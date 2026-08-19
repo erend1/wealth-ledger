@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="./src/WealthLedger.Domain/WealthLedger.Domain.csproj" />
+  <Project Path="./tests/WealthLedger.Domain.Tests/WealthLedger.Domain.Tests.csproj" />
+</Solution>
