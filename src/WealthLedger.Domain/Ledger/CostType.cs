@@ -1,10 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WealthLedger.Domain.Ledger
+﻿namespace WealthLedger.Domain.Ledger
 {
-    internal class CostType
+    public enum CostType
     {
+        Commission,
+        WithholdingTax,
+        OtherTax,
+
+        MakingCharge,
+
+        Brokerage,
+        TitleDeed,
+        Expertise,
+        Notary,
+        Insurance,
+
+        Other
     }
 }

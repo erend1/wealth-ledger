@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WealthLedger.Domain.Lots
+﻿namespace WealthLedger.Domain.Lots
 {
-    internal class CostBasisStatus
+    public enum CostBasisStatus
     {
+        Known,
+        Unknown,
+        NotApplicable
     }
 }

@@ -2,13 +2,15 @@
 
 namespace WealthLedger.Domain.ValueObjects
 {
-    public readonly record struct Money
+    public sealed record Money
     {
         public long MinorUnits { get; }
         public CurrencyCode Currency { get; }
 
         private Money(long minorUnits, CurrencyCode currency)
         {
+            ArgumentNullException.ThrowIfNull(currency);
+
             MinorUnits = minorUnits;
             Currency = currency;
         }

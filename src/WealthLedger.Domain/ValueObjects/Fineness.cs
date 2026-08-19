@@ -1,6 +1,6 @@
 ﻿namespace WealthLedger.Domain.ValueObjects
 {
-    public readonly record struct Fineness
+    public sealed record Fineness
     {
         public const int MaximumPpm = 1_000_000;
 

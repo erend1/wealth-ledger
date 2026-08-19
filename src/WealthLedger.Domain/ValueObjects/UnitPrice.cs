@@ -1,6 +1,6 @@
 ﻿namespace WealthLedger.Domain.ValueObjects
 {
-    public readonly record struct UnitPrice
+    public sealed record UnitPrice
     {
         public const long Scale = 100_000_000L;
 

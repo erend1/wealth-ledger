@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WealthLedger.Domain.Ledger
+﻿namespace WealthLedger.Domain.Ledger
 {
-    internal class CostTreatment
+    public enum CostTreatment
     {
+        AdditionalCashOutflow,
+        WithheldFromProceeds,
+        IncludedInConsideration,
+        InformationalOnly
     }
 }

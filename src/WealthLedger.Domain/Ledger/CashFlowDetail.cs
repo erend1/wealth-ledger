@@ -1,10 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WealthLedger.Domain.Ledger
+﻿namespace WealthLedger.Domain.Ledger
 {
-    internal class CashFlowDetail
+    public sealed class CashFlowDetail
     {
+        public CashFlowCategory Category { get; }
+
+        public Guid? HouseholdMemberId { get; }
+
+        internal CashFlowDetail(
+            CashFlowCategory category,
+            Guid? householdMemberId)
+        {
+            if (householdMemberId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Household member ID cannot be empty.",
+                    nameof(householdMemberId));
+            }
+
+            Category = category;
+            HouseholdMemberId = householdMemberId;
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace WealthLedger.Domain.ValueObjects
 {
-    public readonly record struct CurrencyCode
+    public sealed record CurrencyCode
     {
         public string Value { get; }
 

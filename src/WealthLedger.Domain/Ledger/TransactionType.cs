@@ -1,10 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WealthLedger.Domain.Ledger
+﻿namespace WealthLedger.Domain.Ledger
 {
-    internal class TransactionType
+    public enum TransactionType
     {
+        Contribution,
+        Withdrawal,
+
+        Buy,
+        Sell,
+
+        Transfer,
+
+        Dividend,
+        Income,
+        Expense,
+
+        Fee,
+        Tax,
+
+        CorporateAction,
+
+        OpeningBalance,
+        Adjustment,
+        Reversal
     }
 }

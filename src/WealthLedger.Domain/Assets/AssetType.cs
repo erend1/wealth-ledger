@@ -1,10 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WealthLedger.Domain.Assets
+﻿namespace WealthLedger.Domain.Assets
 {
-    internal class AssetType
+    public enum AssetType
     {
+        Cash,
+        Currency,
+        Fund,
+        Equity,
+        PhysicalGold,
+        RealEstate,
+        Land,
+        Vehicle,
+        Other
     }
 }
