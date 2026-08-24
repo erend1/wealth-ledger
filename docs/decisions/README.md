@@ -1,0 +1,13 @@
+# WealthLedger Architecture Decision Records
+
+These ADRs preserve the accepted rationale behind the ledger core.
+
+| ADR | Status | Decision |
+|---|---|---|
+| ADR-001 | Accepted | Ledger history is the source of truth |
+| ADR-002 | Accepted | Posted transactions are immutable and corrected by reversal |
+| ADR-003 | Accepted | Financial values use integer/fixed-point storage |
+| ADR-004 | Accepted | LotEntryAllocation replaces disposal-only modeling |
+| ADR-005 | Accepted | AssetLot represents acquisition lineage, not custody |
+
+If a future decision changes one of these, add a new ADR and mark the earlier one Superseded by the new ADR. Do not rewrite accepted history.
