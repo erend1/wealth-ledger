@@ -42,5 +42,15 @@ namespace WealthLedger.Domain.Tests.ValueObjects
             Assert.Throws<InvalidOperationException>(
                 () => current.Subtract(requested));
         }
+
+        [Fact]
+        public void Add_WhenRawQuantityOverflows_Throws()
+        {
+            var maximum = Quantity.FromRaw(long.MaxValue);
+            var one = Quantity.FromRaw(1);
+
+            Assert.Throws<OverflowException>(
+                () => maximum.Add(one));
+        }
     }
 }

@@ -28,5 +28,17 @@ namespace WealthLedger.Domain.Tests.ValueObjects
                     -1m,
                     CurrencyCode.TRY));
         }
+
+        [Fact]
+        public void FromDecimal_WhenScaledPriceOverflows_Throws()
+        {
+            var overflowingPrice =
+                (long.MaxValue / (decimal)UnitPrice.Scale) + 1m;
+
+            Assert.Throws<OverflowException>(() =>
+                UnitPrice.FromDecimal(
+                    overflowingPrice,
+                    CurrencyCode.TRY));
+        }
     }
 }

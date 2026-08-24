@@ -48,5 +48,33 @@ namespace WealthLedger.Domain.Tests.ValueObjects
 
             Assert.Equal(30_000m, result);
         }
+
+        [Fact]
+        public void Add_WhenMinorUnitsOverflow_Throws()
+        {
+            var maximum = Money.FromMinorUnits(
+                long.MaxValue,
+                CurrencyCode.TRY);
+
+            var one = Money.FromMinorUnits(
+                1,
+                CurrencyCode.TRY);
+
+            Assert.Throws<OverflowException>(
+                () => maximum.Add(one));
+        }
+
+        [Fact]
+        public void Negate_MinimumMinorUnits_Throws()
+        {
+            var minimum = Money.FromMinorUnits(
+                long.MinValue,
+                CurrencyCode.TRY);
+
+            Assert.Throws<OverflowException>(() =>
+            {
+                _ = minimum.Negate();
+            });
+        }
     }
 }

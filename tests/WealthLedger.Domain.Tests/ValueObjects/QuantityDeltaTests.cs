@@ -26,5 +26,16 @@ namespace WealthLedger.Domain.Tests.ValueObjects
                 -6412.34918m,
                 inverse.ToDecimal());
         }
+
+        [Fact]
+        public void Negate_MinimumRawDelta_Throws()
+        {
+            var minimum = QuantityDelta.FromRaw(long.MinValue);
+
+            Assert.Throws<OverflowException>(() =>
+            {
+                _ = minimum.Negate();
+            });
+        }
     }
 }
