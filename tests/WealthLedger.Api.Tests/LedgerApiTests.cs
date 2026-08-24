@@ -18,12 +18,12 @@ public sealed class LedgerApiTests
     public async Task ContributionPurchaseAndPositions_RoundTripExactValues()
     {
         using var factory = new WealthLedgerApiFactory();
-        await factory.InitializeDatabaseAsync();
         using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
 
         var contributionResponse = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
-            CreateContributionRequest());
+            CreateContributionRequest(setup));
 
         Assert.Equal(HttpStatusCode.Created, contributionResponse.StatusCode);
 
@@ -38,7 +38,7 @@ public sealed class LedgerApiTests
 
         var purchaseResponse = await client.PostAsJsonAsync(
             "/api/ledger/fund-purchases",
-            CreateFundPurchaseRequest());
+            CreateFundPurchaseRequest(setup));
 
         Assert.Equal(HttpStatusCode.Created, purchaseResponse.StatusCode);
 
@@ -51,11 +51,13 @@ public sealed class LedgerApiTests
 
         var fundPosition = await GetPositionAsync(
             client,
-            ApiTestData.FundAssetId);
+            setup,
+            setup.FundAssetId);
 
         var cashPosition = await GetPositionAsync(
             client,
-            ApiTestData.CashAssetId);
+            setup,
+            setup.CashAssetId);
 
         Assert.Equal(125_000_000, fundPosition.QuantityRawE8);
         Assert.Equal(1, fundPosition.SourceEntryCount);
@@ -92,10 +94,10 @@ public sealed class LedgerApiTests
     public async Task InvalidTransportCode_ReturnsBadRequestProblem()
     {
         using var factory = new WealthLedgerApiFactory();
-        await factory.InitializeDatabaseAsync();
         using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
 
-        var request = CreateContributionRequest() with
+        var request = CreateContributionRequest(setup) with
         {
             CashFlowCategoryCode = "NOT_A_CATEGORY"
         };
@@ -118,12 +120,12 @@ public sealed class LedgerApiTests
     public async Task ApplicationRuleViolation_ReturnsUnprocessableEntityProblem()
     {
         using var factory = new WealthLedgerApiFactory();
-        await factory.InitializeDatabaseAsync();
         using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
 
-        var request = CreateContributionRequest() with
+        var request = CreateContributionRequest(setup) with
         {
-            CashAssetId = ApiTestData.FundAssetId
+            CashAssetId = setup.FundAssetId
         };
 
         var response = await client.PostAsJsonAsync(
@@ -146,7 +148,8 @@ public sealed class LedgerApiTests
     public async Task PersistenceFailure_ReturnsSanitizedConflictProblem()
     {
         using var factory = new WealthLedgerApiFactory();
-        await factory.InitializeDatabaseAsync();
+        using var setupClient = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(setupClient);
 
         using var failingFactory = factory.WithWebHostBuilder(
             builder => builder.ConfigureServices(services =>
@@ -160,7 +163,7 @@ public sealed class LedgerApiTests
 
         var response = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
-            CreateContributionRequest());
+            CreateContributionRequest(setup));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
@@ -176,27 +179,44 @@ public sealed class LedgerApiTests
         Assert.DoesNotContain("TransactionEntry", problem.Detail);
     }
 
-    private static RecordContributionRequest CreateContributionRequest()
+    private static async Task<InitializeCoreLedgerResponse>
+        InitializeCoreLedgerAsync(HttpClient client)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/setup/core-ledger",
+            ApiTestData.CreateSetupRequest());
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var setup = await response.Content
+            .ReadFromJsonAsync<InitializeCoreLedgerResponse>();
+
+        return Assert.IsType<InitializeCoreLedgerResponse>(setup);
+    }
+
+    private static RecordContributionRequest CreateContributionRequest(
+        InitializeCoreLedgerResponse setup)
         => new(
-            ApiTestData.HouseholdId,
-            ApiTestData.PortfolioId,
-            ApiTestData.AccountId,
-            ApiTestData.CashAssetId,
+            setup.HouseholdId,
+            setup.PortfolioId,
+            setup.AccountId,
+            setup.CashAssetId,
             AmountMinorUnits: 100_000,
             CurrencyCode: "TRY",
             CashFlowCategoryCode: "ACADEMIC_INCOME",
             ApiTestData.ExecutionDate,
-            ApiTestData.HouseholdMemberId,
+            setup.HouseholdMemberId,
             ExternalReference: "CONTRIBUTION-TEST",
             Note: "Synthetic API test contribution");
 
-    private static RecordFundPurchaseRequest CreateFundPurchaseRequest()
+    private static RecordFundPurchaseRequest CreateFundPurchaseRequest(
+        InitializeCoreLedgerResponse setup)
         => new(
-            ApiTestData.HouseholdId,
-            ApiTestData.PortfolioId,
-            ApiTestData.AccountId,
-            ApiTestData.FundAssetId,
-            ApiTestData.CashAssetId,
+            setup.HouseholdId,
+            setup.PortfolioId,
+            setup.AccountId,
+            setup.FundAssetId,
+            setup.CashAssetId,
             FundQuantityRawE8: 125_000_000,
             ExecutedUnitPriceRawE8: 20_000_000_000,
             PriceCurrencyCode: "TRY",
@@ -208,12 +228,13 @@ public sealed class LedgerApiTests
 
     private static async Task<PositionResponse> GetPositionAsync(
         HttpClient client,
+        InitializeCoreLedgerResponse setup,
         Guid assetId)
     {
         var response = await client.GetAsync(
-            $"/api/households/{ApiTestData.HouseholdId}/portfolios/"
-            + $"{ApiTestData.PortfolioId}/accounts/"
-            + $"{ApiTestData.AccountId}/positions/{assetId}");
+            $"/api/households/{setup.HouseholdId}/portfolios/"
+            + $"{setup.PortfolioId}/accounts/"
+            + $"{setup.AccountId}/positions/{assetId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

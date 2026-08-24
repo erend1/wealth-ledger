@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using WealthLedger.Application.Common;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Common;
 
 namespace WealthLedger.Api.ErrorHandling;
@@ -31,6 +32,10 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
     private static ApiFailure? Map(Exception exception)
         => exception switch
         {
+            CoreLedgerAlreadyInitializedException => new ApiFailure(
+                StatusCodes.Status409Conflict,
+                "Core ledger already initialized",
+                exception.Message),
             ApplicationRuleViolationException => new ApiFailure(
                 StatusCodes.Status422UnprocessableEntity,
                 "Ledger rule violation",

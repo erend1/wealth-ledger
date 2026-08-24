@@ -363,8 +363,8 @@ namespace WealthLedger.Domain.Tests.Lots
             var gold =
                 Asset.Create(
                     Guid.NewGuid(),
-                    "GOLD_AJDA_22K",
-                    "22K Ajda Bracelet",
+                    "GOLD_BRACELET_22K",
+                    "22K Synthetic Bracelet",
                     AssetType.PhysicalGold,
                     AssetUnit.GrossGram,
                     CurrencyCode.TRY,

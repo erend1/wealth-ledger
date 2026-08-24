@@ -23,12 +23,12 @@ namespace WealthLedger.Domain.Tests.MasterData
             var household =
                 Household.Create(
                     Guid.NewGuid(),
-                    "  Demirtas Household  ",
+                    "  Synthetic Household  ",
                     CurrencyCode.TRY,
                     Now);
 
             Assert.Equal(
-                "Demirtas Household",
+                "Synthetic Household",
                 household.Name);
         }
 
@@ -97,8 +97,8 @@ namespace WealthLedger.Domain.Tests.MasterData
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     Guid.NewGuid(),
-                    "ISBANK_INVESTMENT",
-                    "Is Bank Investment",
+                    "SYNTHETIC_INVESTMENT",
+                    "Synthetic Investment Account",
                     AccountType.Investment,
                     new DateOnly(2026, 8, 1));
 
@@ -121,8 +121,8 @@ namespace WealthLedger.Domain.Tests.MasterData
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     Guid.NewGuid(),
-                    "ISBANK_INVESTMENT",
-                    "Is Bank Investment",
+                    "SYNTHETIC_INVESTMENT",
+                    "Synthetic Investment Account",
                     AccountType.Investment,
                     new DateOnly(2026, 8, 1));
 
@@ -137,12 +137,12 @@ namespace WealthLedger.Domain.Tests.MasterData
             var institution =
                 Institution.Create(
                     Guid.NewGuid(),
-                    " isbank ",
-                    "Is Bankasi",
+                    " synthetic_bank ",
+                    "Synthetic Bank",
                     InstitutionType.Bank);
 
             Assert.Equal(
-                "ISBANK",
+                "SYNTHETIC_BANK",
                 institution.Code);
         }
 
@@ -153,7 +153,7 @@ namespace WealthLedger.Domain.Tests.MasterData
                 HouseholdMember.Create(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
-                    "Huseyin",
+                    "Synthetic Member",
                     Now);
 
             member.Deactivate();

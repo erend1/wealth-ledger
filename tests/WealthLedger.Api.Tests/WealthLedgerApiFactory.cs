@@ -1,19 +1,22 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using WealthLedger.Infrastructure.Persistence;
 
 namespace WealthLedger.Api.Tests;
 
 internal sealed class WealthLedgerApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _directoryPath;
+    private readonly bool _setupEnabled;
+    private readonly bool _applyMigrationsOnStartup;
 
-    internal WealthLedgerApiFactory()
+    internal WealthLedgerApiFactory(
+        bool setupEnabled = true,
+        bool applyMigrationsOnStartup = true)
     {
+        _setupEnabled = setupEnabled;
+        _applyMigrationsOnStartup = applyMigrationsOnStartup;
         _directoryPath = Path.Combine(
             Path.GetTempPath(),
             "WealthLedger.Api.Tests",
@@ -35,16 +38,6 @@ internal sealed class WealthLedgerApiFactory : WebApplicationFactory<Program>
 
     internal string ConnectionString { get; }
 
-    internal async Task InitializeDatabaseAsync()
-    {
-        await using var scope = Services.CreateAsyncScope();
-        var context = scope.ServiceProvider
-            .GetRequiredService<WealthLedgerDbContext>();
-
-        await context.Database.MigrateAsync();
-        await ApiTestData.SeedAsync(context);
-    }
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -55,7 +48,10 @@ internal sealed class WealthLedgerApiFactory : WebApplicationFactory<Program>
                     new Dictionary<string, string?>
                     {
                         ["ConnectionStrings:WealthLedger"] =
-                            ConnectionString
+                            ConnectionString,
+                        ["Database:ApplyMigrationsOnStartup"] =
+                            _applyMigrationsOnStartup.ToString(),
+                        ["Setup:Enabled"] = _setupEnabled.ToString()
                     });
             });
     }

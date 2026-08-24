@@ -10,19 +10,19 @@ namespace WealthLedger.Domain.Tests.Assets
         {
             var asset = Asset.Create(
                 Guid.NewGuid(),
-                " gold_ajda_22k ",
-                "  22K Ajda Bracelet  ",
+                " gold_bracelet_22k ",
+                "  22K Synthetic Bracelet  ",
                 AssetType.PhysicalGold,
                 AssetUnit.GrossGram,
                 CurrencyCode.TRY,
                 LotTrackingMode.Required);
 
             Assert.Equal(
-                "GOLD_AJDA_22K",
+                "GOLD_BRACELET_22K",
                 asset.Code);
 
             Assert.Equal(
-                "22K Ajda Bracelet",
+                "22K Synthetic Bracelet",
                 asset.Name);
         }
 

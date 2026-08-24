@@ -6,7 +6,7 @@ Status source: verified against the repository, the generated EF model, and loca
 
 ## Current checkpoint
 
-The Domain v1 baseline, the `001_CoreLedger` persistence milestone, and the first ASP.NET Core Minimal API slice are implemented and verified. The end-to-end slice records a contribution and a synthetic fund purchase, creates its acquisition lot, commits each posted graph atomically, and derives positions from posted entry history through HTTP against real SQLite.
+The Domain v1 baseline, the `001_CoreLedger` persistence milestone, the first ASP.NET Core Minimal API slice, and an explicit first-run setup slice are implemented and verified. Starting from an empty SQLite file, the end-to-end path applies the migration only when opted in, initializes the required master data through HTTP, records a contribution and fund purchase, creates its acquisition lot, and derives positions from posted entry history.
 
 The solution currently contains:
 
@@ -70,6 +70,14 @@ Transport contracts use signed integer minor units and raw E8 integers. Cash-flo
 
 The composition root registers the focused Application use cases, the EF Core SQLite adapters, `TimeProvider`, Problem Details, and exception translation. Invalid transport values return 400, Domain/Application rule violations return 422, and wrapped persistence conflicts return a sanitized 409 without leaking SQLite or EF details. Database migration and master-data initialization remain explicit operational prerequisites rather than hidden endpoint side effects.
 
+### First-run setup
+
+Application provides one focused initialization command for a base currency, household, optional member, institution, portfolio, account, cash asset, and required-lot fund asset. It constructs the existing Domain master entities, generates their identities, and submits one setup graph through `ICoreLedgerSetupStore`; no generic master-data repository or service layer was introduced.
+
+Infrastructure accepts setup only when all core master tables are empty and inserts the complete graph in one SQLite transaction. Existing master data returns a stable conflict, while a constraint or trigger failure rolls back currency, household, member, institution, portfolio, account, and assets together. The setup uses the existing `001_CoreLedger` schema and required no model or migration change.
+
+`POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly true. `Database:ApplyMigrationsOnStartup` is also false by default and applies migrations only when explicitly enabled. API integration tests now initialize through HTTP rather than inserting internal persistence rows, and the setup endpoint returns stable IDs consumed by the existing ledger routes.
+
 ## Verification
 
 Last verified commands:
@@ -83,23 +91,23 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Results:
 
 - Domain tests: 76 passed, 0 failed.
-- Application tests: 6 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 29 passed, 0 failed.
-- API tests against real SQLite files: 4 passed, 0 failed.
-- Total: 115 passed, 0 failed.
+- Application tests: 12 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 32 passed, 0 failed.
+- API tests against real SQLite files: 7 passed, 0 failed.
+- Total: 127 passed, 0 failed.
 - Formatting drift: none.
 - EF model drift: none.
 
-The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, atomic rollback, and an HTTP contribution/purchase/position round trip without authoritative balance tables. API tests also prove transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated migrated SQLite databases under parallel execution.
+The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
 ## Next coherent slice
 
-The smallest operational follow-on is a focused setup slice for the master/reference data required by the API:
+The natural next ledger slice is the posted reversal/correction workflow already accepted by the Domain and persistence design:
 
-1. Accept explicit Application use cases for initializing the first household, currencies, institution, portfolio, account, cash asset, and fund asset without introducing generic repositories.
-2. Add transport contracts only for those accepted setup operations and keep persistence rows internal.
-3. Define and test a deliberate local database migration/initialization workflow rather than seeding durable data from ledger endpoints.
-4. Keep authentication, authorization, and UI technology as separate decisions.
+1. Add a focused Application use case and query/store ports that load one posted original with its effective entries, verify reversal uniqueness and later lot dependencies, and create the Domain reversal.
+2. Persist the reversal transaction and mirrored allocations atomically without changing the original transaction's Posted status.
+3. Add an explicit API command and sanitized conflict/not-found behavior without exposing persistence rows.
+4. Prove original-plus-reversal position netting, second-reversal rejection, dependent-lot rejection, restart behavior, and posted-history immutability through Application, SQLite, and HTTP tests.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 

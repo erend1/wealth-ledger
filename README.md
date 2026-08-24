@@ -26,6 +26,16 @@ dotnet tool restore
 dotnet restore WealthLedger.slnx
 ```
 
+## Local database initialization
+
+Database migration and the one-time setup endpoint are disabled by default. For an explicit first local initialization, run:
+
+```powershell
+dotnet run --project src/WealthLedger.Api/WealthLedger.Api.csproj -- --Database:ApplyMigrationsOnStartup=true --Setup:Enabled=true
+```
+
+Call `POST /api/setup/core-ledger` once to create the initial currency, household, institution, portfolio, account, cash asset, and fund asset. Stop the process afterward and restart without the setup flags for normal operation.
+
 ## Verification
 
 Run the full test suite:
