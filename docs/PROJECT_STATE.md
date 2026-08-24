@@ -6,18 +6,20 @@ Status source: verified against the repository, the generated EF model, and loca
 
 ## Current checkpoint
 
-The Domain v1 baseline and the `001_CoreLedger` persistence milestone are implemented and verified. The first complete Application-to-SQLite slice records a contribution and a synthetic fund purchase, creates its acquisition lot, commits each posted graph atomically, and derives positions from posted entry history after the database is closed and reopened.
+The Domain v1 baseline, the `001_CoreLedger` persistence milestone, and the first ASP.NET Core Minimal API slice are implemented and verified. The end-to-end slice records a contribution and a synthetic fund purchase, creates its acquisition lot, commits each posted graph atomically, and derives positions from posted entry history through HTTP against real SQLite.
 
 The solution currently contains:
 
 - `WealthLedger.Domain`
 - `WealthLedger.Application`
 - `WealthLedger.Infrastructure`
+- `WealthLedger.Api`
+- `WealthLedger.Api.Tests`
 - `WealthLedger.Application.Tests`
 - `WealthLedger.Domain.Tests`
 - `WealthLedger.Infrastructure.Tests`
 
-`WealthLedger.Api`, `WealthLedger.UI`, and a UI technology decision do not yet exist.
+`WealthLedger.UI` and a UI technology decision do not yet exist.
 
 ## Verified implementation
 
@@ -56,12 +58,25 @@ Currency-asset quantities are converted deterministically from signed integer mi
 
 Infrastructure resolves the required master references, maps Domain aggregate roots to internal rows, inserts the complete graph as Draft, and finalizes it as Posted inside one SQLite transaction. A failed final posting rolls back the transaction, entries, lots, and allocations together. The position adapter returns only posted entry facts; Application performs the ordered checked sum.
 
+### Minimal API boundary
+
+`WealthLedger.Api` exposes:
+
+- `POST /api/ledger/contributions`;
+- `POST /api/ledger/fund-purchases`;
+- `GET /api/households/{householdId}/portfolios/{portfolioId}/accounts/{accountId}/positions/{assetId}`.
+
+Transport contracts use signed integer minor units and raw E8 integers. Cash-flow categories have explicit stable text-code mapping. API contracts do not expose Domain aggregates or EF rows, and no portfolio arithmetic has moved into the delivery layer.
+
+The composition root registers the focused Application use cases, the EF Core SQLite adapters, `TimeProvider`, Problem Details, and exception translation. Invalid transport values return 400, Domain/Application rule violations return 422, and wrapped persistence conflicts return a sanitized 409 without leaking SQLite or EF details. Database migration and master-data initialization remain explicit operational prerequisites rather than hidden endpoint side effects.
+
 ## Verification
 
 Last verified commands:
 
 ```text
 dotnet test WealthLedger.slnx --no-restore --verbosity minimal
+dotnet format WealthLedger.slnx --verify-no-changes --no-restore --verbosity minimal
 dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj --startup-project src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj --context WealthLedgerDbContext --no-build
 ```
 
@@ -70,19 +85,21 @@ Results:
 - Domain tests: 76 passed, 0 failed.
 - Application tests: 6 passed, 0 failed.
 - Infrastructure tests against real SQLite files: 29 passed, 0 failed.
-- Total: 111 passed, 0 failed.
+- API tests against real SQLite files: 4 passed, 0 failed.
+- Total: 115 passed, 0 failed.
+- Formatting drift: none.
 - EF model drift: none.
 
-The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, atomic rollback, and a contribution/purchase/position round trip without authoritative balance tables.
+The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, atomic rollback, and an HTTP contribution/purchase/position round trip without authoritative balance tables. API tests also prove transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated migrated SQLite databases under parallel execution.
 
 ## Next coherent slice
 
-The natural next delivery slice is the accepted ASP.NET Core Minimal API boundary for the verified use cases:
+The smallest operational follow-on is a focused setup slice for the master/reference data required by the API:
 
-1. Add `WealthLedger.Api` with explicit contribution, fund-purchase, and position transport contracts.
-2. Add ordinary dependency-injection composition for DbContext, Application use cases, and Infrastructure adapters.
-3. Translate transport input deliberately into fixed-point Domain/Application values and map validation/storage failures without exposing EF rows.
-4. Add HTTP integration tests against real SQLite while keeping UI technology undecided.
+1. Accept explicit Application use cases for initializing the first household, currencies, institution, portfolio, account, cash asset, and fund asset without introducing generic repositories.
+2. Add transport contracts only for those accepted setup operations and keep persistence rows internal.
+3. Define and test a deliberate local database migration/initialization workflow rather than seeding durable data from ledger endpoints.
+4. Keep authentication, authorization, and UI technology as separate decisions.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 

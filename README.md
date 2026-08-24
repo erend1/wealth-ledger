@@ -9,6 +9,7 @@ The ledger is the source of truth. Posted transactions are immutable, correction
 - `src/WealthLedger.Domain` contains the financial model and invariants.
 - `src/WealthLedger.Application` contains focused use cases and persistence ports.
 - `src/WealthLedger.Infrastructure` contains the EF Core SQLite implementation.
+- `src/WealthLedger.Api` contains the ASP.NET Core Minimal API boundary.
 - `tests` contains the unit and real-SQLite integration suites.
 - `docs` contains the canonical architecture, domain, database, project-state, and ADR material.
 
