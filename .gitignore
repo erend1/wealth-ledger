@@ -66,3 +66,4 @@ docs/tests/
 
 ## Generated agent context (never authoritative project state)
 .agent/
+/docs/history
