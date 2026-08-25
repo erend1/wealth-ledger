@@ -1,8 +1,8 @@
 ﻿namespace WealthLedger.Application.CoreLedger
 {
-    public static class RecordContributionCommandCanonicalizer
+    internal static class RecordContributionCommandCanonicalizer
     {
-        public static RecordContributionCommand Normalize(
+        internal static RecordContributionCommand Normalize(
             RecordContributionCommand command)
         {
             ArgumentNullException.ThrowIfNull(command);
