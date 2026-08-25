@@ -11,13 +11,14 @@ All code, identifiers, database names, API routes, tests, comments, commit messa
 ## Start every task this way
 
 1. Read this file and docs/PROJECT_STATE.md.
-2. Read only the architecture, domain, database, and ADR material relevant to the task.
-3. Inspect the actual solution, source, tests, migrations, package references, and git status.
-4. Run the existing tests before changing behavior.
-5. Compare repository reality with docs/PROJECT_STATE.md. Do not assume a conversationally reported file exists.
-6. Keep the change inside the requested milestone.
-7. Run focused tests and then the appropriate full suite.
-8. Update docs/PROJECT_STATE.md when the verified project checkpoint changes. Add or supersede an ADR only when an architectural decision changes.
+2. If the request belongs to a milestone, read the requested or active milestone in docs/milestones. A roadmap item is not implementation scope by itself.
+3. Read only the product, architecture, domain, database, operations, and ADR material relevant to the task.
+4. Inspect the actual solution, source, tests, migrations, package references, and git status.
+5. Run the existing tests before changing behavior.
+6. Compare repository reality with docs/PROJECT_STATE.md. Do not assume a conversationally reported file exists.
+7. Keep the change inside the requested milestone.
+8. Run focused tests and then the appropriate full suite.
+9. Update docs/PROJECT_STATE.md when the verified project checkpoint changes. Add or supersede an ADR only when an architectural decision changes.
 
 Do not modify historical transcripts to make them look current. Historical material may contain superseded designs.
 
@@ -30,11 +31,25 @@ When sources conflict:
 1. Follow the current user request and active repository instructions.
 2. Inspect source code and tests to establish implementation reality.
 3. Apply the non-negotiable rules in this file and accepted ADRs.
-4. Use PROJECT_STATE for milestone status.
-5. Use the architecture, domain, and database documents for canonical detail.
-6. Treat conversation transcripts and history as reference only.
+4. Use an Accepted or explicitly authorized milestone for delivery scope. A Proposed milestone identifies decisions to review, not permission to guess them.
+5. Use PROJECT_STATE for verified checkpoint and active-delivery status.
+6. Use product requirements and the roadmap for product intent and ordering.
+7. Use the architecture, domain, database, UX, data-capture, and operations documents for their stated canonical or proposed detail.
+8. Treat conversation transcripts and history as reference only.
 
 Do not silently reshape code to match prose or rewrite prose to excuse a design violation. Report a material conflict, explain the impact, and resolve it explicitly with code, tests, docs, and an ADR update where appropriate.
+
+## Delivery and milestone workflow
+
+- `docs/PRODUCT_REQUIREMENTS.md` defines durable product outcomes and boundaries.
+- `docs/ROADMAP.md` defines intended delivery order. It is not evidence of implementation and does not authorize a broad code change.
+- `docs/PROJECT_STATE.md` defines the concise verified checkpoint and identifies the active delivery candidate.
+- `docs/milestones` contains bounded implementation contracts and status rules.
+- At most one milestone may be In Progress.
+- Draft and Proposed milestones may be reviewed and edited without implementation. Implement one only after it is Accepted or the user explicitly authorizes the work and its unresolved decisions are made explicit.
+- Mark a milestone Verified only after its acceptance criteria and repository checks pass and PROJECT_STATE agrees with source reality.
+- Preserve Verified milestone history. Later behavior belongs in a new milestone and, where cross-cutting, a superseding ADR.
+- Roadmap and milestone numbering are independent from EF Core migration numbering.
 
 ## Technology and project boundaries
 
@@ -165,6 +180,8 @@ Test derived queries from transaction history rather than seeding authoritative 
 ## Documentation discipline
 
 PROJECT_STATE is a concise, factual handoff and should be updated after a milestone. Do not turn it into a changelog.
+
+Product requirements describe desired outcomes, ROADMAP describes intended order, and milestone documents describe bounded delivery contracts. None of them may claim that planned behavior is already implemented.
 
 Create an ADR when accepting, superseding, or materially changing a cross-cutting decision. Never edit an old accepted ADR to hide a later change; add a new ADR and mark the old one Superseded.
 

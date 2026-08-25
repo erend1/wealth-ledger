@@ -21,6 +21,19 @@ The solution currently contains:
 
 `WealthLedger.UI` and a UI technology decision do not yet exist.
 
+## Delivery planning
+
+Canonical product requirements, delivery roadmap, proposed MVP interaction
+model, data-capture guide, security/operations baseline, and milestone workflow
+now live under `docs`.
+
+The only accepted delivery milestone is
+[`M002: Retry-Safe Transaction Submission and Readback`](milestones/M002_transaction_submission_and_readback.md).
+Its dedicated retry-identity contract and persistence boundary were accepted on
+2026-08-24 and are recorded by ADR-006. No idempotency storage,
+transaction-detail query, or related API behavior exists yet; implementation
+and verification remain pending.
+
 ## Verified implementation
 
 ### Domain
@@ -100,9 +113,28 @@ Results:
 
 The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
-## Next coherent slice
+## Next delivery candidate
 
-The natural next ledger slice is the posted reversal/correction workflow already accepted by the Domain and persistence design:
+M002 is the next accepted implementation milestone. It hardens the current HTTP
+write boundary before another command endpoint is added:
+
+1. Separate a client command's retry identity from optional external financial
+   references.
+2. Persist retry identity and posting result atomically so equivalent and
+   concurrent replay cannot duplicate history.
+3. Add transaction-detail readback and make existing transaction Locations
+   resolvable.
+4. Prove equivalent replay, conflicting replay, concurrent submission,
+   rollback, restart, and sanitized not-found/conflict behavior.
+
+Acceptance changed delivery status only and has not changed the verified runtime
+checkpoint described above.
+
+## Following coherent ledger slice
+
+After write safety and readback, the next coherent ledger feature is the posted
+reversal/correction workflow already accepted by the Domain and persistence
+design:
 
 1. Add a focused Application use case and query/store ports that load one posted original with its effective entries, verify reversal uniqueness and later lot dependencies, and create the Domain reversal.
 2. Persist the reversal transaction and mirrored allocations atomically without changing the original transaction's Posted status.

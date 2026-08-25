@@ -11,9 +11,28 @@ The ledger is the source of truth. Posted transactions are immutable, correction
 - `src/WealthLedger.Infrastructure` contains the EF Core SQLite implementation.
 - `src/WealthLedger.Api` contains the ASP.NET Core Minimal API boundary.
 - `tests` contains the unit and real-SQLite integration suites.
-- `docs` contains the canonical architecture, domain, database, project-state, and ADR material.
+- `docs` contains product, delivery, architecture, domain, database, project-state, operations, milestone, and ADR material at each document's stated status.
 
 See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint and next coherent slice.
+
+## Documentation map
+
+| Document | Purpose |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Repository-wide rules for humans and agents |
+| [docs/PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md) | Durable product outcomes and boundaries |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Intended delivery order, never proof of implementation |
+| [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Concise verified repository checkpoint |
+| [docs/UX_MVP.md](docs/UX_MVP.md) | Framework-independent proposed interaction model |
+| [docs/DATA_CAPTURE.md](docs/DATA_CAPTURE.md) | Source facts each financial workflow should preserve |
+| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Proposed local-data, backup, restore, and privacy baseline |
+| [docs/milestones/README.md](docs/milestones/README.md) | Milestone statuses, template, agent prompts, and definition of done |
+| [docs/decisions/README.md](docs/decisions/README.md) | Accepted architectural decisions |
+
+Roadmap items are implemented one bounded milestone at a time. A Proposed
+milestone is a review contract, not authorization to fill unresolved decisions
+silently. Conversation transcripts under `docs/history` are non-authoritative
+reference material and are not required reading for routine development.
 
 ## Prerequisites
 
