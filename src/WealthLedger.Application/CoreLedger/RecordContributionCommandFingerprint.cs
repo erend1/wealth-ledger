@@ -27,20 +27,20 @@ namespace WealthLedger.Application.CoreLedger
         {
             ArgumentNullException.ThrowIfNull(command);
 
-            if (!string.Equals(
-                    algorithmCode,
-                    CurrentAlgorithmCode,
-                    StringComparison.Ordinal))
+            return (algorithmCode, version) switch
             {
-                throw new NotSupportedException(
-                    $"Fingerprint algorithm '{algorithmCode}' is not supported.");
-            }
+                (CurrentAlgorithmCode, 1) =>
+                    ComputeV1(command),
 
-            if (version != CurrentVersion)
-            {
-                throw new NotSupportedException(
-                    $"Contribution fingerprint version '{version}' is not supported.");
-            }
+                _ =>
+                    throw new NotSupportedException(
+                        $"Contribution fingerprint '{algorithmCode}' version '{version}' is not supported.")
+            };
+        }
+
+        internal static CommandFingerprint ComputeV1(RecordContributionCommand command)
+        {
+            ArgumentNullException.ThrowIfNull(command);
 
             var normalized =
                 RecordContributionCommandCanonicalizer.Normalize(command);
@@ -60,7 +60,7 @@ namespace WealthLedger.Application.CoreLedger
 
                 writer.WriteNumber(
                     "version",
-                    version);
+                    CurrentVersion);
 
                 writer.WriteString(
                     "operation",
@@ -123,8 +123,8 @@ namespace WealthLedger.Application.CoreLedger
                 SHA256.HashData(buffer.WrittenSpan);
 
             return new CommandFingerprint(
-                algorithmCode,
-                version,
+                CurrentAlgorithmCode,
+                CurrentVersion,
                 Convert
                     .ToHexString(hash)
                     .ToLowerInvariant());
