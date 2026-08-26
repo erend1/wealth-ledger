@@ -24,83 +24,123 @@ public sealed record RecordContributionResult(Guid TransactionId);
 public sealed class RecordContributionUseCase
 {
     private readonly ILedgerReferenceData _referenceData;
-    private readonly ILedgerPostingStore _postingStore;
+    private readonly ILedgerSubmissionStore _submissionStore;
     private readonly TimeProvider _timeProvider;
 
     public RecordContributionUseCase(
         ILedgerReferenceData referenceData,
-        ILedgerPostingStore postingStore,
+        ILedgerSubmissionStore submissionStore,
         TimeProvider timeProvider)
     {
         _referenceData = referenceData
             ?? throw new ArgumentNullException(nameof(referenceData));
-        _postingStore = postingStore
-            ?? throw new ArgumentNullException(nameof(postingStore));
+        _submissionStore = submissionStore
+            ?? throw new ArgumentNullException(nameof(submissionStore));
         _timeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RecordContributionResult> ExecuteAsync(
+        string idempotencyKey,
         RecordContributionCommand command,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.Amount);
 
-        EnsureNonEmpty(command.HouseholdId, nameof(command.HouseholdId));
-        EnsureNonEmpty(command.PortfolioId, nameof(command.PortfolioId));
-        EnsureNonEmpty(command.AccountId, nameof(command.AccountId));
-        EnsureNonEmpty(command.CashAssetId, nameof(command.CashAssetId));
+        EnsureNonEmpty(
+            command.HouseholdId,
+            nameof(command.HouseholdId));
 
-        if (command.Amount.MinorUnits <= 0)
+        var normalizedCommand =
+            RecordContributionCommandCanonicalizer.Normalize(command);
+
+        var scope = new LedgerSubmissionScope(
+            normalizedCommand.HouseholdId,
+            LedgerOperationCodes.RecordContribution,
+            idempotencyKey);
+
+        var existingReceipt =
+            await _submissionStore.FindReceiptAsync(
+                scope,
+                cancellationToken);
+
+        if (existingReceipt is not null)
+        {
+            return ResolveReceipt(
+                scope,
+                normalizedCommand,
+                existingReceipt);
+        }
+
+        EnsureNonEmpty(
+            normalizedCommand.PortfolioId,
+            nameof(normalizedCommand.PortfolioId));
+
+        EnsureNonEmpty(
+            normalizedCommand.AccountId,
+            nameof(normalizedCommand.AccountId));
+
+        EnsureNonEmpty(
+            normalizedCommand.CashAssetId,
+            nameof(normalizedCommand.CashAssetId));
+
+        if (normalizedCommand.Amount.MinorUnits <= 0)
         {
             throw new ApplicationRuleViolationException(
                 "A contribution amount must be positive.");
         }
 
-        var location = await _referenceData.FindLocationAsync(
-            command.PortfolioId,
-            command.AccountId,
-            cancellationToken);
+        var location =
+            await _referenceData.FindLocationAsync(
+                normalizedCommand.PortfolioId,
+                normalizedCommand.AccountId,
+                cancellationToken);
 
         ValidateLocation(
             location,
-            command.HouseholdId,
-            command.PortfolioId,
-            command.AccountId);
+            normalizedCommand.HouseholdId,
+            normalizedCommand.PortfolioId,
+            normalizedCommand.AccountId);
 
-        var cashAsset = await _referenceData.FindAssetAsync(
-            command.CashAssetId,
-            cancellationToken);
+        var cashAsset =
+            await _referenceData.FindAssetAsync(
+                normalizedCommand.CashAssetId,
+                cancellationToken);
 
         ValidateCashAsset(
             cashAsset,
-            command.CashAssetId,
-            command.Amount.Currency);
+            normalizedCommand.CashAssetId,
+            normalizedCommand.Amount.Currency);
 
-        var currency = await _referenceData.FindCurrencyAsync(
-            command.Amount.Currency,
-            cancellationToken);
+        var currency =
+            await _referenceData.FindCurrencyAsync(
+                normalizedCommand.Amount.Currency,
+                cancellationToken);
 
         if (currency is null)
         {
             throw new ApplicationRuleViolationException(
-                $"Currency '{command.Amount.Currency}' does not exist.");
+                $"Currency '{normalizedCommand.Amount.Currency}' does not exist.");
         }
 
-        if (command.HouseholdMemberId is Guid householdMemberId)
+        if (normalizedCommand.HouseholdMemberId
+            is Guid householdMemberId)
         {
             EnsureNonEmpty(
                 householdMemberId,
-                nameof(command.HouseholdMemberId));
+                nameof(normalizedCommand.HouseholdMemberId));
 
-            var member = await _referenceData.FindHouseholdMemberAsync(
-                householdMemberId,
-                cancellationToken);
+            var member =
+                await _referenceData.FindHouseholdMemberAsync(
+                    householdMemberId,
+                    cancellationToken);
 
             if (member is null
                 || member.Id != householdMemberId
-                || member.HouseholdId != command.HouseholdId
+                || member.HouseholdId
+                    != normalizedCommand.HouseholdId
                 || !member.IsActive)
             {
                 throw new ApplicationRuleViolationException(
@@ -108,39 +148,107 @@ public sealed class RecordContributionUseCase
             }
         }
 
-        var quantityRawE8 = CurrencyAmountConverter.ToQuantityRawE8(
-            command.Amount,
-            currency);
+        var quantityRawE8 =
+            CurrencyAmountConverter.ToQuantityRawE8(
+                normalizedCommand.Amount,
+                currency);
 
-        var recordedAtUtc = _timeProvider.GetUtcNow();
-        var transaction = LedgerTransaction.CreateDraft(
-            Guid.NewGuid(),
-            command.HouseholdId,
-            TransactionType.Contribution,
-            recordedAtUtc,
-            executionDate: command.ExecutionDate,
-            externalReference: command.ExternalReference,
-            note: command.Note);
+        var fingerprint =
+            RecordContributionCommandFingerprint.ComputeCurrent(
+                normalizedCommand);
+
+        var recordedAtUtc =
+            _timeProvider.GetUtcNow();
+
+        var transaction =
+            LedgerTransaction.CreateDraft(
+                Guid.NewGuid(),
+                normalizedCommand.HouseholdId,
+                TransactionType.Contribution,
+                recordedAtUtc,
+                executionDate:
+                    normalizedCommand.ExecutionDate,
+                externalReference:
+                    normalizedCommand.ExternalReference,
+                note:
+                    normalizedCommand.Note);
 
         transaction.AddEntry(
-            command.PortfolioId,
-            command.AccountId,
-            command.CashAssetId,
+            normalizedCommand.PortfolioId,
+            normalizedCommand.AccountId,
+            normalizedCommand.CashAssetId,
             QuantityDelta.FromRaw(quantityRawE8),
             EntryRole.Principal);
 
         transaction.AttachCashFlowDetail(
-            command.Category,
-            command.HouseholdMemberId);
+            normalizedCommand.Category,
+            normalizedCommand.HouseholdMemberId);
 
         transaction.Post(recordedAtUtc);
 
-        await _postingStore.SavePostedTransactionAsync(
-            transaction,
-            Array.Empty<AssetLot>(),
-            cancellationToken);
+        var receipt =
+            new LedgerSubmissionReceipt(
+                scope,
+                fingerprint,
+                transaction.Id,
+                AssetLotId: null,
+                CreatedAtUtc: recordedAtUtc);
 
-        return new RecordContributionResult(transaction.Id);
+        var commitResult =
+            await _submissionStore.TryCommitAsync(
+                receipt,
+                transaction,
+                Array.Empty<AssetLot>(),
+                cancellationToken);
+
+        if (commitResult.WasCommitted)
+        {
+            if (commitResult.Receipt != receipt)
+            {
+                throw new InvalidOperationException(
+                    "The submission store returned an inconsistent committed receipt.");
+            }
+
+            return new RecordContributionResult(
+                transaction.Id);
+        }
+
+        return ResolveReceipt(
+            scope,
+            normalizedCommand,
+            commitResult.Receipt);
+    }
+
+    private static RecordContributionResult ResolveReceipt(
+        LedgerSubmissionScope expectedScope,
+        RecordContributionCommand normalizedCommand,
+        LedgerSubmissionReceipt receipt)
+    {
+        if (receipt.Scope != expectedScope)
+        {
+            throw new InvalidOperationException(
+                "The submission store returned a receipt for a different scope.");
+        }
+
+        if (receipt.AssetLotId is not null)
+        {
+            throw new InvalidOperationException(
+                "A contribution receipt cannot contain an asset-lot result.");
+        }
+
+        var replayFingerprint =
+            RecordContributionCommandFingerprint.Compute(
+                normalizedCommand,
+                receipt.Fingerprint.AlgorithmCode,
+                receipt.Fingerprint.Version);
+
+        if (replayFingerprint != receipt.Fingerprint)
+        {
+            throw new IdempotencyConflictException();
+        }
+
+        return new RecordContributionResult(
+            receipt.TransactionId);
     }
 
     private static void ValidateLocation(

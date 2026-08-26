@@ -37,6 +37,9 @@ public sealed class CoreLedgerUseCaseTests
     private static readonly DateOnly ExecutionDate =
         new(2026, 8, 24);
 
+    private const string ContributionIdempotencyKey =
+        "contribution-2026-08-24-001";
+
     [Fact]
     public async Task Contribution_BuildsAndPostsDomainAggregate()
     {
@@ -45,13 +48,14 @@ public sealed class CoreLedgerUseCaseTests
             HouseholdMemberId,
             HouseholdId,
             IsActive: true);
-        var store = new CapturingPostingStore();
+        var store = new StubLedgerSubmissionStore();
         var useCase = new RecordContributionUseCase(
             references,
             store,
             new FixedTimeProvider(RecordedAtUtc));
 
         var result = await useCase.ExecuteAsync(
+            ContributionIdempotencyKey,
             new RecordContributionCommand(
                 HouseholdId,
                 PortfolioId,
@@ -135,7 +139,7 @@ public sealed class CoreLedgerUseCaseTests
         {
             AccountHouseholdId = OtherHouseholdId
         };
-        var store = new CapturingPostingStore();
+        var store = new StubLedgerSubmissionStore();
         var useCase = new RecordContributionUseCase(
             references,
             store,
@@ -143,6 +147,7 @@ public sealed class CoreLedgerUseCaseTests
 
         var exception = await Assert.ThrowsAsync<ApplicationRuleViolationException>(
             () => useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
                 new RecordContributionCommand(
                     HouseholdId,
                     PortfolioId,
@@ -154,6 +159,7 @@ public sealed class CoreLedgerUseCaseTests
 
         Assert.Contains("same household", exception.Message);
         Assert.Null(store.Transaction);
+        Assert.Equal(0, store.TryCommitCalls);
     }
 
     [Fact]
@@ -163,7 +169,7 @@ public sealed class CoreLedgerUseCaseTests
         references.Currency = new CurrencyReference(
             CurrencyCode.TRY,
             MinorUnitDigits: 0);
-        var store = new CapturingPostingStore();
+        var store = new StubLedgerSubmissionStore();
         var useCase = new RecordContributionUseCase(
             references,
             store,
@@ -171,6 +177,7 @@ public sealed class CoreLedgerUseCaseTests
 
         await Assert.ThrowsAsync<OverflowException>(
             () => useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
                 new RecordContributionCommand(
                     HouseholdId,
                     PortfolioId,
@@ -181,6 +188,278 @@ public sealed class CoreLedgerUseCaseTests
                     ExecutionDate)));
 
         Assert.Null(store.Transaction);
+        Assert.Equal(0, store.TryCommitCalls);
+    }
+
+    [Fact]
+    public async Task Contribution_EquivalentReplay_ReturnsRecordedResultWithoutPosting()
+    {
+        var references =
+            CreateReferenceData();
+
+        var command =
+            CreateContributionCommand();
+
+        var normalized =
+            RecordContributionCommandCanonicalizer
+                .Normalize(command);
+
+        var fingerprint =
+            RecordContributionCommandFingerprint
+                .ComputeCurrent(normalized);
+
+        var originalTransactionId =
+            Guid.Parse(
+                "60000000-0000-0000-0000-000000000001");
+
+        var store =
+            new StubLedgerSubmissionStore
+            {
+                ExistingReceipt =
+                    new LedgerSubmissionReceipt(
+                        new LedgerSubmissionScope(
+                            HouseholdId,
+                            LedgerOperationCodes.RecordContribution,
+                            ContributionIdempotencyKey),
+                        fingerprint,
+                        originalTransactionId,
+                        AssetLotId: null,
+                        CreatedAtUtc: RecordedAtUtc)
+            };
+
+        var useCase =
+            new RecordContributionUseCase(
+                references,
+                store,
+                new FixedTimeProvider(RecordedAtUtc));
+
+        var result =
+            await useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
+                command);
+
+        Assert.Equal(
+            originalTransactionId,
+            result.TransactionId);
+
+        Assert.Equal(1, store.FindReceiptCalls);
+        Assert.Equal(0, store.TryCommitCalls);
+
+        Assert.Equal(0, references.FindLocationCalls);
+        Assert.Equal(0, references.FindAssetCalls);
+        Assert.Equal(0, references.FindCurrencyCalls);
+        Assert.Equal(
+            0,
+            references.FindHouseholdMemberCalls);
+    }
+
+    [Fact]
+    public async Task Contribution_ReusedKeyWithDifferentCommand_ThrowsConflict()
+    {
+        var references =
+            CreateReferenceData();
+
+        var original =
+            CreateContributionCommand();
+
+        var changed =
+            original with
+            {
+                Amount =
+                    Money.FromMinorUnits(
+                        12_346,
+                        CurrencyCode.TRY)
+            };
+
+        var receipt =
+            new LedgerSubmissionReceipt(
+                new LedgerSubmissionScope(
+                    HouseholdId,
+                    LedgerOperationCodes.RecordContribution,
+                    ContributionIdempotencyKey),
+                RecordContributionCommandFingerprint
+                    .ComputeCurrent(original),
+                Guid.Parse(
+                    "60000000-0000-0000-0000-000000000001"),
+                AssetLotId: null,
+                CreatedAtUtc: RecordedAtUtc);
+
+        var store =
+            new StubLedgerSubmissionStore
+            {
+                ExistingReceipt = receipt
+            };
+
+        var useCase =
+            new RecordContributionUseCase(
+                references,
+                store,
+                new FixedTimeProvider(RecordedAtUtc));
+
+        await Assert.ThrowsAsync<
+            IdempotencyConflictException>(
+            () => useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
+                changed));
+
+        Assert.Equal(0, store.TryCommitCalls);
+
+        Assert.Equal(0, references.FindLocationCalls);
+        Assert.Equal(0, references.FindAssetCalls);
+        Assert.Equal(0, references.FindCurrencyCalls);
+    }
+
+    [Fact]
+    public async Task Contribution_EquivalentConcurrentWinner_ReturnsWinnerTransaction()
+    {
+        var references =
+            CreateReferenceData();
+
+        var command =
+            CreateContributionCommand();
+
+        var fingerprint =
+            RecordContributionCommandFingerprint
+                .ComputeCurrent(command);
+
+        var winnerTransactionId =
+            Guid.Parse(
+                "60000000-0000-0000-0000-000000000002");
+
+        var winnerReceipt =
+            new LedgerSubmissionReceipt(
+                new LedgerSubmissionScope(
+                    HouseholdId,
+                    LedgerOperationCodes.RecordContribution,
+                    ContributionIdempotencyKey),
+                fingerprint,
+                winnerTransactionId,
+                AssetLotId: null,
+                CreatedAtUtc: RecordedAtUtc);
+
+        var store =
+            new StubLedgerSubmissionStore
+            {
+                ExistingReceipt = null,
+
+                CommitResult =
+                    new LedgerSubmissionCommitResult(
+                        WasCommitted: false,
+                        Receipt: winnerReceipt)
+            };
+
+        var useCase =
+            new RecordContributionUseCase(
+                references,
+                store,
+                new FixedTimeProvider(RecordedAtUtc));
+
+        var result =
+            await useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
+                command);
+
+        Assert.Equal(
+            winnerTransactionId,
+            result.TransactionId);
+
+        Assert.Equal(1, store.TryCommitCalls);
+    }
+
+    [Fact]
+    public async Task Contribution_ConflictingConcurrentWinner_ThrowsConflict()
+    {
+        var references =
+            CreateReferenceData();
+
+        var command =
+            CreateContributionCommand();
+
+        var differentCommand =
+            command with
+            {
+                Amount =
+                    Money.FromMinorUnits(
+                        99_999,
+                        CurrencyCode.TRY)
+            };
+
+        var winnerReceipt =
+            new LedgerSubmissionReceipt(
+                new LedgerSubmissionScope(
+                    HouseholdId,
+                    LedgerOperationCodes.RecordContribution,
+                    ContributionIdempotencyKey),
+                RecordContributionCommandFingerprint
+                    .ComputeCurrent(differentCommand),
+                Guid.NewGuid(),
+                AssetLotId: null,
+                CreatedAtUtc: RecordedAtUtc);
+
+        var store =
+            new StubLedgerSubmissionStore
+            {
+                CommitResult =
+                    new LedgerSubmissionCommitResult(
+                        WasCommitted: false,
+                        Receipt: winnerReceipt)
+            };
+
+        var useCase =
+            new RecordContributionUseCase(
+                references,
+                store,
+                new FixedTimeProvider(RecordedAtUtc));
+
+        await Assert.ThrowsAsync<
+            IdempotencyConflictException>(
+            () => useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
+                command));
+
+        Assert.Equal(1, store.TryCommitCalls);
+    }
+
+    [Fact]
+    public async Task Contribution_ReplayWithUnsupportedStoredFingerprintVersion_Throws()
+    {
+        var references =
+            CreateReferenceData();
+
+        var command =
+            CreateContributionCommand();
+
+        var store =
+            new StubLedgerSubmissionStore
+            {
+                ExistingReceipt =
+                    new LedgerSubmissionReceipt(
+                        new LedgerSubmissionScope(
+                            HouseholdId,
+                            LedgerOperationCodes.RecordContribution,
+                            ContributionIdempotencyKey),
+                        new CommandFingerprint(
+                            "SHA256",
+                            999,
+                            "irrelevant"),
+                        Guid.NewGuid(),
+                        AssetLotId: null,
+                        CreatedAtUtc: RecordedAtUtc)
+            };
+
+        var useCase =
+            new RecordContributionUseCase(
+                references,
+                store,
+                new FixedTimeProvider(RecordedAtUtc));
+
+        await Assert.ThrowsAsync<
+            NotSupportedException>(
+            () => useCase.ExecuteAsync(
+                ContributionIdempotencyKey,
+                command));
+
+        Assert.Equal(0, store.TryCommitCalls);
     }
 
     private static StubLedgerReferenceData CreateReferenceData()
@@ -220,6 +499,106 @@ public sealed class CoreLedgerUseCaseTests
         return references;
     }
 
+    private static RecordContributionCommand CreateContributionCommand()
+    {
+        return new RecordContributionCommand(
+            HouseholdId,
+            PortfolioId,
+            AccountId,
+            CashAssetId,
+            Money.FromMinorUnits(
+                12_345,
+                CurrencyCode.TRY),
+            CashFlowCategory.Other,
+            ExecutionDate);
+    }
+
+    private sealed class StubLedgerSubmissionStore : ILedgerSubmissionStore
+    {
+        internal LedgerSubmissionReceipt? ExistingReceipt
+        {
+            get;
+            set;
+        }
+
+        internal LedgerSubmissionCommitResult? CommitResult
+        {
+            get;
+            set;
+        }
+
+        internal LedgerSubmissionScope? LastLookupScope
+        {
+            get;
+            private set;
+        }
+
+        internal LedgerSubmissionReceipt? AttemptedReceipt
+        {
+            get;
+            private set;
+        }
+
+        internal LedgerTransaction? Transaction
+        {
+            get;
+            private set;
+        }
+
+        internal IReadOnlyCollection<AssetLot> NewLots
+        {
+            get;
+            private set;
+        } = Array.Empty<AssetLot>();
+
+        internal int FindReceiptCalls
+        {
+            get;
+            private set;
+        }
+
+        internal int TryCommitCalls
+        {
+            get;
+            private set;
+        }
+
+        public Task<LedgerSubmissionReceipt?>
+            FindReceiptAsync(
+                LedgerSubmissionScope scope,
+                CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            FindReceiptCalls++;
+            LastLookupScope = scope;
+
+            return Task.FromResult(
+                ExistingReceipt);
+        }
+
+        public Task<LedgerSubmissionCommitResult>
+            TryCommitAsync(
+                LedgerSubmissionReceipt receipt,
+                LedgerTransaction transaction,
+                IReadOnlyCollection<AssetLot> newLots,
+                CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            TryCommitCalls++;
+            AttemptedReceipt = receipt;
+            Transaction = transaction;
+            NewLots = newLots;
+
+            return Task.FromResult(
+                CommitResult
+                ?? new LedgerSubmissionCommitResult(
+                    WasCommitted: true,
+                    Receipt: receipt));
+        }
+    }
+
     private sealed class StubLedgerReferenceData : ILedgerReferenceData
     {
         internal LedgerLocationReference? Location { get; set; }
@@ -230,12 +609,23 @@ public sealed class CoreLedgerUseCaseTests
 
         internal Dictionary<Guid, Asset> Assets { get; } = [];
 
+        internal int FindLocationCalls { get; private set; }
+
+        internal int FindAssetCalls { get; private set; }
+
+        internal int FindCurrencyCalls { get; private set; }
+
+        internal int FindHouseholdMemberCalls { get; private set; }
+
         public Task<LedgerLocationReference?> FindLocationAsync(
             Guid portfolioId,
             Guid accountId,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            FindLocationCalls++;
+
             return Task.FromResult(Location);
         }
 
@@ -244,7 +634,11 @@ public sealed class CoreLedgerUseCaseTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            FindAssetCalls++;
+
             Assets.TryGetValue(assetId, out var asset);
+
             return Task.FromResult(asset);
         }
 
@@ -253,6 +647,9 @@ public sealed class CoreLedgerUseCaseTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            FindCurrencyCalls++;
+
             return Task.FromResult(Currency);
         }
 
@@ -261,6 +658,9 @@ public sealed class CoreLedgerUseCaseTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            FindHouseholdMemberCalls++;
+
             return Task.FromResult(HouseholdMember);
         }
     }
