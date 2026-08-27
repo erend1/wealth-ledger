@@ -38,6 +38,7 @@ public sealed class CoreLedgerVerticalSliceTests
                 postingStore,
                 timeProvider);
             contributionResult = await contribution.ExecuteAsync(
+                "vertical-slice-contribution-001",
                 new RecordContributionCommand(
                     CoreLedgerTestData.HouseholdId,
                     CoreLedgerTestData.PortfolioId,
