@@ -6,6 +6,9 @@ namespace WealthLedger.Api.Endpoints;
 
 internal static class LedgerEndpoints
 {
+    private const int MaxIdempotencyKeyLength = 256;
+    private const string IdempotencyKeyHeaderName = "Idempotency-Key";
+
     internal static IEndpointRouteBuilder MapLedgerEndpoints(
         this IEndpointRouteBuilder endpoints)
     {
@@ -25,17 +28,54 @@ internal static class LedgerEndpoints
     }
 
     private static async Task<IResult> RecordContributionAsync(
+        HttpRequest httpRequest,
         RecordContributionRequest request,
         RecordContributionUseCase useCase,
         CancellationToken cancellationToken)
     {
-        var result = await useCase.ExecuteAsync(
-            request.ToCommand(),
-            cancellationToken);
+        if (!TryGetIdempotencyKey(
+                httpRequest,
+                out var idempotencyKey,
+                out var error))
+        {
+            return error!;
+        }
 
-        return TypedResults.Created(
-            $"/api/ledger/transactions/{result.TransactionId}",
-            new RecordContributionResponse(result.TransactionId));
+        try
+        {
+            var result =
+                await useCase.ExecuteAsync(
+                    idempotencyKey,
+                    request.ToCommand(),
+                    cancellationToken);
+
+            return Results.Created(
+                $"/api/ledger/transactions/{result.TransactionId}",
+                result);
+        }
+        catch (IdempotencyConflictException exception)
+        {
+            return Results.Problem(
+                statusCode:
+                    StatusCodes.Status409Conflict,
+
+                title:
+                    "Idempotency key conflict",
+
+                detail:
+                    exception.Message,
+
+                extensions:
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] =
+                            IdempotencyConflictException
+                                .ErrorCode
+                    });
+        }
+
+        // Keep your existing validation/domain/persistence
+        // exception mappings below this.
     }
 
     private static async Task<IResult> RecordFundPurchaseAsync(
@@ -52,5 +92,59 @@ internal static class LedgerEndpoints
             new RecordFundPurchaseResponse(
                 result.TransactionId,
                 result.AssetLotId));
+    }
+
+    private static bool TryGetIdempotencyKey(
+        HttpRequest request,
+        out string idempotencyKey,
+        out IResult? error)
+    {
+        if (!request.Headers.TryGetValue(
+                IdempotencyKeyHeaderName,
+                out var values)
+            || values.Count != 1)
+        {
+            idempotencyKey = string.Empty;
+
+            error = Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid idempotency key",
+                detail:
+                    "Exactly one Idempotency-Key header is required.",
+                extensions: new Dictionary<string, object?>
+                {
+                    ["code"] =
+                        "IDEMPOTENCY_KEY_REQUIRED"
+                });
+
+            return false;
+        }
+
+        var value = values[0];
+
+        if (string.IsNullOrWhiteSpace(value)
+            || value.Length > MaxIdempotencyKeyLength
+            || value.Any(char.IsControl))
+        {
+            idempotencyKey = string.Empty;
+
+            error = Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid idempotency key",
+                detail:
+                    $"Idempotency-Key must contain between 1 and {MaxIdempotencyKeyLength} non-control characters.",
+                extensions: new Dictionary<string, object?>
+                {
+                    ["code"] =
+                        "IDEMPOTENCY_KEY_INVALID"
+                });
+
+            return false;
+        }
+
+        idempotencyKey = value;
+        error = null;
+
+        return true;
     }
 }
