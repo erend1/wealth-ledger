@@ -24,6 +24,11 @@ internal static class LedgerEndpoints
                 RecordFundPurchaseAsync)
             .WithName("RecordFundPurchase");
 
+        group.MapGet(
+                "/transactions/{transactionId:guid}",
+                GetTransactionAsync)
+            .WithName("GetLedgerTransaction");
+
         return endpoints;
     }
 
@@ -92,6 +97,31 @@ internal static class LedgerEndpoints
             new RecordFundPurchaseResponse(
                 result.TransactionId,
                 result.AssetLotId));
+    }
+
+    private static async Task<IResult> GetTransactionAsync(
+        Guid transactionId,
+        GetLedgerTransactionUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await useCase.ExecuteAsync(
+                transactionId,
+                cancellationToken);
+
+        if (result is null)
+        {
+            return Results.Problem(
+                statusCode:
+                    StatusCodes.Status404NotFound,
+                title:
+                    "Ledger transaction not found",
+                detail:
+                    "The requested ledger transaction does not exist.");
+        }
+
+        return Results.Ok(
+            result.ToResponse());
     }
 
     private static bool TryGetIdempotencyKey(

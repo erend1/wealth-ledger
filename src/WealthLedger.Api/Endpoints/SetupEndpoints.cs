@@ -26,8 +26,7 @@ internal static class SetupEndpoints
             request.ToCommand(),
             cancellationToken);
 
-        return TypedResults.Created(
-            $"/api/households/{result.HouseholdId}",
+        return Results.Json(
             new InitializeCoreLedgerResponse(
                 result.HouseholdId,
                 result.HouseholdMemberId,
@@ -35,6 +34,8 @@ internal static class SetupEndpoints
                 result.PortfolioId,
                 result.AccountId,
                 result.CashAssetId,
-                result.FundAssetId));
+                result.FundAssetId),
+            statusCode:
+                StatusCodes.Status201Created);
     }
 }

@@ -40,6 +40,8 @@ public static class DependencyInjection
             serviceProvider =>
                 serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
 
+        services.AddScoped<ILedgerTransactionReadStore,EfCoreLedgerTransactionReadStore>();
+
         return services;
     }
 }

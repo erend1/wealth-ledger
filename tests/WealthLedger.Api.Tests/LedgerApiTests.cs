@@ -398,6 +398,34 @@ public sealed class LedgerApiTests
             secondBody.TransactionId);
     }
 
+    [Fact]
+    public async Task Transaction_UnknownId_ReturnsNotFoundProblem()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var response =
+            await client.GetAsync(
+                $"/api/ledger/transactions/{Guid.NewGuid()}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+
+        var problem =
+            await response.Content
+                .ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(
+            "Ledger transaction not found",
+            problem.Title);
+    }
+
     private static async Task<InitializeCoreLedgerResponse>
         InitializeCoreLedgerAsync(HttpClient client)
     {
