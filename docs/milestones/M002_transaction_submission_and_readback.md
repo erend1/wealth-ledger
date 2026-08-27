@@ -1,12 +1,14 @@
 # M002: Retry-Safe Transaction Submission and Readback
 
-Status: Accepted
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-08-27
 
 Accepted: 2026-08-24
+
+Verified: 2026-08-27
 
 ## User outcome
 
@@ -16,18 +18,51 @@ open a stable read-only explanation of the posted transaction.
 
 ## Current evidence
 
-The verified repository currently exposes contribution and fund-purchase write
-endpoints and returns a `Location` under `/api/ledger/transactions/{id}`. No GET
-endpoint resolves that transaction URL.
+M002 is implemented and verified.
 
-`ExternalReference` is accepted as optional source metadata. The current schema
-does not make it unique and the write flow does not provide command-level
-idempotency. Equivalent submissions can therefore create distinct posted
-transactions.
+Both existing ledger write endpoints accept a dedicated `Idempotency-Key`
+that is separate from `ExternalReference`. The retry scope is household plus
+stable operation code plus opaque key.
 
-The setup endpoint returns a household `Location`, but no matching household GET
-route exists. Setup itself already rejects initialization after master data is
-present.
+Application normalizes contribution and fund-purchase commands before computing
+deterministic, versioned SHA-256 fingerprints. Equivalent replay returns the
+original stable result identities without reconstructing or reposting the
+Domain aggregate. Conflicting replay returns a sanitized idempotency conflict.
+
+SQLite persists command receipts in dedicated `CommandReceipt` storage with a
+unique household/operation/key scope. Receipt persistence and the corresponding
+ledger graph participate in the same database transaction. Fund-purchase
+receipts preserve both the transaction identity and acquisition-lot identity.
+
+Real SQLite integration tests cover receipt round trip, atomic rollback, unique
+scope, and concurrent equivalent submissions through independent DbContexts.
+The persisted EF model contains the command-receipt table and its result
+relationships in addition to the existing normalized ledger schema.
+
+The API exposes:
+
+- `POST /api/ledger/contributions`;
+- `POST /api/ledger/fund-purchases`;
+- `GET /api/ledger/transactions/{transactionId}`.
+
+Contribution and fund-purchase Locations now resolve to stable read-only
+transaction projections. Transaction readback includes transaction facts,
+ordered entries, optional cash-flow detail, typed costs, and lots created by
+the transaction.
+
+The one-time setup endpoint retains its `201 Created` response but no longer
+advertises a household Location for which no GET route exists.
+
+Application, Infrastructure, and API tests cover first submission, equivalent
+replay, conflicting replay, purchase replay with stable transaction and lot
+identities, transaction readback, unknown-transaction 404 behavior, setup
+Location behavior, persistence rollback, and concurrent receipt submission.
+
+During final review, two additional API assertions were considered useful
+hardening but not release blockers: directly asserting the serialized
+idempotency-conflict error-code extension, and duplicating zero-row persistence
+assertions at the API boundary for invalid/conflicting requests. The human
+owner accepted the current verification evidence without expanding those tests.
 
 ## Why now
 
@@ -59,6 +94,10 @@ Human approval on 2026-08-24 accepted the following decisions:
 6. **Setup Location.** Keep setup's 201 response but omit a non-resolvable
    `Location` until a household read endpoint exists. Every non-null Location
    emitted by the API must resolve.
+
+Verification outcome: accepted as satisfied on 2026-08-27. The final human
+review accepted the current automated evidence with the two non-blocking API
+test-hardening notes recorded in Current evidence.
 
 The cross-cutting rationale is recorded in
 [`ADR-006`](../decisions/ADR-006-command-idempotency.md).
