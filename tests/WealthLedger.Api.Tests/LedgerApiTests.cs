@@ -41,6 +41,99 @@ public sealed class LedgerApiTests
             $"/api/ledger/transactions/{contribution.TransactionId}",
             contributionResponse.Headers.Location?.OriginalString);
 
+        Assert.NotNull(
+    contributionResponse.Headers.Location);
+
+        var contributionReadResponse =
+            await client.GetAsync(
+                contributionResponse.Headers.Location);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            contributionReadResponse.StatusCode);
+
+        var contributionRead =
+            await contributionReadResponse.Content
+                .ReadFromJsonAsync<LedgerTransactionResponse>();
+
+        Assert.NotNull(contributionRead);
+
+        Assert.Equal(
+            contribution.TransactionId,
+            contributionRead.TransactionId);
+
+        Assert.Equal(
+            setup.HouseholdId,
+            contributionRead.HouseholdId);
+
+        Assert.Equal(
+            "CONTRIBUTION",
+            contributionRead.TypeCode);
+
+        Assert.Equal(
+            "POSTED",
+            contributionRead.StatusCode);
+
+        Assert.Equal(
+            ApiTestData.ExecutionDate,
+            contributionRead.ExecutionDate);
+
+        Assert.Equal(
+            "CONTRIBUTION-TEST",
+            contributionRead.ExternalReference);
+
+        Assert.Equal(
+            "Synthetic API test contribution",
+            contributionRead.Note);
+
+        var contributionEntry =
+            Assert.Single(
+                contributionRead.Entries);
+
+        Assert.Equal(
+            setup.PortfolioId,
+            contributionEntry.PortfolioId);
+
+        Assert.Equal(
+            setup.AccountId,
+            contributionEntry.AccountId);
+
+        Assert.Equal(
+            setup.CashAssetId,
+            contributionEntry.AssetId);
+
+        Assert.Equal(
+            "PRINCIPAL",
+            contributionEntry.RoleCode);
+
+        Assert.Equal(
+            100_000_000_000,
+            contributionEntry.QuantityDeltaRawE8);
+
+        Assert.Null(
+            contributionEntry.UnitPriceRawE8);
+
+        Assert.Null(
+            contributionEntry.PriceCurrencyCode);
+
+        Assert.NotNull(
+            contributionRead.CashFlow);
+
+        Assert.Equal(
+            "ACADEMIC_INCOME",
+            contributionRead.CashFlow.CategoryCode);
+
+        Assert.Equal(
+            setup.HouseholdMemberId,
+            contributionRead.CashFlow.HouseholdMemberId);
+
+        Assert.Empty(
+            contributionRead.Costs);
+
+        Assert.Empty(
+            contributionRead.CreatedLots);
+
+
         var purchaseResponse = await client.PostAsJsonAsync(
             "/api/ledger/fund-purchases",
             CreateFundPurchaseRequest(setup));
@@ -53,6 +146,130 @@ public sealed class LedgerApiTests
         Assert.NotNull(purchase);
         Assert.NotEqual(Guid.Empty, purchase.TransactionId);
         Assert.NotEqual(Guid.Empty, purchase.AssetLotId);
+
+        Assert.NotNull(purchaseResponse.Headers.Location);
+
+        Assert.Equal(
+            $"/api/ledger/transactions/{purchase.TransactionId}",
+            purchaseResponse.Headers.Location.OriginalString);
+
+        var purchaseReadResponse =
+            await client.GetAsync(
+                purchaseResponse.Headers.Location);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            purchaseReadResponse.StatusCode);
+
+        var purchaseRead =
+            await purchaseReadResponse.Content
+                .ReadFromJsonAsync<LedgerTransactionResponse>();
+
+        Assert.NotNull(purchaseRead);
+
+        Assert.Equal(
+            purchase.TransactionId,
+            purchaseRead.TransactionId);
+
+        Assert.Equal(
+            setup.HouseholdId,
+            purchaseRead.HouseholdId);
+
+        Assert.Equal(
+            "BUY",
+            purchaseRead.TypeCode);
+
+        Assert.Equal(
+            "POSTED",
+            purchaseRead.StatusCode);
+
+        Assert.Equal(
+            ApiTestData.ExecutionDate,
+            purchaseRead.ExecutionDate);
+
+        Assert.Equal(
+            "PURCHASE-TEST",
+            purchaseRead.ExternalReference);
+
+        Assert.Equal(
+            "Synthetic API test purchase",
+            purchaseRead.Note);
+
+        Assert.Equal(
+            2,
+            purchaseRead.Entries.Count);
+
+        var purchasePrincipal =
+            Assert.Single(
+                purchaseRead.Entries,
+                    entry =>
+                        entry.RoleCode
+                            == "PRINCIPAL");
+
+        Assert.Equal(
+            setup.FundAssetId,
+            purchasePrincipal.AssetId);
+
+        Assert.Equal(
+            125_000_000,
+            purchasePrincipal.QuantityDeltaRawE8);
+
+        Assert.Equal(
+            20_000_000_000,
+            purchasePrincipal.UnitPriceRawE8);
+
+        Assert.Equal(
+            "TRY",
+            purchasePrincipal.PriceCurrencyCode);
+
+        var purchaseConsideration =
+            Assert.Single(
+                purchaseRead.Entries,
+                    entry =>
+                        entry.RoleCode
+                            == "CONSIDERATION");
+
+        Assert.Equal(
+            setup.CashAssetId,
+            purchaseConsideration.AssetId);
+
+        Assert.Equal(
+            -25_000_000_000,
+            purchaseConsideration.QuantityDeltaRawE8);
+
+        Assert.Null(
+            purchaseRead.CashFlow);
+
+        Assert.Empty(
+            purchaseRead.Costs);
+
+        var createdLot =
+            Assert.Single(
+                purchaseRead.CreatedLots);
+
+        Assert.Equal(
+            purchase.AssetLotId,
+            createdLot.AssetLotId);
+
+        Assert.Equal(
+            setup.FundAssetId,
+            createdLot.AssetId);
+
+        Assert.Equal(
+            purchasePrincipal.EntryId,
+            createdLot.OpeningTransactionEntryId);
+
+        Assert.Equal(
+            25_000,
+            createdLot.OriginalCostBasisMinorUnits);
+
+        Assert.Equal(
+            "TRY",
+            createdLot.CostBasisCurrencyCode);
+
+        Assert.Equal(
+            "KNOWN",
+            createdLot.CostBasisStatusCode);
 
         var fundPosition = await GetPositionAsync(
             client,
@@ -172,10 +389,16 @@ public sealed class LedgerApiTests
                 services.RemoveAll<ILedgerSubmissionStore>();
 
                 services.AddScoped<FailingPostingStore>();
+
                 services.AddScoped<ILedgerPostingStore>(
-                    _ => new FailingPostingStore());
+                    serviceProvider =>
+                        serviceProvider.GetRequiredService<
+                            FailingPostingStore>());
+
                 services.AddScoped<ILedgerSubmissionStore>(
-                    _ => new FailingPostingStore());
+                    serviceProvider =>
+                        serviceProvider.GetRequiredService<
+                            FailingPostingStore>());
             }));
 
         using var client = failingFactory.CreateClient();

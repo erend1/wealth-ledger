@@ -54,9 +54,10 @@ internal static class LedgerEndpoints
                     request.ToCommand(),
                     cancellationToken);
 
-            return Results.Created(
+            return TypedResults.Created(
                 $"/api/ledger/transactions/{result.TransactionId}",
-                result);
+                new RecordContributionResponse(
+                    result.TransactionId));
         }
         catch (IdempotencyConflictException exception)
         {
