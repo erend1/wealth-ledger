@@ -649,6 +649,187 @@ public sealed class LedgerApiTests
             problem.Title);
     }
 
+    [Fact]
+    public async Task FundPurchase_WithoutIdempotencyKey_ReturnsBadRequest()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var setup =
+            await InitializeCoreLedgerAsync(
+                client);
+
+        var response =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                CreateFundPurchaseRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task FundPurchase_EquivalentReplay_ReturnsSameTransactionAndLot()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var setup =
+            await InitializeCoreLedgerAsync(
+                client);
+
+        const string key =
+            "api-fund-purchase-replay-001";
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var firstResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                CreateFundPurchaseRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
+
+        var first =
+            await firstResponse.Content
+                .ReadFromJsonAsync<
+                    RecordFundPurchaseResponse>();
+
+        Assert.NotNull(first);
+
+        var secondResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                CreateFundPurchaseRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            secondResponse.StatusCode);
+
+        var second =
+            await secondResponse.Content
+                .ReadFromJsonAsync<
+                    RecordFundPurchaseResponse>();
+
+        Assert.NotNull(second);
+
+        Assert.Equal(
+            first.TransactionId,
+            second.TransactionId);
+
+        Assert.Equal(
+            first.AssetLotId,
+            second.AssetLotId);
+
+        Assert.Equal(
+            firstResponse.Headers.Location,
+            secondResponse.Headers.Location);
+
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var context =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    WealthLedgerDbContext>();
+
+        Assert.Equal(
+            1,
+            await context.CommandReceipts
+                .CountAsync(x =>
+                    x.OperationCode
+                        == LedgerOperationCodes
+                            .RecordFundPurchase
+                    && x.IdempotencyKey
+                        == key));
+
+        Assert.Equal(
+            1,
+            await context.AssetLots
+                .CountAsync());
+
+        Assert.Equal(
+            1,
+            await context.LotEntryAllocations
+                .CountAsync());
+    }
+
+    [Fact]
+    public async Task FundPurchase_ReusedKeyForDifferentCommand_ReturnsConflict()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var setup =
+            await InitializeCoreLedgerAsync(
+                client);
+
+        const string key =
+            "api-fund-purchase-conflict-001";
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var original =
+            CreateFundPurchaseRequest(setup);
+
+        var firstResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                original);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
+
+        var changed =
+            original with
+            {
+                FundQuantityRawE8 =
+                    original.FundQuantityRawE8
+                    + 1
+            };
+
+        var changedResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                changed);
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            changedResponse.StatusCode);
+
+        var problem =
+            await changedResponse.Content
+                .ReadFromJsonAsync<
+                    ProblemDetails>();
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(
+            StatusCodes.Status409Conflict,
+            problem.Status);
+
+        Assert.Equal(
+            "Idempotency key conflict",
+            problem.Title);
+    }
+
     private static async Task<InitializeCoreLedgerResponse>
         InitializeCoreLedgerAsync(HttpClient client)
     {

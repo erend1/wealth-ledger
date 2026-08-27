@@ -85,19 +85,53 @@ internal static class LedgerEndpoints
     }
 
     private static async Task<IResult> RecordFundPurchaseAsync(
+        HttpRequest httpRequest,
         RecordFundPurchaseRequest request,
         RecordFundPurchaseUseCase useCase,
         CancellationToken cancellationToken)
     {
-        var result = await useCase.ExecuteAsync(
-            request.ToCommand(),
-            cancellationToken);
+        if (!TryGetIdempotencyKey(
+                httpRequest,
+                out var idempotencyKey,
+                out var error))
+        {
+            return error!;
+        }
 
-        return TypedResults.Created(
-            $"/api/ledger/transactions/{result.TransactionId}",
-            new RecordFundPurchaseResponse(
-                result.TransactionId,
-                result.AssetLotId));
+        try
+        {
+            var result =
+                await useCase.ExecuteAsync(
+                    idempotencyKey,
+                    request.ToCommand(),
+                    cancellationToken);
+
+            return TypedResults.Created(
+                $"/api/ledger/transactions/{result.TransactionId}",
+                new RecordFundPurchaseResponse(
+                    result.TransactionId,
+                    result.AssetLotId));
+        }
+        catch (IdempotencyConflictException exception)
+        {
+            return Results.Problem(
+                statusCode:
+                    StatusCodes.Status409Conflict,
+
+                title:
+                    "Idempotency key conflict",
+
+                detail:
+                    exception.Message,
+
+                extensions:
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] =
+                            IdempotencyConflictException
+                                .ErrorCode
+                    });
+        }
     }
 
     private static async Task<IResult> GetTransactionAsync(
