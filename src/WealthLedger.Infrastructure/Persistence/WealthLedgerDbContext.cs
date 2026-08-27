@@ -42,6 +42,9 @@ public sealed class WealthLedgerDbContext : DbContext
     internal DbSet<PhysicalGoldLotDetailRow> PhysicalGoldLotDetails
         => Set<PhysicalGoldLotDetailRow>();
 
+    internal DbSet<CommandReceiptRow> CommandReceipts
+        => Set<CommandReceiptRow>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(SqliteConnectionPragmaInterceptor.Instance);
@@ -63,5 +66,6 @@ public sealed class WealthLedgerDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AssetLotConfiguration());
         modelBuilder.ApplyConfiguration(new LotEntryAllocationConfiguration());
         modelBuilder.ApplyConfiguration(new PhysicalGoldLotDetailConfiguration());
+        modelBuilder.ApplyConfiguration(new CommandReceiptConfiguration());
     }
 }

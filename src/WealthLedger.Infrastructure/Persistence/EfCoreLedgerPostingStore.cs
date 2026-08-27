@@ -7,8 +7,17 @@ using WealthLedger.Infrastructure.Persistence.Rows;
 
 namespace WealthLedger.Infrastructure.Persistence;
 
-public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore
+public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore, ILedgerSubmissionStore
 {
+    private sealed record PreparedLedgerGraph(
+        LedgerTransactionRow Transaction,
+        TransactionEntryRow[] Entries,
+        TransactionCostComponentRow[] Costs,
+        CashFlowDetailRow? CashFlow,
+        AssetLotRow[] Lots,
+        LotEntryAllocationRow[] Allocations,
+        PhysicalGoldLotDetailRow[] PhysicalGoldDetails);
+
     private readonly WealthLedgerDbContext _dbContext;
 
     public EfCoreLedgerPostingStore(WealthLedgerDbContext dbContext)
@@ -22,6 +31,168 @@ public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore
         IReadOnlyCollection<AssetLot> newLots,
         CancellationToken cancellationToken = default)
     {
+        var graph =
+            PrepareLedgerGraph(
+                transaction,
+                newLots);
+
+        try
+        {
+            await using var databaseTransaction =
+                await _dbContext.Database
+                    .BeginTransactionAsync(
+                        cancellationToken);
+
+            AddGraph(graph);
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
+
+            MarkPosted(
+                graph,
+                transaction);
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
+
+            await databaseTransaction.CommitAsync(
+                cancellationToken);
+        }
+        catch (Exception exception)
+            when (exception is
+                DbUpdateException or SqliteException)
+        {
+            throw new CoreLedgerPersistenceException(
+                "The posted ledger transaction could not be persisted atomically.",
+                exception);
+        }
+    }
+
+    public async Task<LedgerSubmissionReceipt?> FindReceiptAsync(
+        LedgerSubmissionScope scope,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var row =
+            await _dbContext.CommandReceipts
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    x =>
+                        x.HouseholdId == scope.HouseholdId
+                        && x.OperationCode == scope.OperationCode
+                        && x.IdempotencyKey == scope.IdempotencyKey,
+                    cancellationToken);
+
+        return row is null
+            ? null
+            : ToReceipt(row);
+    }
+
+    public async Task<LedgerSubmissionCommitResult> TryCommitAsync(
+        LedgerSubmissionReceipt receipt,
+        LedgerTransaction transaction,
+        IReadOnlyCollection<AssetLot> newLots,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(receipt);
+        ArgumentNullException.ThrowIfNull(transaction);
+        ArgumentNullException.ThrowIfNull(newLots);
+
+        var lots =
+            newLots.ToArray();
+
+        ValidateReceipt(
+            receipt,
+            transaction,
+            lots);
+
+        var graph =
+            PrepareLedgerGraph(
+                transaction,
+                lots);
+
+        var receiptRow =
+            MapReceipt(receipt);
+
+        var writingReceipt = false;
+
+        try
+        {
+            await using (
+                var databaseTransaction =
+                    await _dbContext.Database
+                        .BeginTransactionAsync(
+                            cancellationToken))
+            {
+                AddGraph(graph);
+
+                await _dbContext.SaveChangesAsync(
+                    cancellationToken);
+
+                writingReceipt = true;
+
+                _dbContext.CommandReceipts.Add(
+                    receiptRow);
+
+                await _dbContext.SaveChangesAsync(
+                    cancellationToken);
+
+                writingReceipt = false;
+
+                MarkPosted(
+                    graph,
+                    transaction);
+
+                await _dbContext.SaveChangesAsync(
+                    cancellationToken);
+
+                await databaseTransaction.CommitAsync(
+                    cancellationToken);
+            }
+
+            return new LedgerSubmissionCommitResult(
+                WasCommitted: true,
+                Receipt: receipt);
+        }
+        catch (DbUpdateException exception)
+            when (
+                writingReceipt
+                && IsUniqueConstraintViolation(
+                    exception))
+        {
+            _dbContext.ChangeTracker.Clear();
+
+            var winner =
+                await FindReceiptAsync(
+                    receipt.Scope,
+                    cancellationToken);
+
+            if (winner is not null)
+            {
+                return new LedgerSubmissionCommitResult(
+                    WasCommitted: false,
+                    Receipt: winner);
+            }
+
+            throw new CoreLedgerPersistenceException(
+                "The ledger submission collided with another writer but no committed receipt could be recovered.",
+                exception);
+        }
+        catch (Exception exception)
+            when (exception is
+                DbUpdateException or SqliteException)
+        {
+            throw new CoreLedgerPersistenceException(
+                "The ledger submission could not be persisted atomically.",
+                exception);
+        }
+    }
+
+    private static PreparedLedgerGraph PrepareLedgerGraph(
+        LedgerTransaction transaction,
+        IReadOnlyCollection<AssetLot> newLots)
+    {
         ArgumentNullException.ThrowIfNull(transaction);
         ArgumentNullException.ThrowIfNull(newLots);
 
@@ -34,63 +205,211 @@ public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore
         }
 
         var lots = newLots.ToArray();
+
         ValidateNewLots(transaction, lots);
 
-        var transactionRow = MapDraftTransaction(transaction);
-        var entryRows = transaction.Entries
-            .Select(entry => MapEntry(transaction, entry))
-            .ToArray();
-        var costRows = transaction.Costs
-            .Select(cost => MapCost(transaction, cost))
-            .ToArray();
-        var cashFlowRow = MapCashFlowDetail(transaction);
-        var lotRows = lots
-            .Select(MapLot)
-            .ToArray();
-        var allocationRows = lots
-            .SelectMany(MapAllocations)
-            .ToArray();
-        var physicalGoldRows = lots
-            .Select(MapPhysicalGoldDetail)
-            .Where(row => row is not null)
-            .Cast<PhysicalGoldLotDetailRow>()
-            .ToArray();
+        return new PreparedLedgerGraph(
+            MapDraftTransaction(transaction),
 
-        try
+            transaction.Entries
+                .Select(entry => MapEntry(transaction, entry))
+                .ToArray(),
+
+            transaction.Costs
+                .Select(cost => MapCost(transaction, cost))
+                .ToArray(),
+
+            MapCashFlowDetail(transaction),
+
+            lots
+                .Select(MapLot)
+                .ToArray(),
+
+            lots
+                .SelectMany(MapAllocations)
+                .ToArray(),
+
+            lots
+                .Select(MapPhysicalGoldDetail)
+                .Where(row => row is not null)
+                .Cast<PhysicalGoldLotDetailRow>()
+                .ToArray());
+    }
+
+    private void AddGraph(
+        PreparedLedgerGraph graph)
+    {
+        _dbContext.LedgerTransactions.Add(
+            graph.Transaction);
+
+        _dbContext.TransactionEntries.AddRange(
+            graph.Entries);
+
+        _dbContext.TransactionCostComponents.AddRange(
+            graph.Costs);
+
+        if (graph.CashFlow is not null)
         {
-            await using var databaseTransaction =
-                await _dbContext.Database.BeginTransactionAsync(
-                    cancellationToken);
-
-            _dbContext.LedgerTransactions.Add(transactionRow);
-            _dbContext.TransactionEntries.AddRange(entryRows);
-            _dbContext.TransactionCostComponents.AddRange(costRows);
-
-            if (cashFlowRow is not null)
-            {
-                _dbContext.CashFlowDetails.Add(cashFlowRow);
-            }
-
-            _dbContext.AssetLots.AddRange(lotRows);
-            _dbContext.LotEntryAllocations.AddRange(allocationRows);
-            _dbContext.PhysicalGoldLotDetails.AddRange(physicalGoldRows);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            transactionRow.Status = TransactionStatus.Posted;
-            transactionRow.PostedAtUtc =
-                transaction.PostedAtUtc.Value.UtcDateTime;
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await databaseTransaction.CommitAsync(cancellationToken);
+            _dbContext.CashFlowDetails.Add(
+                graph.CashFlow);
         }
-        catch (Exception exception)
-            when (exception is DbUpdateException or SqliteException)
+
+        _dbContext.AssetLots.AddRange(
+            graph.Lots);
+
+        _dbContext.LotEntryAllocations.AddRange(
+            graph.Allocations);
+
+        _dbContext.PhysicalGoldLotDetails.AddRange(
+            graph.PhysicalGoldDetails);
+    }
+
+    private static void ValidateReceipt(
+        LedgerSubmissionReceipt receipt,
+        LedgerTransaction transaction,
+        IReadOnlyCollection<AssetLot> newLots)
+    {
+        ArgumentNullException.ThrowIfNull(receipt);
+
+        if (receipt.Scope.HouseholdId
+            != transaction.HouseholdId)
         {
-            throw new CoreLedgerPersistenceException(
-                "The posted ledger transaction could not be persisted atomically.",
-                exception);
+            throw new ArgumentException(
+                "The submission receipt household must match the ledger transaction household.",
+                nameof(receipt));
         }
+
+        if (receipt.TransactionId
+            != transaction.Id)
+        {
+            throw new ArgumentException(
+                "The submission receipt transaction ID must match the ledger transaction ID.",
+                nameof(receipt));
+        }
+
+        if (receipt.AssetLotId is Guid assetLotId
+            && !newLots.Any(x => x.Id == assetLotId))
+        {
+            throw new ArgumentException(
+                "The submission receipt asset-lot result must belong to the newly persisted lot set.",
+                nameof(receipt));
+        }
+
+        if (receipt.Scope.HouseholdId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "The submission receipt household ID cannot be empty.",
+                nameof(receipt));
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                receipt.Scope.OperationCode))
+        {
+            throw new ArgumentException(
+                "The submission operation code is required.",
+                nameof(receipt));
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                receipt.Scope.IdempotencyKey))
+        {
+            throw new ArgumentException(
+                "The idempotency key is required.",
+                nameof(receipt));
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                receipt.Fingerprint.AlgorithmCode)
+            || receipt.Fingerprint.Version < 1
+            || string.IsNullOrWhiteSpace(
+                receipt.Fingerprint.Value))
+        {
+            throw new ArgumentException(
+                "The submission fingerprint is invalid.",
+                nameof(receipt));
+        }
+    }
+
+    private static CommandReceiptRow MapReceipt(
+        LedgerSubmissionReceipt receipt)
+    {
+        return new CommandReceiptRow
+        {
+            HouseholdId =
+                receipt.Scope.HouseholdId,
+
+            OperationCode =
+                receipt.Scope.OperationCode,
+
+            IdempotencyKey =
+                receipt.Scope.IdempotencyKey,
+
+            FingerprintAlgorithmCode =
+                receipt.Fingerprint.AlgorithmCode,
+
+            FingerprintVersion =
+                receipt.Fingerprint.Version,
+
+            FingerprintValue =
+                receipt.Fingerprint.Value,
+
+            ResultTransactionId =
+                receipt.TransactionId,
+
+            ResultAssetLotId =
+                receipt.AssetLotId,
+
+            CreatedAtUtc =
+                receipt.CreatedAtUtc.UtcDateTime
+        };
+    }
+
+    private static LedgerSubmissionReceipt ToReceipt(
+        CommandReceiptRow row)
+    {
+        return new LedgerSubmissionReceipt(
+            new LedgerSubmissionScope(
+                row.HouseholdId,
+                row.OperationCode,
+                row.IdempotencyKey),
+
+            new CommandFingerprint(
+                row.FingerprintAlgorithmCode,
+                row.FingerprintVersion,
+                row.FingerprintValue),
+
+            row.ResultTransactionId,
+            row.ResultAssetLotId,
+
+            new DateTimeOffset(
+                DateTime.SpecifyKind(
+                    row.CreatedAtUtc,
+                    DateTimeKind.Utc)));
+    }
+
+    private static bool IsUniqueConstraintViolation(
+        DbUpdateException exception)
+    {
+        if (exception.InnerException
+            is not SqliteException sqliteException)
+        {
+            return false;
+        }
+
+        return sqliteException.SqliteErrorCode == 19
+            && sqliteException.SqliteExtendedErrorCode
+                is 1555 or 2067;
+    }
+
+    private static void MarkPosted(
+        PreparedLedgerGraph graph,
+        LedgerTransaction transaction)
+    {
+        graph.Transaction.Status =
+            TransactionStatus.Posted;
+
+        graph.Transaction.PostedAtUtc =
+            transaction.PostedAtUtc!.Value.UtcDateTime;
     }
 
     private static void ValidateNewLots(

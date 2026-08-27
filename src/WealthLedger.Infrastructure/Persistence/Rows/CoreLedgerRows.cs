@@ -234,3 +234,24 @@ internal sealed class PhysicalGoldLotDetailRow
 
     public string? Note { get; set; }
 }
+
+internal sealed class CommandReceiptRow
+{
+    public Guid HouseholdId { get; set; }
+
+    public string OperationCode { get; set; } = null!;
+
+    public string IdempotencyKey { get; set; } = null!;
+
+    public string FingerprintAlgorithmCode { get; set; } = null!;
+
+    public int FingerprintVersion { get; set; }
+
+    public string FingerprintValue { get; set; } = null!;
+
+    public Guid ResultTransactionId { get; set; }
+
+    public Guid? ResultAssetLotId { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
+}
