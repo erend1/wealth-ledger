@@ -1,5 +1,6 @@
 ﻿using WealthLedger.Domain.Common;
 using WealthLedger.Domain.Ledger;
+using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.ValueObjects;
 
 namespace WealthLedger.Domain.Tests.Ledger
@@ -573,6 +574,299 @@ namespace WealthLedger.Domain.Tests.Ledger
                     Guid.NewGuid(),
                     original,
                     CreatedAt.AddHours(1)));
+        }
+
+        [Fact]
+        public void ReconstitutePosted_PreservesPersistedIdentityAndHistory()
+        {
+            var entryId = Guid.NewGuid();
+            var costId = Guid.NewGuid();
+
+            var transaction =
+                LedgerTransaction.ReconstitutePosted(
+                    Guid.NewGuid(),
+                    HouseholdId,
+                    TransactionType.Buy,
+                    CreatedAt,
+                    PostedAt,
+                    orderDate: null,
+                    executionDate: ExecutionDate,
+                    settlementDate: null,
+                    reversalOfTransactionId: null,
+                    externalReference: "BANK-123",
+                    note: "Imported history",
+                    entries:
+                    [
+                        new LedgerTransactionEntrySnapshot(
+                    entryId,
+                    0,
+                    PortfolioId,
+                    AccountId,
+                    AisAssetId,
+                    QuantityDelta.FromDecimal(10m),
+                    EntryRole.Principal,
+                    UnitPrice.FromDecimal(
+                        5m,
+                        CurrencyCode.TRY)),
+                new LedgerTransactionEntrySnapshot(
+                    Guid.NewGuid(),
+                    1,
+                    PortfolioId,
+                    AccountId,
+                    TryAssetId,
+                    QuantityDelta.FromDecimal(-50m),
+                    EntryRole.Consideration,
+                    null)
+                    ],
+                    costs:
+                    [
+                        new LedgerTransactionCostSnapshot(
+                    costId,
+                    CostType.Commission,
+                    CostTreatment.IncludedInConsideration,
+                    Money.FromMinorUnits(
+                        100,
+                        CurrencyCode.TRY),
+                    "Commission")
+                    ],
+                    cashFlowDetail: null);
+
+            Assert.Equal(
+                TransactionStatus.Posted,
+                transaction.Status);
+
+            Assert.Equal(
+                PostedAt,
+                transaction.PostedAtUtc);
+
+            Assert.Equal(
+                entryId,
+                transaction.Entries
+                    .Single(x => x.Sequence == 0)
+                    .Id);
+
+            Assert.Equal(
+                costId,
+                transaction.Costs.Single().Id);
+        }
+
+        [Fact]
+        public void ReconstitutePosted_RestoresContributionCashFlow()
+        {
+            var memberId = Guid.NewGuid();
+
+            var transaction =
+                LedgerTransaction.ReconstitutePosted(
+                    Guid.NewGuid(),
+                    HouseholdId,
+                    TransactionType.Contribution,
+                    CreatedAt,
+                    PostedAt,
+                    null,
+                    ExecutionDate,
+                    null,
+                    null,
+                    null,
+                    null,
+                    [
+                        new LedgerTransactionEntrySnapshot(
+                    Guid.NewGuid(),
+                    0,
+                    PortfolioId,
+                    AccountId,
+                    TryAssetId,
+                    QuantityDelta.FromDecimal(30_000m),
+                    EntryRole.Principal,
+                    null)
+                    ],
+                    [],
+                    new LedgerCashFlowSnapshot(
+                        CashFlowCategory.Salary,
+                        memberId));
+
+            Assert.Equal(
+                CashFlowCategory.Salary,
+                transaction.CashFlowDetail!.Category);
+
+            Assert.Equal(
+                memberId,
+                transaction.CashFlowDetail.HouseholdMemberId);
+        }
+
+        [Fact]
+        public void ReconstitutedPostedTransaction_CanCreateExactReversal()
+        {
+            var original =
+                LedgerTransaction.ReconstitutePosted(
+                    Guid.NewGuid(),
+                    HouseholdId,
+                    TransactionType.Adjustment,
+                    CreatedAt,
+                    PostedAt,
+                    null,
+                    ExecutionDate,
+                    null,
+                    null,
+                    null,
+                    null,
+                    [
+                        new LedgerTransactionEntrySnapshot(
+                    Guid.NewGuid(),
+                    0,
+                    PortfolioId,
+                    AccountId,
+                    AisAssetId,
+                    QuantityDelta.FromDecimal(125m),
+                    EntryRole.Adjustment,
+                    null)
+                    ],
+                    [],
+                    null);
+
+            var reversal =
+                LedgerTransaction.CreateReversal(
+                    Guid.NewGuid(),
+                    original,
+                    PostedAt.AddDays(1),
+                    "Correcting persisted history.");
+
+            Assert.Equal(
+                original.Id,
+                reversal.ReversalOfTransactionId);
+
+            Assert.Equal(
+                -125m,
+                reversal.Entries.Single()
+                    .QuantityDelta.ToDecimal());
+
+            Assert.Equal(
+                original.ExecutionDate,
+                reversal.ExecutionDate);
+        }
+
+        [Fact]
+        public void Reversal_OfLongMinValueQuantity_ThrowsOverflow()
+        {
+            var original =
+                LedgerTransaction.ReconstitutePosted(
+                    Guid.NewGuid(),
+                    HouseholdId,
+                    TransactionType.Adjustment,
+                    CreatedAt,
+                    PostedAt,
+                    null,
+                    ExecutionDate,
+                    null,
+                    null,
+                    null,
+                    null,
+                    [
+                        new LedgerTransactionEntrySnapshot(
+                    Guid.NewGuid(),
+                    0,
+                    PortfolioId,
+                    AccountId,
+                    AisAssetId,
+                    QuantityDelta.FromRaw(long.MinValue),
+                    EntryRole.Adjustment,
+                    null)
+                    ],
+                    [],
+                    null);
+
+            Assert.Throws<OverflowException>(
+                () => LedgerTransaction.CreateReversal(
+                    Guid.NewGuid(),
+                    original,
+                    PostedAt.AddDays(1)));
+        }
+
+        [Fact]
+        public void Reconstitute_PreservesAllocationIdentityAndQuantity()
+        {
+            var lotId = Guid.NewGuid();
+            var assetId = Guid.NewGuid();
+            var openingEntryId = Guid.NewGuid();
+            var saleEntryId = Guid.NewGuid();
+            var openingAllocationId = Guid.NewGuid();
+            var saleAllocationId = Guid.NewGuid();
+
+            var lot =
+                AssetLot.Reconstitute(
+                    lotId,
+                    assetId,
+                    openingEntryId,
+                    new DateOnly(2026, 1, 10),
+                    CostBasis.Unknown(),
+                    null,
+                    CreatedAt,
+                    [
+                        new AssetLotAllocationSnapshot(
+                    openingAllocationId,
+                    openingEntryId,
+                    QuantityDelta.FromDecimal(1000m)),
+                new AssetLotAllocationSnapshot(
+                    saleAllocationId,
+                    saleEntryId,
+                    QuantityDelta.FromDecimal(-400m))
+                    ]);
+
+            Assert.Equal(lotId, lot.Id);
+            Assert.Equal(600m, lot.CurrentQuantity.ToDecimal());
+
+            Assert.Contains(
+                lot.Allocations,
+                x => x.Id == openingAllocationId);
+
+            Assert.Contains(
+                lot.Allocations,
+                x => x.Id == saleAllocationId);
+        }
+
+        [Fact]
+        public void Allocate_ReconstitutedLot_CanRestoreDisposedQuantity()
+        {
+            var assetId = Guid.NewGuid();
+            var openingEntryId = Guid.NewGuid();
+
+            var lot =
+                AssetLot.Reconstitute(
+                    Guid.NewGuid(),
+                    assetId,
+                    openingEntryId,
+                    new DateOnly(2026, 1, 10),
+                    CostBasis.Unknown(),
+                    null,
+                    CreatedAt,
+                    [
+                        new AssetLotAllocationSnapshot(
+                    Guid.NewGuid(),
+                    openingEntryId,
+                    QuantityDelta.FromDecimal(1000m)),
+                new AssetLotAllocationSnapshot(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    QuantityDelta.FromDecimal(-400m))
+                    ]);
+
+            var reversalEntry =
+                new TransactionEntry(
+                    Guid.NewGuid(),
+                    0,
+                    PortfolioId,
+                    AccountId,
+                    assetId,
+                    QuantityDelta.FromDecimal(400m),
+                    EntryRole.Principal,
+                    null);
+
+            lot.Allocate(
+                reversalEntry,
+                reversalEntry.QuantityDelta);
+
+            Assert.Equal(
+                1000m,
+                lot.CurrentQuantity.ToDecimal());
         }
     }
 }
