@@ -79,9 +79,6 @@ internal static class LedgerEndpoints
                                 .ErrorCode
                     });
         }
-
-        // Keep your existing validation/domain/persistence
-        // exception mappings below this.
     }
 
     private static async Task<IResult> RecordFundPurchaseAsync(

@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-08-27
+Last reviewed: 2026-08-28
 
 ## How to read this roadmap
 

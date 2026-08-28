@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-08-27
+As of: 2026-08-28
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
@@ -18,7 +18,7 @@ from immutable posted entry history.
 
 Equivalent retries cannot create duplicate contribution or fund-purchase
 history. A successful fund-purchase replay preserves both the original
-transaction identity and acquisition-lot identity.	
+transaction identity and acquisition-lot identity.
 
 ## Delivery planning
 
@@ -155,24 +155,19 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 
 Results:
 
-- Domain test project: passing.
-- Application test project: passing.
-- Infrastructure test project against real SQLite files: passing.
-- API test project against real SQLite files: passing.
-- Full solution test run: passing.
-- Formatting drift: none at the verified checkpoint.
-- EF model drift: none at the verified checkpoint.
+- Domain tests: 76 passed, 0 failed.
+- Application tests: 33 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 37 passed, 0 failed.
+- API tests against real SQLite files: 17 passed, 0 failed.
+- Total: 163 passed, 0 failed.
+- Formatting drift: none.
+- EF model drift: none.
 
 The M002 suite additionally proves deterministic contribution and fund-purchase
 fingerprints, equivalent replay, replay conflicts, stable purchase transaction
 and lot identities, atomic command-receipt persistence, concurrent receipt
 submission, resolvable transaction Locations, transaction readback, sanitized
 404/409 behavior, and removal of the unsupported setup Location.
-
-Two further API assertions were reviewed during closeout and intentionally left
-as non-blocking test hardening: directly asserting the serialized conflict
-error-code extension and repeating zero-mutation persistence assertions at the
-HTTP boundary.
 
 The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
@@ -208,5 +203,7 @@ Do not start live market data, provider-specific integration, optimization, AI/L
 - Authentication and authorization.
 - Backup, encryption-at-rest, and deployment for the local database.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
+- SQLite concurrency policy outside the scoped idempotent-submission collision
+  handled by M002.
 
 Record a new ADR only when one of these or another cross-cutting architectural choice is accepted or superseded.

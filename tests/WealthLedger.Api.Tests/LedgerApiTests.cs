@@ -42,7 +42,7 @@ public sealed class LedgerApiTests
             contributionResponse.Headers.Location?.OriginalString);
 
         Assert.NotNull(
-    contributionResponse.Headers.Location);
+            contributionResponse.Headers.Location);
 
         var contributionReadResponse =
             await client.GetAsync(

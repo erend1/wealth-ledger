@@ -31,7 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ILedgerReferenceData, EfCoreLedgerReferenceData>();
         services.AddScoped<IPostedEntrySource, EfCorePostedEntrySource>();
         services.AddScoped<ICoreLedgerSetupStore, EfCoreLedgerSetupStore>();
-        
+
         services.AddScoped<EfCoreLedgerPostingStore>();
         services.AddScoped<ILedgerPostingStore>(
             serviceProvider =>
@@ -40,7 +40,7 @@ public static class DependencyInjection
             serviceProvider =>
                 serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
 
-        services.AddScoped<ILedgerTransactionReadStore,EfCoreLedgerTransactionReadStore>();
+        services.AddScoped<ILedgerTransactionReadStore, EfCoreLedgerTransactionReadStore>();
 
         return services;
     }

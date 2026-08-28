@@ -197,14 +197,15 @@ public sealed class RecordFundPurchaseUseCase
 
         transaction.Post(recordedAtUtc);
 
-        var receipt = new LedgerSubmissionReceipt(
-        scope,
-        fingerprint,
-        transaction.Id,
-        AssetLotId:
-            assetLot.Id,
-        CreatedAtUtc:
-            recordedAtUtc);
+        var receipt =
+            new LedgerSubmissionReceipt(
+                scope,
+                fingerprint,
+                transaction.Id,
+                AssetLotId:
+                    assetLot.Id,
+                CreatedAtUtc:
+                    recordedAtUtc);
 
         var commitResult =
             await _submissionStore.TryCommitAsync(
