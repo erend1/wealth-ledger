@@ -18,6 +18,8 @@ Statuses used here:
 
 - **Verified**: present in source and verified by the repository's required
   checks.
+- **Accepted**: the bounded milestone contract has human approval and may be
+  implemented, but is not yet verified behavior.
 - **Proposed**: specified for review but not yet accepted for implementation.
 - **Planned**: ordered direction without a complete implementation contract.
 - **Deferred**: intentionally outside the current delivery horizon.
@@ -39,7 +41,7 @@ Statuses used here:
 |---|---|---|---|
 | M001 | Verified | Core immutable ledger, fixed-point persistence, setup, contribution, fund purchase, lot creation, and one position query | Existing checkpoint in `PROJECT_STATE.md` |
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
-| M003 | Planned | Posted reversal and correction workflow through Application, SQLite, and HTTP | M002 readback and duplicate-write safety |
+| M003 | Accepted | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; implementation not yet started |
 | M004 | Planned | Safe local data operations: explicit data location, source-control exclusions, backup, restore verification, and local exposure policy | Accepted operations and encryption decisions where needed |
 | M005 | Planned | Master-data and ledger navigation queries with stable, human-oriented contracts | M002 transaction read model |
 | M006 | Planned | UI architecture decision, application shell, first-run experience, and formatted value components | Accepted UI ADR; M004 local safety |
@@ -65,9 +67,11 @@ submission receipts atomically with ledger results, protects contribution and
 fund-purchase writes from equivalent retry duplication, and makes transaction
 Locations resolvable through a stable read model.
 
-M003 is the next planned candidate. It introduces the posted
-reversal/correction workflow required before broader real-history entry and
-must be explicitly reviewed and accepted before implementation starts.
+[`M003_posted_reversal_and_correction.md`](milestones/M003_posted_reversal_and_correction.md)
+is now the next Accepted milestone. It defines retry-safe reversal preview,
+posting, allocation mirroring, reverse readback, and the acquisition-dependency
+semantics required before broader real-history entry. The human owner accepted
+its seven decisions on 2026-08-28; implementation has not yet started.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -115,6 +119,7 @@ milestone becomes Accepted:
 | Decision | Needed by | Expected record |
 |---|---|---|
 | Dedicated idempotency identity versus reusing ExternalReference | M002 | Resolved by ADR-006 |
+| Separate reversal/replacement commands, required reason, structured replacement-link boundary, neutralized lot dependencies, and preview contract | M003 | Resolved by accepted M003 on 2026-08-28; new ADR only if a durable replacement relationship or another cross-cutting rule changes |
 | Local database directory, backup format, and encryption-at-rest policy | M004 | ADR and operations documentation |
 | UI framework and hosting model | M006 | ADR |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |

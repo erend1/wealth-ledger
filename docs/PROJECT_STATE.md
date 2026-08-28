@@ -31,9 +31,11 @@ was accepted on 2026-08-24 and verified on 2026-08-27. ADR-006 records the
 decision to keep command retry identity separate from external financial
 references.
 
-No milestone is currently In Progress. M003, the posted reversal/correction
-workflow, is the next planned candidate and still requires explicit human
-acceptance before implementation begins.
+No milestone is currently In Progress.
+[`M003: Posted Reversal and Correction Workflow`](milestones/M003_posted_reversal_and_correction.md)
+was accepted by the human owner on 2026-08-28 and is the next delivery
+milestone. Its implementation has not yet started and no M003 runtime behavior
+is claimed by this acceptance.
 
 ## Verified implementation
 
@@ -173,26 +175,46 @@ The integration suite proves fixed-point and stable-code round trips, GUID/date/
 
 ## Next delivery candidate
 
-M003 is the next planned coherent ledger slice: posted reversal and correction.
+M003 is the next Accepted coherent ledger slice: posted reversal and
+correction.
 
 Its intended user outcome is to correct immutable posted history through a
 separate reversal transaction and, where needed, a replacement transaction
 without editing or deleting the original posted facts.
 
-Before implementation begins, M003 should be reviewed against the now-verified
-M002 readback and retry-safety contracts and explicitly accepted by the human
-owner.
+The accepted milestone applies M002 retry safety to reversal, adds eligibility
+preview, mirrors allocations on their existing lots, and extends transaction
+readback with reverse navigation and allocation effects. It keeps corrected
+replacement submission separate and does not invent a structured replacement
+relationship.
 
-## Following coherent ledger slice
+Repository inspection found one implementation mismatch that the proposal
+makes explicit: the current posting trigger treats every downstream posted lot
+allocation as a permanent acquisition-reversal blocker, even after that
+downstream transaction has its own valid posted reversal. The accepted M003
+migration aligns Application and SQLite with ADR-002's reverse-dependency
+correction sequence without editing the historical `001_CoreLedger` migration.
 
-After write safety and readback, the next coherent ledger feature is the posted
-reversal/correction workflow already accepted by the Domain and persistence
-design:
+The human owner accepted the seven M003 decisions on 2026-08-28 after review
+against the verified M002 contracts. Implementation may now begin under the
+accepted milestone, but no implementation or migration is present yet.
 
-1. Add a focused Application use case and query/store ports that load one posted original with its effective entries, verify reversal uniqueness and later lot dependencies, and create the Domain reversal.
-2. Persist the reversal transaction and mirrored allocations atomically without changing the original transaction's Posted status.
-3. Add an explicit API command and sanitized conflict/not-found behavior without exposing persistence rows.
-4. Prove original-plus-reversal position netting, second-reversal rejection, dependent-lot rejection, restart behavior, and posted-history immutability through Application, SQLite, and HTTP tests.
+## Accepted M003 delivery outline
+
+After write safety and readback, the next coherent ledger feature applies the
+reversal rules already accepted by the Domain and ADRs:
+
+1. Add focused preview and command use cases that load one immutable original,
+   replay an existing receipt first, and validate reversal/dependency state.
+2. Create the Domain reversal and mirror original allocations on their existing
+   lots without changing the original transaction's Posted status.
+3. Persist reversal, allocations, and receipt atomically, including explicit
+   recovery from reversal-uniqueness races.
+4. Align the posting trigger with neutralized downstream reversal pairs through
+   a new migration rather than modifying `001_CoreLedger`.
+5. Expose preview, command, reverse navigation, and allocation readback through
+   sanitized HTTP contracts and prove them across Application, SQLite, restart,
+   concurrency, and API tests.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
