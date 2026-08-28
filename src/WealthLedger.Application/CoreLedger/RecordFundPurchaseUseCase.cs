@@ -27,26 +27,28 @@ public sealed record RecordFundPurchaseResult(
 public sealed class RecordFundPurchaseUseCase
 {
     private readonly ILedgerReferenceData _referenceData;
-    private readonly ILedgerPostingStore _postingStore;
+    private readonly ILedgerSubmissionStore _submissionStore;
     private readonly TimeProvider _timeProvider;
 
     public RecordFundPurchaseUseCase(
         ILedgerReferenceData referenceData,
-        ILedgerPostingStore postingStore,
+        ILedgerSubmissionStore submissionStore,
         TimeProvider timeProvider)
     {
         _referenceData = referenceData
             ?? throw new ArgumentNullException(nameof(referenceData));
-        _postingStore = postingStore
-            ?? throw new ArgumentNullException(nameof(postingStore));
+        _submissionStore = submissionStore
+            ?? throw new ArgumentNullException(nameof(submissionStore));
         _timeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RecordFundPurchaseResult> ExecuteAsync(
+        string idempotencyKey,
         RecordFundPurchaseCommand command,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.ExecutedUnitPrice);
         ArgumentNullException.ThrowIfNull(command.CashConsideration);
@@ -82,90 +84,188 @@ public sealed class RecordFundPurchaseUseCase
                 "Executed unit price and cash consideration must use the same currency.");
         }
 
+        var normalizedCommand = RecordFundPurchaseCommandCanonicalizer
+            .Normalize(command);
+
+        var scope =
+            new LedgerSubmissionScope(
+                normalizedCommand.HouseholdId,
+                LedgerOperationCodes.RecordFundPurchase,
+                idempotencyKey);
+
+        var existingReceipt =
+            await _submissionStore.FindReceiptAsync(
+                scope,
+                cancellationToken);
+
+        if (existingReceipt is not null)
+        {
+            return ResolveReceipt(
+                scope,
+                normalizedCommand,
+                existingReceipt);
+        }
+
         var location = await _referenceData.FindLocationAsync(
-            command.PortfolioId,
-            command.AccountId,
+            normalizedCommand.PortfolioId,
+            normalizedCommand.AccountId,
             cancellationToken);
 
         ValidateLocation(
             location,
-            command.HouseholdId,
-            command.PortfolioId,
-            command.AccountId);
+            normalizedCommand.HouseholdId,
+            normalizedCommand.PortfolioId,
+            normalizedCommand.AccountId);
 
         var fundAsset = await _referenceData.FindAssetAsync(
-            command.FundAssetId,
+            normalizedCommand.FundAssetId,
             cancellationToken);
 
-        ValidateFundAsset(fundAsset, command.FundAssetId);
+        ValidateFundAsset(fundAsset, normalizedCommand.FundAssetId);
 
         var cashAsset = await _referenceData.FindAssetAsync(
-            command.CashAssetId,
+            normalizedCommand.CashAssetId,
             cancellationToken);
 
         ValidateCashAsset(
             cashAsset,
-            command.CashAssetId,
-            command.CashConsideration.Currency);
+            normalizedCommand.CashAssetId,
+            normalizedCommand.CashConsideration.Currency);
 
         var currency = await _referenceData.FindCurrencyAsync(
-            command.CashConsideration.Currency,
+            normalizedCommand.CashConsideration.Currency,
             cancellationToken);
 
         if (currency is null)
         {
             throw new ApplicationRuleViolationException(
-                $"Currency '{command.CashConsideration.Currency}' does not exist.");
+                $"Currency '{normalizedCommand.CashConsideration.Currency}' does not exist.");
         }
 
         var considerationRawE8 = CurrencyAmountConverter.ToQuantityRawE8(
-            command.CashConsideration,
+            normalizedCommand.CashConsideration,
             currency);
 
-        var recordedAtUtc = _timeProvider.GetUtcNow();
-        var transaction = LedgerTransaction.CreateDraft(
-            Guid.NewGuid(),
-            command.HouseholdId,
-            TransactionType.Buy,
-            recordedAtUtc,
-            executionDate: command.ExecutionDate,
-            externalReference: command.ExternalReference,
-            note: command.Note);
+        var fingerprint = RecordFundPurchaseCommandFingerprint
+            .ComputeCurrent(normalizedCommand);
 
-        var principalEntry = transaction.AddEntry(
-            command.PortfolioId,
-            command.AccountId,
-            command.FundAssetId,
-            QuantityDelta.FromRaw(command.FundQuantity.RawE8),
-            EntryRole.Principal,
-            command.ExecutedUnitPrice);
+        var recordedAtUtc = _timeProvider.GetUtcNow();
+
+        var transaction =
+            LedgerTransaction.CreateDraft(
+                Guid.NewGuid(),
+                normalizedCommand.HouseholdId,
+                TransactionType.Buy,
+                recordedAtUtc,
+                executionDate:
+                    normalizedCommand.ExecutionDate,
+                externalReference:
+                    normalizedCommand.ExternalReference,
+                note:
+                    normalizedCommand.Note);
+
+        var principalEntry =
+            transaction.AddEntry(
+                normalizedCommand.PortfolioId,
+                normalizedCommand.AccountId,
+                normalizedCommand.FundAssetId,
+                QuantityDelta.FromRaw(
+                    normalizedCommand
+                        .FundQuantity.RawE8),
+                EntryRole.Principal,
+                normalizedCommand.ExecutedUnitPrice);
 
         transaction.AddEntry(
-            command.PortfolioId,
-            command.AccountId,
-            command.CashAssetId,
-            QuantityDelta.FromRaw(checked(-considerationRawE8)),
+            normalizedCommand.PortfolioId,
+            normalizedCommand.AccountId,
+            normalizedCommand.CashAssetId,
+            QuantityDelta.FromRaw(
+                checked(-considerationRawE8)),
             EntryRole.Consideration);
 
-        var assetLot = AssetLot.Create(
-            Guid.NewGuid(),
-            fundAsset!,
-            principalEntry,
-            command.FundQuantity,
-            command.ExecutionDate,
-            CostBasis.Known(command.CashConsideration),
-            recordedAtUtc);
+        var assetLot =
+            AssetLot.Create(
+                Guid.NewGuid(),
+                fundAsset!,
+                principalEntry,
+                normalizedCommand.FundQuantity,
+                normalizedCommand.ExecutionDate,
+                CostBasis.Known(
+                    normalizedCommand
+                        .CashConsideration),
+                recordedAtUtc);
 
         transaction.Post(recordedAtUtc);
 
-        await _postingStore.SavePostedTransactionAsync(
-            transaction,
-            [assetLot],
-            cancellationToken);
+        var receipt =
+            new LedgerSubmissionReceipt(
+                scope,
+                fingerprint,
+                transaction.Id,
+                AssetLotId:
+                    assetLot.Id,
+                CreatedAtUtc:
+                    recordedAtUtc);
+
+        var commitResult =
+            await _submissionStore.TryCommitAsync(
+                receipt,
+                transaction,
+                [assetLot],
+                cancellationToken);
+
+        if (commitResult.WasCommitted)
+        {
+            if (commitResult.Receipt != receipt)
+            {
+                throw new InvalidOperationException(
+                    "The submission store returned an inconsistent committed receipt.");
+            }
+
+            return new RecordFundPurchaseResult(
+                transaction.Id,
+                assetLot.Id);
+        }
+
+        return ResolveReceipt(
+            scope,
+            normalizedCommand,
+            commitResult.Receipt);
+    }
+
+    private static RecordFundPurchaseResult ResolveReceipt(
+        LedgerSubmissionScope expectedScope,
+        RecordFundPurchaseCommand normalizedCommand,
+        LedgerSubmissionReceipt receipt)
+    {
+        if (receipt.Scope != expectedScope)
+        {
+            throw new InvalidOperationException(
+                "The submission store returned a receipt for a different scope.");
+        }
+
+        if (receipt.AssetLotId is not Guid assetLotId
+            || assetLotId == Guid.Empty)
+        {
+            throw new InvalidOperationException(
+                "A fund-purchase receipt must contain an asset-lot result.");
+        }
+
+        var replayFingerprint =
+            RecordFundPurchaseCommandFingerprint.Compute(
+                normalizedCommand,
+                receipt.Fingerprint.AlgorithmCode,
+                receipt.Fingerprint.Version);
+
+        if (replayFingerprint
+            != receipt.Fingerprint)
+        {
+            throw new IdempotencyConflictException();
+        }
 
         return new RecordFundPurchaseResult(
-            transaction.Id,
-            assetLot.Id);
+            receipt.TransactionId,
+            assetLotId);
     }
 
     private static void ValidateLocation(

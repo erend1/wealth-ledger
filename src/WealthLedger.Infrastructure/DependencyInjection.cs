@@ -29,9 +29,18 @@ public static class DependencyInjection
             });
 
         services.AddScoped<ILedgerReferenceData, EfCoreLedgerReferenceData>();
-        services.AddScoped<ILedgerPostingStore, EfCoreLedgerPostingStore>();
         services.AddScoped<IPostedEntrySource, EfCorePostedEntrySource>();
         services.AddScoped<ICoreLedgerSetupStore, EfCoreLedgerSetupStore>();
+
+        services.AddScoped<EfCoreLedgerPostingStore>();
+        services.AddScoped<ILedgerPostingStore>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
+        services.AddScoped<ILedgerSubmissionStore>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
+
+        services.AddScoped<ILedgerTransactionReadStore, EfCoreLedgerTransactionReadStore>();
 
         return services;
     }

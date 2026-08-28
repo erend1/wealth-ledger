@@ -1,38 +1,39 @@
 # WealthLedger Project State
 
-As of: 2026-08-24
+As of: 2026-08-28
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
 ## Current checkpoint
 
-The Domain v1 baseline, the `001_CoreLedger` persistence milestone, the first ASP.NET Core Minimal API slice, and an explicit first-run setup slice are implemented and verified. Starting from an empty SQLite file, the end-to-end path applies the migration only when opted in, initializes the required master data through HTTP, records a contribution and fund purchase, creates its acquisition lot, and derives positions from posted entry history.
+The Domain v1 baseline, core SQLite persistence, Minimal API boundary,
+first-run setup, and M002 retry-safe transaction submission/readback milestone
+are implemented and verified.
 
-The solution currently contains:
+Starting from an empty SQLite file, the supported synthetic-data path can apply
+migrations when explicitly enabled, initialize required master data, record
+retry-safe contributions and fund purchases, create acquisition lots, read
+posted transactions back through stable HTTP projections, and derive positions
+from immutable posted entry history.
 
-- `WealthLedger.Domain`
-- `WealthLedger.Application`
-- `WealthLedger.Infrastructure`
-- `WealthLedger.Api`
-- `WealthLedger.Api.Tests`
-- `WealthLedger.Application.Tests`
-- `WealthLedger.Domain.Tests`
-- `WealthLedger.Infrastructure.Tests`
-
-`WealthLedger.UI` and a UI technology decision do not yet exist.
+Equivalent retries cannot create duplicate contribution or fund-purchase
+history. A successful fund-purchase replay preserves both the original
+transaction identity and acquisition-lot identity.
 
 ## Delivery planning
 
 Canonical product requirements, delivery roadmap, proposed MVP interaction
 model, data-capture guide, security/operations baseline, and milestone workflow
-now live under `docs`.
+live under `docs`.
 
-The only accepted delivery milestone is
-[`M002: Retry-Safe Transaction Submission and Readback`](milestones/M002_transaction_submission_and_readback.md).
-Its dedicated retry-identity contract and persistence boundary were accepted on
-2026-08-24 and are recorded by ADR-006. No idempotency storage,
-transaction-detail query, or related API behavior exists yet; implementation
-and verification remain pending.
+[`M002: Retry-Safe Transaction Submission and Readback`](milestones/M002_transaction_submission_and_readback.md)
+was accepted on 2026-08-24 and verified on 2026-08-27. ADR-006 records the
+decision to keep command retry identity separate from external financial
+references.
+
+No milestone is currently In Progress. M003, the posted reversal/correction
+workflow, is the next planned candidate and still requires explicit human
+acceptance before implementation begins.
 
 ## Verified implementation
 
@@ -51,6 +52,17 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - Explicit configurations: `src/WealthLedger.Infrastructure/Persistence/Mapping/CoreLedgerConfigurations.cs`.
 - Stable text-code mappings: `src/WealthLedger.Infrastructure/Persistence/Mapping/StableCodeMappings.cs`.
 - Initial migration: `20260824074930_001_CoreLedger`.
+
+M002 adds a second schema migration for dedicated `CommandReceipt` persistence.
+A receipt is identified by household, stable operation code, and idempotency
+key, and records fingerprint algorithm/version/value plus the resulting
+transaction identity and optional acquisition-lot identity.
+
+The receipt has restrictive relationships to the resulting ledger transaction
+and optional asset lot. Receipt and ledger graph persistence are coordinated
+inside one explicit SQLite transaction. Concurrent equivalent submissions are
+arbitrated by the database uniqueness invariant rather than by an in-memory
+lock.
 
 The migration creates the normalized core master-data, ledger, lot, allocation, cash-flow, cost-component, and physical-gold tables. Financial values use signed integer minor units or signed E8 integers. GUIDs, business dates, UTC timestamps, and enum-like values have explicit SQLite representations.
 
@@ -71,17 +83,56 @@ Currency-asset quantities are converted deterministically from signed integer mi
 
 Infrastructure resolves the required master references, maps Domain aggregate roots to internal rows, inserts the complete graph as Draft, and finalizes it as Posted inside one SQLite transaction. A failed final posting rolls back the transaction, entries, lots, and allocations together. The position adapter returns only posted entry facts; Application performs the ordered checked sum.
 
+### Retry-safe submission and transaction readback
+
+Application defines dedicated retry-safe submission contracts rather than
+overloading `ExternalReference`. Contribution and fund-purchase commands are
+normalized and fingerprinted with explicit versioned canonical forms.
+
+For both supported write commands:
+
+- a new scoped idempotency key posts one ledger graph;
+- an equivalent replay returns the previously recorded result;
+- a conflicting replay is rejected;
+- replay does not re-run current reference-data validation or Domain posting;
+- a concurrent loser observes the winning receipt rather than creating
+  duplicate history.
+
+Contribution receipts preserve the original transaction identity.
+Fund-purchase receipts preserve both the original transaction identity and
+acquisition-lot identity.
+
+Infrastructure implements the submission contract with dedicated
+`CommandReceipt` persistence and the existing EF Core ledger writer. Real
+file-backed SQLite tests cover receipt round trip, rollback, operation-code
+scope separation, and concurrent equivalent submissions.
+
+A dedicated read adapter reconstructs a stable transaction-detail projection
+from normalized persisted facts. It returns transaction metadata, ordered
+entries, optional cash-flow detail, typed cost components, and lots created by
+the transaction.
+
 ### Minimal API boundary
 
 `WealthLedger.Api` exposes:
 
 - `POST /api/ledger/contributions`;
 - `POST /api/ledger/fund-purchases`;
+- `GET /api/ledger/transactions/{transactionId}`;
 - `GET /api/households/{householdId}/portfolios/{portfolioId}/accounts/{accountId}/positions/{assetId}`.
 
-Transport contracts use signed integer minor units and raw E8 integers. Cash-flow categories have explicit stable text-code mapping. API contracts do not expose Domain aggregates or EF rows, and no portfolio arithmetic has moved into the delivery layer.
+Contribution and fund-purchase submissions require a bounded opaque
+`Idempotency-Key`. Equivalent replay returns the original stable identities and
+transaction Location. Reuse of a scoped key for a different semantic command
+returns sanitized 409 Problem Details.
 
-The composition root registers the focused Application use cases, the EF Core SQLite adapters, `TimeProvider`, Problem Details, and exception translation. Invalid transport values return 400, Domain/Application rule violations return 422, and wrapped persistence conflicts return a sanitized 409 without leaking SQLite or EF details. Database migration and master-data initialization remain explicit operational prerequisites rather than hidden endpoint side effects.
+Every transaction Location emitted by the ledger write endpoints resolves
+through the transaction-detail GET. Unknown transaction identities return a
+sanitized 404.
+
+Transport contracts continue to use signed integer minor units and raw E8
+integers. Public enum-like values are mapped to explicit stable text codes
+rather than exposing implementation enum names.
 
 ### First-run setup
 
@@ -89,7 +140,8 @@ Application provides one focused initialization command for a base currency, hou
 
 Infrastructure accepts setup only when all core master tables are empty and inserts the complete graph in one SQLite transaction. Existing master data returns a stable conflict, while a constraint or trigger failure rolls back currency, household, member, institution, portfolio, account, and assets together. The setup uses the existing `001_CoreLedger` schema and required no model or migration change.
 
-`POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly true. `Database:ApplyMigrationsOnStartup` is also false by default and applies migrations only when explicitly enabled. API integration tests now initialize through HTTP rather than inserting internal persistence rows, and the setup endpoint returns stable IDs consumed by the existing ledger routes.
+`POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly true. `Database:ApplyMigrationsOnStartup` is also false by default and applies migrations only when explicitly enabled. The setup endpoint returns stable initialized identities but deliberately emits
+no `Location` until a matching household read endpoint exists.
 
 ## Verification
 
@@ -104,31 +156,32 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Results:
 
 - Domain tests: 76 passed, 0 failed.
-- Application tests: 12 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 32 passed, 0 failed.
-- API tests against real SQLite files: 7 passed, 0 failed.
-- Total: 127 passed, 0 failed.
+- Application tests: 33 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 37 passed, 0 failed.
+- API tests against real SQLite files: 17 passed, 0 failed.
+- Total: 163 passed, 0 failed.
 - Formatting drift: none.
 - EF model drift: none.
+
+The M002 suite additionally proves deterministic contribution and fund-purchase
+fingerprints, equivalent replay, replay conflicts, stable purchase transaction
+and lot identities, atomic command-receipt persistence, concurrent receipt
+submission, resolvable transaction Locations, transaction readback, sanitized
+404/409 behavior, and removal of the unsupported setup Location.
 
 The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
 ## Next delivery candidate
 
-M002 is the next accepted implementation milestone. It hardens the current HTTP
-write boundary before another command endpoint is added:
+M003 is the next planned coherent ledger slice: posted reversal and correction.
 
-1. Separate a client command's retry identity from optional external financial
-   references.
-2. Persist retry identity and posting result atomically so equivalent and
-   concurrent replay cannot duplicate history.
-3. Add transaction-detail readback and make existing transaction Locations
-   resolvable.
-4. Prove equivalent replay, conflicting replay, concurrent submission,
-   rollback, restart, and sanitized not-found/conflict behavior.
+Its intended user outcome is to correct immutable posted history through a
+separate reversal transaction and, where needed, a replacement transaction
+without editing or deleting the original posted facts.
 
-Acceptance changed delivery status only and has not changed the verified runtime
-checkpoint described above.
+Before implementation begins, M003 should be reviewed against the now-verified
+M002 readback and retry-safety contracts and explicitly accepted by the human
+owner.
 
 ## Following coherent ledger slice
 
@@ -150,6 +203,7 @@ Do not start live market data, provider-specific integration, optimization, AI/L
 - Authentication and authorization.
 - Backup, encryption-at-rest, and deployment for the local database.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
-- SQLite concurrency policy if multiple writers become a demonstrated requirement.
+- SQLite concurrency policy outside the scoped idempotent-submission collision
+  handled by M002.
 
 Record a new ADR only when one of these or another cross-cutting architectural choice is accepted or superseded.

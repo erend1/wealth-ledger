@@ -1,9 +1,10 @@
-using System.Net;
-using System.Net.Http.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Net;
+using System.Net.Http.Json;
 using WealthLedger.Api.Contracts;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Domain.Ledger;
@@ -21,6 +22,10 @@ public sealed class LedgerApiTests
         using var client = factory.CreateClient();
         var setup = await InitializeCoreLedgerAsync(client);
 
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            $"test-{Guid.NewGuid():N}");
+
         var contributionResponse = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
             CreateContributionRequest(setup));
@@ -36,6 +41,99 @@ public sealed class LedgerApiTests
             $"/api/ledger/transactions/{contribution.TransactionId}",
             contributionResponse.Headers.Location?.OriginalString);
 
+        Assert.NotNull(
+            contributionResponse.Headers.Location);
+
+        var contributionReadResponse =
+            await client.GetAsync(
+                contributionResponse.Headers.Location);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            contributionReadResponse.StatusCode);
+
+        var contributionRead =
+            await contributionReadResponse.Content
+                .ReadFromJsonAsync<LedgerTransactionResponse>();
+
+        Assert.NotNull(contributionRead);
+
+        Assert.Equal(
+            contribution.TransactionId,
+            contributionRead.TransactionId);
+
+        Assert.Equal(
+            setup.HouseholdId,
+            contributionRead.HouseholdId);
+
+        Assert.Equal(
+            "CONTRIBUTION",
+            contributionRead.TypeCode);
+
+        Assert.Equal(
+            "POSTED",
+            contributionRead.StatusCode);
+
+        Assert.Equal(
+            ApiTestData.ExecutionDate,
+            contributionRead.ExecutionDate);
+
+        Assert.Equal(
+            "CONTRIBUTION-TEST",
+            contributionRead.ExternalReference);
+
+        Assert.Equal(
+            "Synthetic API test contribution",
+            contributionRead.Note);
+
+        var contributionEntry =
+            Assert.Single(
+                contributionRead.Entries);
+
+        Assert.Equal(
+            setup.PortfolioId,
+            contributionEntry.PortfolioId);
+
+        Assert.Equal(
+            setup.AccountId,
+            contributionEntry.AccountId);
+
+        Assert.Equal(
+            setup.CashAssetId,
+            contributionEntry.AssetId);
+
+        Assert.Equal(
+            "PRINCIPAL",
+            contributionEntry.RoleCode);
+
+        Assert.Equal(
+            100_000_000_000,
+            contributionEntry.QuantityDeltaRawE8);
+
+        Assert.Null(
+            contributionEntry.UnitPriceRawE8);
+
+        Assert.Null(
+            contributionEntry.PriceCurrencyCode);
+
+        Assert.NotNull(
+            contributionRead.CashFlow);
+
+        Assert.Equal(
+            "ACADEMIC_INCOME",
+            contributionRead.CashFlow.CategoryCode);
+
+        Assert.Equal(
+            setup.HouseholdMemberId,
+            contributionRead.CashFlow.HouseholdMemberId);
+
+        Assert.Empty(
+            contributionRead.Costs);
+
+        Assert.Empty(
+            contributionRead.CreatedLots);
+
+
         var purchaseResponse = await client.PostAsJsonAsync(
             "/api/ledger/fund-purchases",
             CreateFundPurchaseRequest(setup));
@@ -48,6 +146,130 @@ public sealed class LedgerApiTests
         Assert.NotNull(purchase);
         Assert.NotEqual(Guid.Empty, purchase.TransactionId);
         Assert.NotEqual(Guid.Empty, purchase.AssetLotId);
+
+        Assert.NotNull(purchaseResponse.Headers.Location);
+
+        Assert.Equal(
+            $"/api/ledger/transactions/{purchase.TransactionId}",
+            purchaseResponse.Headers.Location.OriginalString);
+
+        var purchaseReadResponse =
+            await client.GetAsync(
+                purchaseResponse.Headers.Location);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            purchaseReadResponse.StatusCode);
+
+        var purchaseRead =
+            await purchaseReadResponse.Content
+                .ReadFromJsonAsync<LedgerTransactionResponse>();
+
+        Assert.NotNull(purchaseRead);
+
+        Assert.Equal(
+            purchase.TransactionId,
+            purchaseRead.TransactionId);
+
+        Assert.Equal(
+            setup.HouseholdId,
+            purchaseRead.HouseholdId);
+
+        Assert.Equal(
+            "BUY",
+            purchaseRead.TypeCode);
+
+        Assert.Equal(
+            "POSTED",
+            purchaseRead.StatusCode);
+
+        Assert.Equal(
+            ApiTestData.ExecutionDate,
+            purchaseRead.ExecutionDate);
+
+        Assert.Equal(
+            "PURCHASE-TEST",
+            purchaseRead.ExternalReference);
+
+        Assert.Equal(
+            "Synthetic API test purchase",
+            purchaseRead.Note);
+
+        Assert.Equal(
+            2,
+            purchaseRead.Entries.Count);
+
+        var purchasePrincipal =
+            Assert.Single(
+                purchaseRead.Entries,
+                    entry =>
+                        entry.RoleCode
+                            == "PRINCIPAL");
+
+        Assert.Equal(
+            setup.FundAssetId,
+            purchasePrincipal.AssetId);
+
+        Assert.Equal(
+            125_000_000,
+            purchasePrincipal.QuantityDeltaRawE8);
+
+        Assert.Equal(
+            20_000_000_000,
+            purchasePrincipal.UnitPriceRawE8);
+
+        Assert.Equal(
+            "TRY",
+            purchasePrincipal.PriceCurrencyCode);
+
+        var purchaseConsideration =
+            Assert.Single(
+                purchaseRead.Entries,
+                    entry =>
+                        entry.RoleCode
+                            == "CONSIDERATION");
+
+        Assert.Equal(
+            setup.CashAssetId,
+            purchaseConsideration.AssetId);
+
+        Assert.Equal(
+            -25_000_000_000,
+            purchaseConsideration.QuantityDeltaRawE8);
+
+        Assert.Null(
+            purchaseRead.CashFlow);
+
+        Assert.Empty(
+            purchaseRead.Costs);
+
+        var createdLot =
+            Assert.Single(
+                purchaseRead.CreatedLots);
+
+        Assert.Equal(
+            purchase.AssetLotId,
+            createdLot.AssetLotId);
+
+        Assert.Equal(
+            setup.FundAssetId,
+            createdLot.AssetId);
+
+        Assert.Equal(
+            purchasePrincipal.EntryId,
+            createdLot.OpeningTransactionEntryId);
+
+        Assert.Equal(
+            25_000,
+            createdLot.OriginalCostBasisMinorUnits);
+
+        Assert.Equal(
+            "TRY",
+            createdLot.CostBasisCurrencyCode);
+
+        Assert.Equal(
+            "KNOWN",
+            createdLot.CostBasisStatusCode);
 
         var fundPosition = await GetPositionAsync(
             client,
@@ -102,6 +324,10 @@ public sealed class LedgerApiTests
             CashFlowCategoryCode = "NOT_A_CATEGORY"
         };
 
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            $"test-{Guid.NewGuid():N}");
+
         var response = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
             request);
@@ -127,6 +353,11 @@ public sealed class LedgerApiTests
         {
             CashAssetId = setup.FundAssetId
         };
+
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            $"test-{Guid.NewGuid():N}");
 
         var response = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
@@ -155,11 +386,26 @@ public sealed class LedgerApiTests
             builder => builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ILedgerPostingStore>();
+                services.RemoveAll<ILedgerSubmissionStore>();
+
+                services.AddScoped<FailingPostingStore>();
+
                 services.AddScoped<ILedgerPostingStore>(
-                    _ => new FailingPostingStore());
+                    serviceProvider =>
+                        serviceProvider.GetRequiredService<
+                            FailingPostingStore>());
+
+                services.AddScoped<ILedgerSubmissionStore>(
+                    serviceProvider =>
+                        serviceProvider.GetRequiredService<
+                            FailingPostingStore>());
             }));
 
         using var client = failingFactory.CreateClient();
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            $"test-{Guid.NewGuid():N}");
 
         var response = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
@@ -179,6 +425,411 @@ public sealed class LedgerApiTests
         Assert.DoesNotContain("TransactionEntry", problem.Detail);
     }
 
+    [Fact]
+    public async Task Contribution_WithoutIdempotencyKey_ReturnsBadRequest()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+
+        var problem =
+            await response.Content
+                .ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(
+            StatusCodes.Status400BadRequest,
+            problem.Status);
+    }
+
+    [Fact]
+    public async Task Contribution_WithOverlongIdempotencyKey_ReturnsBadRequest()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            new string('x', 257));
+
+        var response = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Contribution_WithNewIdempotencyKey_ReturnsCreated()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
+        var request = CreateContributionRequest(setup);
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            "api-contribution-001");
+
+        var response = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Contribution_EquivalentReplay_ReturnsSameTransaction()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
+
+        const string key =
+            "api-contribution-replay-001";
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var firstResponse = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
+
+        var firstBody =
+            await firstResponse.Content
+                .ReadFromJsonAsync<RecordContributionResponse>();
+
+        Assert.NotNull(firstBody);
+
+        client.DefaultRequestHeaders.Remove(
+            "Idempotency-Key");
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var secondResponse = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            secondResponse.StatusCode);
+
+        var secondBody =
+            await secondResponse.Content
+                .ReadFromJsonAsync<RecordContributionResponse>();
+
+        Assert.NotNull(secondBody);
+
+        Assert.Equal(
+            firstBody.TransactionId,
+            secondBody.TransactionId);
+
+        Assert.Equal(
+            firstResponse.Headers.Location,
+            secondResponse.Headers.Location);
+    }
+
+    [Fact]
+    public async Task Contribution_ReusedKeyForDifferentCommand_ReturnsConflict()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
+
+        const string key =
+            "api-contribution-conflict-001";
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var firstResponse = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup, 30_000_00));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
+
+        var changedResponse = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup, 31_000_00));
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            changedResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Contribution_SameCommandWithDifferentKey_CreatesDifferentTransaction()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            "api-new-command-001");
+
+        var firstResponse = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        var firstBody =
+            await firstResponse.Content
+                .ReadFromJsonAsync<RecordContributionResponse>();
+
+        client.DefaultRequestHeaders.Remove(
+            "Idempotency-Key");
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            "api-new-command-002");
+
+        var secondResponse = await client.PostAsJsonAsync(
+            "/api/ledger/contributions",
+            CreateContributionRequest(setup));
+
+        var secondBody =
+            await secondResponse.Content
+                .ReadFromJsonAsync<RecordContributionResponse>();
+
+        Assert.NotNull(firstBody);
+        Assert.NotNull(secondBody);
+
+        Assert.NotEqual(
+            firstBody.TransactionId,
+            secondBody.TransactionId);
+    }
+
+    [Fact]
+    public async Task Transaction_UnknownId_ReturnsNotFoundProblem()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var response =
+            await client.GetAsync(
+                $"/api/ledger/transactions/{Guid.NewGuid()}");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+
+        var problem =
+            await response.Content
+                .ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(
+            "Ledger transaction not found",
+            problem.Title);
+    }
+
+    [Fact]
+    public async Task FundPurchase_WithoutIdempotencyKey_ReturnsBadRequest()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var setup =
+            await InitializeCoreLedgerAsync(
+                client);
+
+        var response =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                CreateFundPurchaseRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task FundPurchase_EquivalentReplay_ReturnsSameTransactionAndLot()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var setup =
+            await InitializeCoreLedgerAsync(
+                client);
+
+        const string key =
+            "api-fund-purchase-replay-001";
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var firstResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                CreateFundPurchaseRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
+
+        var first =
+            await firstResponse.Content
+                .ReadFromJsonAsync<
+                    RecordFundPurchaseResponse>();
+
+        Assert.NotNull(first);
+
+        var secondResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                CreateFundPurchaseRequest(setup));
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            secondResponse.StatusCode);
+
+        var second =
+            await secondResponse.Content
+                .ReadFromJsonAsync<
+                    RecordFundPurchaseResponse>();
+
+        Assert.NotNull(second);
+
+        Assert.Equal(
+            first.TransactionId,
+            second.TransactionId);
+
+        Assert.Equal(
+            first.AssetLotId,
+            second.AssetLotId);
+
+        Assert.Equal(
+            firstResponse.Headers.Location,
+            secondResponse.Headers.Location);
+
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var context =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    WealthLedgerDbContext>();
+
+        Assert.Equal(
+            1,
+            await context.CommandReceipts
+                .CountAsync(x =>
+                    x.OperationCode
+                        == LedgerOperationCodes
+                            .RecordFundPurchase
+                    && x.IdempotencyKey
+                        == key));
+
+        Assert.Equal(
+            1,
+            await context.AssetLots
+                .CountAsync());
+
+        Assert.Equal(
+            1,
+            await context.LotEntryAllocations
+                .CountAsync());
+    }
+
+    [Fact]
+    public async Task FundPurchase_ReusedKeyForDifferentCommand_ReturnsConflict()
+    {
+        using var factory =
+            new WealthLedgerApiFactory();
+
+        using var client =
+            factory.CreateClient();
+
+        var setup =
+            await InitializeCoreLedgerAsync(
+                client);
+
+        const string key =
+            "api-fund-purchase-conflict-001";
+
+        client.DefaultRequestHeaders.Add(
+            "Idempotency-Key",
+            key);
+
+        var original =
+            CreateFundPurchaseRequest(setup);
+
+        var firstResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                original);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
+
+        var changed =
+            original with
+            {
+                FundQuantityRawE8 =
+                    original.FundQuantityRawE8
+                    + 1
+            };
+
+        var changedResponse =
+            await client.PostAsJsonAsync(
+                "/api/ledger/fund-purchases",
+                changed);
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            changedResponse.StatusCode);
+
+        var problem =
+            await changedResponse.Content
+                .ReadFromJsonAsync<
+                    ProblemDetails>();
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(
+            StatusCodes.Status409Conflict,
+            problem.Status);
+
+        Assert.Equal(
+            "Idempotency key conflict",
+            problem.Title);
+    }
+
     private static async Task<InitializeCoreLedgerResponse>
         InitializeCoreLedgerAsync(HttpClient client)
     {
@@ -195,13 +846,13 @@ public sealed class LedgerApiTests
     }
 
     private static RecordContributionRequest CreateContributionRequest(
-        InitializeCoreLedgerResponse setup)
+        InitializeCoreLedgerResponse setup, long amountMinorUnits = 100_000)
         => new(
             setup.HouseholdId,
             setup.PortfolioId,
             setup.AccountId,
             setup.CashAssetId,
-            AmountMinorUnits: 100_000,
+            AmountMinorUnits: amountMinorUnits,
             CurrencyCode: "TRY",
             CashFlowCategoryCode: "ACADEMIC_INCOME",
             ApiTestData.ExecutionDate,
@@ -244,13 +895,27 @@ public sealed class LedgerApiTests
         return Assert.IsType<PositionResponse>(position);
     }
 
-    private sealed class FailingPostingStore : ILedgerPostingStore
+    private sealed class FailingPostingStore : ILedgerPostingStore, ILedgerSubmissionStore
     {
         public Task SavePostedTransactionAsync(
             LedgerTransaction transaction,
             IReadOnlyCollection<AssetLot> newLots,
             CancellationToken cancellationToken = default)
             => Task.FromException(
+                new CoreLedgerPersistenceException(
+                    "SQLite TransactionEntry constraint details must stay private."));
+
+        public Task<LedgerSubmissionReceipt?> FindReceiptAsync(
+            LedgerSubmissionScope scope,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<LedgerSubmissionReceipt?>(null);
+
+        public Task<LedgerSubmissionCommitResult> TryCommitAsync(
+            LedgerSubmissionReceipt receipt,
+            LedgerTransaction transaction,
+            IReadOnlyCollection<AssetLot> newLots,
+            CancellationToken cancellationToken = default)
+            => Task.FromException<LedgerSubmissionCommitResult>(
                 new CoreLedgerPersistenceException(
                     "SQLite TransactionEntry constraint details must stay private."));
     }

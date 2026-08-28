@@ -17,6 +17,7 @@ public sealed class SetupApiTests
             "/api/setup/core-ledger",
             ApiTestData.CreateSetupRequest());
 
+        Assert.Null(firstResponse.Headers.Location);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
         var setup = await firstResponse.Content

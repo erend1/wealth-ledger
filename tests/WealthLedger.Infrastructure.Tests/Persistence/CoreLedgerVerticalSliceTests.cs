@@ -38,6 +38,7 @@ public sealed class CoreLedgerVerticalSliceTests
                 postingStore,
                 timeProvider);
             contributionResult = await contribution.ExecuteAsync(
+                "vertical-slice-contribution-001",
                 new RecordContributionCommand(
                     CoreLedgerTestData.HouseholdId,
                     CoreLedgerTestData.PortfolioId,
@@ -54,6 +55,7 @@ public sealed class CoreLedgerVerticalSliceTests
                 postingStore,
                 timeProvider);
             purchaseResult = await purchase.ExecuteAsync(
+                "vertical-slice-purchase-001",
                 new RecordFundPurchaseCommand(
                     CoreLedgerTestData.HouseholdId,
                     CoreLedgerTestData.PortfolioId,

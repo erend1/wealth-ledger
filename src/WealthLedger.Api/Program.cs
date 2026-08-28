@@ -16,6 +16,7 @@ builder.Services.AddScoped<RecordContributionUseCase>();
 builder.Services.AddScoped<RecordFundPurchaseUseCase>();
 builder.Services.AddScoped<GetPositionUseCase>();
 builder.Services.AddScoped<InitializeCoreLedgerUseCase>();
+builder.Services.AddScoped<GetLedgerTransactionUseCase>();
 
 var app = builder.Build();
 

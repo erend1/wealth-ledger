@@ -815,3 +815,102 @@ internal sealed class PhysicalGoldLotDetailConfiguration
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class CommandReceiptConfiguration
+    : IEntityTypeConfiguration<CommandReceiptRow>
+{
+    public void Configure(
+        EntityTypeBuilder<CommandReceiptRow> builder)
+    {
+        builder.ToTable(
+            "CommandReceipt",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_CommandReceipt_OperationCode_Length",
+                    "length(\"OperationCode\") BETWEEN 1 AND 64");
+
+                table.HasCheckConstraint(
+                    "CK_CommandReceipt_IdempotencyKey_Length",
+                    "length(\"IdempotencyKey\") BETWEEN 1 AND 256");
+
+                table.HasCheckConstraint(
+                    "CK_CommandReceipt_FingerprintAlgorithm_Length",
+                    "length(\"FingerprintAlgorithmCode\") BETWEEN 1 AND 32");
+
+                table.HasCheckConstraint(
+                    "CK_CommandReceipt_FingerprintVersion",
+                    "\"FingerprintVersion\" >= 1");
+
+                table.HasCheckConstraint(
+                    "CK_CommandReceipt_FingerprintValue_Length",
+                    "length(\"FingerprintValue\") BETWEEN 1 AND 256");
+            });
+
+        builder.HasKey(
+            x => new
+            {
+                x.HouseholdId,
+                x.OperationCode,
+                x.IdempotencyKey
+            });
+
+        builder.Property(x => x.HouseholdId)
+            .HasUuidTextConversion();
+
+        builder.Property(x => x.OperationCode)
+            .HasColumnType("TEXT")
+            .HasMaxLength(64)
+            .IsRequired();
+
+        builder.Property(x => x.IdempotencyKey)
+            .HasColumnType("TEXT")
+            .HasMaxLength(256)
+            .IsRequired();
+
+        builder.Property(x => x.FingerprintAlgorithmCode)
+            .HasColumnType("TEXT")
+            .HasMaxLength(32)
+            .IsRequired();
+
+        builder.Property(x => x.FingerprintVersion)
+            .HasColumnType("INTEGER");
+
+        builder.Property(x => x.FingerprintValue)
+            .HasColumnType("TEXT")
+            .HasMaxLength(256)
+            .IsRequired();
+
+        builder.Property(x => x.ResultTransactionId)
+            .HasUuidTextConversion();
+
+        builder.Property(x => x.ResultAssetLotId)
+            .HasUuidTextConversion();
+
+        builder.Property(x => x.CreatedAtUtc)
+            .HasUtcTimestampTextConversion();
+
+        builder.HasOne<HouseholdRow>()
+            .WithMany()
+            .HasForeignKey(x => x.HouseholdId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<LedgerTransactionRow>()
+            .WithMany()
+            .HasForeignKey(x => x.ResultTransactionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<AssetLotRow>()
+            .WithMany()
+            .HasForeignKey(x => x.ResultAssetLotId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.ResultTransactionId)
+            .HasDatabaseName(
+                "IX_CommandReceipt_ResultTransaction");
+
+        builder.HasIndex(x => x.ResultAssetLotId)
+            .HasDatabaseName(
+                "IX_CommandReceipt_ResultAssetLot");
+    }
+}
