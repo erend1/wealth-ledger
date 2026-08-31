@@ -42,6 +42,8 @@ public static class DependencyInjection
 
         services.AddScoped<ILedgerTransactionReadStore, EfCoreLedgerTransactionReadStore>();
 
+        services.AddScoped<ILedgerReversalStore, EfCoreLedgerReversalStore>();
+
         return services;
     }
 }
