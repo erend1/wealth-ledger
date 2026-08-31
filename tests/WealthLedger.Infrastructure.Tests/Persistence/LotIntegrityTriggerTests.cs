@@ -933,6 +933,346 @@ public sealed class LotIntegrityTriggerTests
         Assert.Equal(0, forbiddenTableCount);
     }
 
+    [Fact]
+    public async Task
+    AcquisitionReversal_AllowsDependencyAfterItsPostedReversal()
+    {
+        await using var database =
+            await SqliteTestDatabase.CreateAsync();
+
+        PostedLot originalLot;
+
+        var dependentTransactionId =
+            Guid.NewGuid();
+
+        var dependentEntryId =
+            Guid.NewGuid();
+
+        var dependentReversalId =
+            Guid.NewGuid();
+
+        var dependentReversalEntryId =
+            Guid.NewGuid();
+
+        var acquisitionReversalId =
+            Guid.NewGuid();
+
+        var acquisitionReversalEntryId =
+            Guid.NewGuid();
+
+        await using (var context = database.CreateContext())
+        {
+            await CoreLedgerTestData.SeedMasterDataAsync(
+                context);
+
+            originalLot =
+                await CreateAndPostOpeningLotAsync(
+                    context,
+                    CoreLedgerTestData.FundAssetId,
+                    quantityE8: 100);
+
+            // -------------------------------------------------
+            // Downstream economic transaction: -40
+            // -------------------------------------------------
+
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    dependentTransactionId,
+                    TransactionType.Adjustment));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    dependentEntryId,
+                    dependentTransactionId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    -40,
+                    EntryRole.Adjustment));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id = Guid.NewGuid(),
+                    AssetLotId = originalLot.LotId,
+                    TransactionEntryId = dependentEntryId,
+                    QuantityDeltaE8 = -40,
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+
+            await CoreLedgerTestData.PostAsync(
+                context,
+                dependentTransactionId);
+
+            // -------------------------------------------------
+            // Exact posted reversal of downstream transaction.
+            // -------------------------------------------------
+
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    dependentReversalId,
+                    TransactionType.Reversal,
+                    reversalOfTransactionId:
+                        dependentTransactionId));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    dependentReversalEntryId,
+                    dependentReversalId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    40,
+                    EntryRole.Adjustment));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id = Guid.NewGuid(),
+                    AssetLotId = originalLot.LotId,
+                    TransactionEntryId =
+                        dependentReversalEntryId,
+                    QuantityDeltaE8 = 40,
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+
+            await CoreLedgerTestData.PostAsync(
+                context,
+                dependentReversalId);
+
+            // -------------------------------------------------
+            // Now reverse the acquisition itself.
+            // -------------------------------------------------
+
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    acquisitionReversalId,
+                    TransactionType.Reversal,
+                    reversalOfTransactionId:
+                        originalLot.TransactionId));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    acquisitionReversalEntryId,
+                    acquisitionReversalId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    -100,
+                    EntryRole.Principal));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id = Guid.NewGuid(),
+                    AssetLotId = originalLot.LotId,
+                    TransactionEntryId =
+                        acquisitionReversalEntryId,
+                    QuantityDeltaE8 = -100,
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+        }
+
+        await using (var postingContext =
+                     database.CreateContext())
+        {
+            await CoreLedgerTestData.PostAsync(
+                postingContext,
+                acquisitionReversalId);
+        }
+
+        await using var verificationContext =
+            database.CreateContext();
+
+        var acquisitionReversal =
+            await verificationContext
+                .LedgerTransactions
+                .SingleAsync(
+                    x => x.Id == acquisitionReversalId);
+
+        Assert.Equal(
+            TransactionStatus.Posted,
+            acquisitionReversal.Status);
+
+        var effectiveLotQuantity =
+            Convert.ToInt64(
+                await database.ExecuteScalarAsync(
+                    """
+                SELECT COALESCE(
+                    SUM(allocation.QuantityDeltaE8),
+                    0)
+                FROM LotEntryAllocation AS allocation
+                JOIN TransactionEntry AS entry
+                    ON entry.Id =
+                       allocation.TransactionEntryId
+                JOIN LedgerTransaction AS tx
+                    ON tx.Id = entry.TransactionId
+                WHERE allocation.AssetLotId = $lotId
+                AND tx.StatusCode = 'POSTED';
+                """,
+                    new SqliteParameter(
+                        "$lotId",
+                        originalLot.LotId.ToString("D"))));
+
+        Assert.Equal(
+            0,
+            effectiveLotQuantity);
+    }
+
+    [Fact]
+    public async Task
+    AcquisitionReversal_UnrelatedNettingDoesNotNeutralizeDependency()
+    {
+        await using var database =
+            await SqliteTestDatabase.CreateAsync();
+
+        PostedLot originalLot;
+
+        var dependentTransactionId =
+            Guid.NewGuid();
+
+        var dependentEntryId =
+            Guid.NewGuid();
+
+        var unrelatedTransactionId =
+            Guid.NewGuid();
+
+        var unrelatedEntryId =
+            Guid.NewGuid();
+
+        var acquisitionReversalId =
+            Guid.NewGuid();
+
+        var acquisitionReversalEntryId =
+            Guid.NewGuid();
+
+        await using (var context = database.CreateContext())
+        {
+            await CoreLedgerTestData.SeedMasterDataAsync(
+                context);
+
+            originalLot =
+                await CreateAndPostOpeningLotAsync(
+                    context,
+                    CoreLedgerTestData.FundAssetId,
+                    quantityE8: 100);
+
+            // Real dependency: -40.
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    dependentTransactionId,
+                    TransactionType.Adjustment));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    dependentEntryId,
+                    dependentTransactionId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    -40,
+                    EntryRole.Adjustment));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id = Guid.NewGuid(),
+                    AssetLotId = originalLot.LotId,
+                    TransactionEntryId = dependentEntryId,
+                    QuantityDeltaE8 = -40,
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+
+            await CoreLedgerTestData.PostAsync(
+                context,
+                dependentTransactionId);
+
+            // Coincidental +40, but NOT a reversal.
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    unrelatedTransactionId,
+                    TransactionType.Adjustment));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    unrelatedEntryId,
+                    unrelatedTransactionId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    40,
+                    EntryRole.Adjustment));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id = Guid.NewGuid(),
+                    AssetLotId = originalLot.LotId,
+                    TransactionEntryId = unrelatedEntryId,
+                    QuantityDeltaE8 = 40,
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+
+            await CoreLedgerTestData.PostAsync(
+                context,
+                unrelatedTransactionId);
+
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    acquisitionReversalId,
+                    TransactionType.Reversal,
+                    reversalOfTransactionId:
+                        originalLot.TransactionId));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    acquisitionReversalEntryId,
+                    acquisitionReversalId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    -100,
+                    EntryRole.Principal));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id = Guid.NewGuid(),
+                    AssetLotId = originalLot.LotId,
+                    TransactionEntryId =
+                        acquisitionReversalEntryId,
+                    QuantityDeltaE8 = -100,
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+        }
+
+        await using var postingContext =
+            database.CreateContext();
+
+        var exception =
+            await Assert.ThrowsAsync<DbUpdateException>(
+                () =>
+                    CoreLedgerTestData.PostAsync(
+                        postingContext,
+                        acquisitionReversalId));
+
+        Assert.Contains(
+            "later posted lot allocations",
+            exception.InnerException?.Message);
+    }
+
     private static async Task<PostedLot> CreateAndPostOpeningLotAsync(
         WealthLedgerDbContext context,
         Guid assetId,
