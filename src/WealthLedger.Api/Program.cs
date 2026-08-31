@@ -17,6 +17,8 @@ builder.Services.AddScoped<RecordFundPurchaseUseCase>();
 builder.Services.AddScoped<GetPositionUseCase>();
 builder.Services.AddScoped<InitializeCoreLedgerUseCase>();
 builder.Services.AddScoped<GetLedgerTransactionUseCase>();
+builder.Services.AddScoped<PreviewPostedTransactionReversalUseCase>();
+builder.Services.AddScoped<ReversePostedTransactionUseCase>();
 
 var app = builder.Build();
 

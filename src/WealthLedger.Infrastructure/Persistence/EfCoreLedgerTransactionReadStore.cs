@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Domain.Ledger;
 
 namespace WealthLedger.Infrastructure.Persistence
 {
@@ -66,6 +67,55 @@ namespace WealthLedger.Infrastructure.Persistence
                     .Select(x => x.Id)
                     .ToArray();
 
+            var reversedByTransactionId =
+                await _dbContext.LedgerTransactions
+                    .AsNoTracking()
+                    .Where(
+                        x =>
+                            x.Type == TransactionType.Reversal
+                            && x.Status == TransactionStatus.Posted
+                            && x.ReversalOfTransactionId == transactionId)
+                    .Select(x => (Guid?)x.Id)
+                    .SingleOrDefaultAsync(
+                        cancellationToken);
+
+            var lotAllocations =
+                entryIds.Length == 0
+                    ? []
+                    : await _dbContext.LotEntryAllocations
+                        .AsNoTracking()
+                        .Where(
+                            x =>
+                                entryIds.Contains(
+                                    x.TransactionEntryId))
+                        .Join(
+                            _dbContext.TransactionEntries
+                                .AsNoTracking(),
+                            allocation =>
+                                allocation.TransactionEntryId,
+                            entry =>
+                                entry.Id,
+                            (allocation, entry) =>
+                                new
+                                {
+                                    allocation,
+                                    entry.EntrySequence
+                                })
+                        .OrderBy(x => x.EntrySequence)
+                        .ThenBy(x => x.allocation.AssetLotId)
+                        .ThenBy(x => x.allocation.Id)
+                        .Select(
+                            x =>
+                                new LedgerTransactionLotAllocationDetail(
+                                    x.allocation.Id,
+                                    x.allocation.AssetLotId,
+                                    x.allocation.TransactionEntryId,
+                                    x.allocation.QuantityDeltaE8,
+                                    ToDateTimeOffset(
+                                        x.allocation.CreatedAtUtc)))
+                        .ToArrayAsync(
+                            cancellationToken);
+
             var createdLots =
                 entryIds.Length == 0
                     ? []
@@ -90,6 +140,7 @@ namespace WealthLedger.Infrastructure.Persistence
                 transaction.ExternalReference,
                 transaction.Note,
                 transaction.ReversalOfTransactionId,
+                reversedByTransactionId,
                 ToDateTimeOffset(
                     transaction.CreatedAtUtc),
                 transaction.PostedAtUtc is null
@@ -145,7 +196,9 @@ namespace WealthLedger.Infrastructure.Persistence
                                 x.CostBasisStatus,
                                 ToDateTimeOffset(
                                     x.CreatedAtUtc)))
-                    .ToArray());
+                    .ToArray(),
+
+                lotAllocations);
         }
 
         private static DateTimeOffset ToDateTimeOffset(

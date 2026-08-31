@@ -29,6 +29,16 @@ internal static class LedgerEndpoints
                 GetTransactionAsync)
             .WithName("GetLedgerTransaction");
 
+        group.MapGet(
+                "/transactions/{transactionId:guid}/reversal-preview",
+                GetReversalPreviewAsync)
+            .WithName("GetLedgerTransactionReversalPreview");
+
+        group.MapPost(
+                "/transactions/{transactionId:guid}/reversals",
+                ReverseTransactionAsync)
+            .WithName("ReverseLedgerTransaction");
+
         return endpoints;
     }
 
@@ -156,6 +166,137 @@ internal static class LedgerEndpoints
             result.ToResponse());
     }
 
+    private static async Task<IResult> GetReversalPreviewAsync(
+        Guid transactionId,
+        PreviewPostedTransactionReversalUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await useCase.ExecuteAsync(
+                transactionId,
+                cancellationToken);
+
+        if (result is null)
+        {
+            return Results.Problem(
+                statusCode:
+                    StatusCodes.Status404NotFound,
+
+                title:
+                    "Ledger transaction not found",
+
+                detail:
+                    "The requested ledger transaction does not exist.",
+
+                extensions:
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] =
+                            "LEDGER_TRANSACTION_NOT_FOUND"
+                    });
+        }
+
+        return Results.Ok(
+            result.ToResponse());
+    }
+
+    private static async Task<IResult> ReverseTransactionAsync(
+        HttpRequest httpRequest,
+        Guid transactionId,
+        ReversePostedTransactionRequest request,
+        ReversePostedTransactionUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetIdempotencyKey(
+                httpRequest,
+                out var idempotencyKey,
+                out var error))
+        {
+            return error!;
+        }
+
+        try
+        {
+            var result =
+                await useCase.ExecuteAsync(
+                    idempotencyKey,
+                    new ReversePostedTransactionCommand(
+                        transactionId,
+                        request.Reason),
+                    cancellationToken);
+
+            if (result is null)
+            {
+                return Results.Problem(
+                    statusCode:
+                        StatusCodes.Status404NotFound,
+
+                    title:
+                        "Ledger transaction not found",
+
+                    detail:
+                        "The requested ledger transaction does not exist.",
+
+                    extensions:
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] =
+                                "LEDGER_TRANSACTION_NOT_FOUND"
+                        });
+            }
+
+            return TypedResults.Created(
+                $"/api/ledger/transactions/{result.ReversalTransactionId}",
+                new ReversePostedTransactionResponse(
+                    result.ReversalTransactionId,
+                    result.ReversalOfTransactionId));
+        }
+        catch (ReversalReasonValidationException exception)
+        {
+            return Results.Problem(
+                statusCode:
+                    StatusCodes.Status400BadRequest,
+
+                title:
+                    "Invalid reversal reason",
+
+                detail:
+                    exception.Message,
+
+                extensions:
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] =
+                            exception.ErrorCode
+                    });
+        }
+        catch (IdempotencyConflictException exception)
+        {
+            return Results.Problem(
+                statusCode:
+                    StatusCodes.Status409Conflict,
+
+                title:
+                    "Idempotency key conflict",
+
+                detail:
+                    exception.Message,
+
+                extensions:
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] =
+                            IdempotencyConflictException
+                                .ErrorCode
+                    });
+        }
+        catch (ReversalCommandRejectedException exception)
+        {
+            return ToReversalRejectedProblem(
+                exception);
+        }
+    }
+
     private static bool TryGetIdempotencyKey(
         HttpRequest request,
         out string idempotencyKey,
@@ -208,5 +349,120 @@ internal static class LedgerEndpoints
         error = null;
 
         return true;
+    }
+
+    private static IResult ToReversalRejectedProblem(
+        ReversalCommandRejectedException exception)
+    {
+        return exception.EligibilityCode switch
+        {
+            ReversalEligibilityCode.NotPosted =>
+                Results.Problem(
+                    statusCode:
+                        StatusCodes.Status409Conflict,
+
+                    title:
+                        "Transaction is not posted",
+
+                    detail:
+                        exception.Message,
+
+                    extensions:
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] =
+                                "TRANSACTION_NOT_POSTED"
+                        }),
+
+            ReversalEligibilityCode.AlreadyReversed =>
+                Results.Problem(
+                    statusCode:
+                        StatusCodes.Status409Conflict,
+
+                    title:
+                        "Transaction already reversed",
+
+                    detail:
+                        exception.Message,
+
+                    extensions:
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] =
+                                "TRANSACTION_ALREADY_REVERSED",
+
+                            ["existingReversalTransactionId"] =
+                                exception
+                                    .ExistingReversalTransactionId
+                        }),
+
+            ReversalEligibilityCode.BlockedByDependencies =>
+                Results.Problem(
+                    statusCode:
+                        StatusCodes.Status409Conflict,
+
+                    title:
+                        "Reversal blocked by dependencies",
+
+                    detail:
+                        exception.Message,
+
+                    extensions:
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] =
+                                "REVERSAL_DEPENDENCY_CONFLICT",
+
+                            ["blockingTransactionIds"] =
+                                exception
+                                    .BlockingTransactionIds
+                        }),
+
+            ReversalEligibilityCode.TargetIsReversal =>
+                Results.Problem(
+                    statusCode:
+                        StatusCodes.Status422UnprocessableEntity,
+
+                    title:
+                        "Reversal target is itself a reversal",
+
+                    detail:
+                        exception.Message,
+
+                    extensions:
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] =
+                                "REVERSAL_TARGET_IS_REVERSAL"
+                        }),
+
+            ReversalEligibilityCode.UnsupportedPersistedShape =>
+                Results.Problem(
+                    statusCode:
+                        StatusCodes.Status422UnprocessableEntity,
+
+                    title:
+                        "Reversal source is unsupported",
+
+                    detail:
+                        exception.Message,
+
+                    extensions:
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] =
+                                "REVERSAL_SOURCE_UNSUPPORTED"
+                        }),
+
+            ReversalEligibilityCode.Eligible =>
+                throw new InvalidOperationException(
+                    "An eligible reversal cannot be mapped to an API rejection."),
+
+            _ =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(exception),
+                    exception.EligibilityCode,
+                    "Unsupported reversal eligibility code.")
+        };
     }
 }
