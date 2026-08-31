@@ -67,6 +67,7 @@ internal static class ApiContractMapper
             detail.ExternalReference,
             detail.Note,
             detail.ReversalOfTransactionId,
+            detail.ReversedByTransactionId,
             detail.CreatedAtUtc,
             detail.PostedAtUtc,
 
@@ -116,6 +117,17 @@ internal static class ApiContractMapper
                             lot.CostBasisCurrencyCode,
                             ToCode(lot.CostBasisStatus),
                             lot.CreatedAtUtc))
+                .ToArray(),
+
+            detail.LotAllocations
+                .Select(
+                    allocation =>
+                        new LedgerTransactionLotAllocationResponse(
+                            allocation.AllocationId,
+                            allocation.AssetLotId,
+                            allocation.TransactionEntryId,
+                            allocation.QuantityDeltaRawE8,
+                            allocation.CreatedAtUtc))
                 .ToArray());
     }
 
