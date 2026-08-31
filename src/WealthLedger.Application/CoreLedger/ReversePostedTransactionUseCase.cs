@@ -114,6 +114,28 @@ namespace WealthLedger.Application.CoreLedger
                     "The reversal store returned a candidate for a different target.");
             }
 
+            // A concurrent equivalent writer may have committed its
+            // reversal and receipt while this request was loading the
+            // multi-query reversal candidate.
+            //
+            // Idempotency replay must continue to take precedence over
+            // current eligibility. Without this second receipt lookup,
+            // the candidate can correctly observe ALREADY_REVERSED but
+            // an equivalent same-key caller would incorrectly receive
+            // a conflict instead of replaying the winning result.
+            var concurrentReceipt =
+                await _reversalStore.FindReceiptAsync(
+                    scope,
+                    cancellationToken);
+
+            if (concurrentReceipt is not null)
+            {
+                return ResolveReceipt(
+                    scope,
+                    normalizedCommand,
+                    concurrentReceipt);
+            }
+
             var evaluation =
                 ReversalEligibilityEvaluator.Evaluate(
                     candidate);

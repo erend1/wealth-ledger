@@ -133,6 +133,11 @@ public sealed class LedgerApiTests
         Assert.Empty(
             contributionRead.CreatedLots);
 
+        Assert.Empty(
+            contributionRead.LotAllocations);
+
+        Assert.Null(
+            contributionRead.ReversedByTransactionId);
 
         var purchaseResponse = await client.PostAsJsonAsync(
             "/api/ledger/fund-purchases",
@@ -242,6 +247,22 @@ public sealed class LedgerApiTests
 
         Assert.Empty(
             purchaseRead.Costs);
+
+        var purchaseAllocation =
+            Assert.Single(
+                purchaseRead.LotAllocations);
+
+        Assert.Equal(
+            purchase.AssetLotId,
+            purchaseAllocation.AssetLotId);
+
+        Assert.Equal(
+            purchasePrincipal.EntryId,
+            purchaseAllocation.TransactionEntryId);
+
+        Assert.Equal(
+            125_000_000,
+            purchaseAllocation.QuantityDeltaRawE8);
 
         var createdLot =
             Assert.Single(

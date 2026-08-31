@@ -177,6 +177,32 @@ namespace WealthLedger.Infrastructure.Persistence
                         entries,
                         cancellationToken);
 
+                // Candidate loading spans several SQLite reads.
+                // Another writer may have committed the unique posted
+                // reversal after our initial reversal lookup but before
+                // the transaction/lot graph finished loading.
+                //
+                // Reconcile once before exposing the candidate. If a
+                // winner appeared, ALREADY_REVERSED takes precedence
+                // over any pre-winner candidate state.
+                var concurrentReversalId =
+                    await FindPostedReversalIdAsync(
+                        transactionId,
+                        cancellationToken);
+
+                if (concurrentReversalId is Guid winnerId)
+                {
+                    return new ReversalCandidate(
+                        transactionRow.Id,
+                        transactionRow.HouseholdId,
+                        transactionRow.Status,
+                        transactionRow.Type,
+                        winnerId,
+                        blockers,
+                        Original: null,
+                        AffectedLots: []);
+                }
+
                 return new ReversalCandidate(
                     transactionRow.Id,
                     transactionRow.HouseholdId,
@@ -191,12 +217,35 @@ namespace WealthLedger.Infrastructure.Persistence
                 when (IsUnsupportedPersistedShape(
                     exception))
             {
+                // A concurrent reversal may have committed while
+                // this multi-query candidate was being reconstructed.
+                //
+                // In that case the correct externally visible state
+                // is ALREADY_REVERSED, not UNSUPPORTED_PERSISTED_SHAPE.
+                var concurrentReversalId =
+                    await FindPostedReversalIdAsync(
+                        transactionId,
+                        cancellationToken);
+
+                if (concurrentReversalId is Guid winnerId)
+                {
+                    return new ReversalCandidate(
+                        transactionRow.Id,
+                        transactionRow.HouseholdId,
+                        transactionRow.Status,
+                        transactionRow.Type,
+                        winnerId,
+                        blockers,
+                        Original: null,
+                        AffectedLots: []);
+                }
+
                 return new ReversalCandidate(
                     transactionRow.Id,
                     transactionRow.HouseholdId,
                     transactionRow.Status,
                     transactionRow.Type,
-                    existingReversalId,
+                    ExistingReversalTransactionId: null,
                     blockers,
                     Original: null,
                     AffectedLots: []);
@@ -344,22 +393,50 @@ namespace WealthLedger.Infrastructure.Persistence
             {
                 _dbContext.ChangeTracker.Clear();
 
-                var winner =
+                // The graph collision may have been caused by an equivalent
+                // writer using the same idempotency scope.
+                //
+                // Recover the winning receipt first. Application will validate
+                // its fingerprint, so:
+                //
+                // same key + equivalent command
+                //     => successful replay
+                //
+                // same key + different command
+                //     => IDEMPOTENCY_KEY_CONFLICT
+                //
+                // different key
+                //     => no receipt in this scope, then fall through to
+                //        ALREADY_REVERSED recovery.
+                var receiptWinner =
+                    await FindReceiptAsync(
+                        receipt.Scope,
+                        cancellationToken);
+
+                if (receiptWinner is not null)
+                {
+                    return new ReversalCommitResult
+                        .ReceiptWinner(
+                            receiptWinner);
+                }
+
+                var reversalWinner =
                     await FindPostedReversalIdAsync(
                         reversal
                             .ReversalOfTransactionId!
                             .Value,
                         cancellationToken);
 
-                if (winner is Guid winnerId)
+                if (reversalWinner
+                    is Guid reversalWinnerId)
                 {
                     return new ReversalCommitResult
                         .AlreadyReversed(
-                            winnerId);
+                            reversalWinnerId);
                 }
 
                 throw new CoreLedgerPersistenceException(
-                    "The reversal collided with another writer but no committed reversal could be recovered.",
+                    "The reversal collided with another writer but no committed receipt or reversal could be recovered.",
                     exception);
             }
             catch (Exception exception)
