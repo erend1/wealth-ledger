@@ -48,6 +48,13 @@ loopback exposure, and encryption boundary; none of that behavior is currently
 claimed as implemented. M003's verification satisfies M004's delivery-order
 prerequisite.
 
+[`M005: Master Data and Ledger Navigation`](milestones/M005_master_data_and_ledger_navigation.md)
+is also Proposed for parallel planning and human review only. It cannot become
+In Progress until M003 and M004 are Verified. The proposal defines read-only
+master/reference pages, a bounded recent Posted ledger feed, current-label
+semantics, cursor pagination, and valid-versus-unknown point-position scopes;
+none of those routes or behaviors is currently implemented.
+
 ## Verified implementation
 
 ### Domain

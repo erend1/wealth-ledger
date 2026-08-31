@@ -43,8 +43,8 @@ Statuses used here:
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
 | M004 | Proposed | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Human acceptance of the ten decision gates; implementation begins only after M003 is Verified |
-| M005 | Planned | Master-data and ledger navigation queries with stable, human-oriented contracts | M002 transaction read model |
-| M006 | Planned | UI architecture decision, application shell, first-run experience, and formatted value components | Accepted UI ADR; M004 local safety |
+| M005 | Proposed | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Human acceptance of the ten decision gates; implementation begins only after M003 and M004 are Verified |
+| M006 | Planned | UI architecture decision, application shell, first-run experience, and formatted value components | Accepted UI ADR; M004 local safety; M005 navigation contracts |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
 | M008 | Planned | Complete investment-fund lifecycle, including fees, taxes, sale, FIFO allocation, and realized cost | Opening lots and correction path |
 | M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
@@ -77,6 +77,15 @@ decisions cover the live-data path, local operations surface, process
 ownership, backup package, restore replacement, explicit migration, loopback
 exposure, and encryption boundary. M003's verification satisfies M004's
 delivery-order prerequisite.
+
+[`M005_master_data_and_ledger_navigation.md`](milestones/M005_master_data_and_ledger_navigation.md)
+is also Proposed for planning and human review only. It defines bounded
+master/reference pages, a cursor-based recent Posted transaction feed, current
+display-label semantics, and the distinction between a genuine zero position
+and an unknown scope. It deliberately leaves broad transaction search,
+position/lot inventory, and reconciliation in M010. M005 must not become In
+Progress until M003 and M004 are Verified and its implementation branch is
+rebased onto that checkpoint.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -128,6 +137,7 @@ milestone becomes Accepted:
 | Dedicated idempotency identity versus reusing ExternalReference | M002 | Resolved by ADR-006 |
 | Separate reversal/replacement commands, required reason, structured replacement-link boundary, neutralized lot dependencies, and preview contract | M003 | Resolved by accepted M003 on 2026-08-28; new ADR only if a durable replacement relationship or another cross-cutting rule changes |
 | Local database directory, operations surface, backup/restore format, local exposure, migration, and encryption-at-rest policy | M004 | Proposed M004 decision gates; ADR and operations documentation after human acceptance |
+| Master projection fields, current-label semantics, cursor contract, recent-ledger boundary, and invalid position-scope behavior | M005 | Proposed M005 decision gates and API contract tests; ADR only if accepted review changes a cross-cutting architecture rule |
 | UI framework and hosting model | M006 | ADR |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
 | Performance methodologies and partial-cost rounding when exposed by a real use case | M008/M012 | Tests and ADR if cross-cutting |
