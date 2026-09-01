@@ -4,7 +4,7 @@
 
 namespace WealthLedger.Infrastructure.Persistence.Migrations;
 
-public partial class _003_ReversalDependencySemantics: Migration
+public partial class _003_ReversalDependencySemantics : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {

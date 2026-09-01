@@ -1072,6 +1072,169 @@ namespace WealthLedger.Infrastructure.Tests.Persistence
                 reversalRead.Status);
         }
 
+
+        [Fact]
+        public async Task
+    TryCommit_DependencyIntroducedAfterCandidateLoad_ReturnsConflictAndRollsBack()
+        {
+            await using var database =
+                await SqliteTestDatabase.CreateAsync();
+
+            PostedPurchaseFixture purchase;
+
+            await using (var seedContext =
+                         database.CreateContext())
+            {
+                await CoreLedgerTestData.SeedMasterDataAsync(
+                    seedContext);
+
+                purchase =
+                    await SeedPostedPurchaseAsync(
+                        seedContext);
+            }
+
+            await using var reversalContext =
+                database.CreateContext();
+
+            var store =
+                new EfCoreLedgerReversalStore(
+                    reversalContext);
+
+            // Eligibility is evaluated from a state with no blockers.
+            var candidate =
+                await store.LoadCandidateAsync(
+                    purchase.TransactionId);
+
+            Assert.NotNull(candidate);
+            Assert.NotNull(candidate!.Original);
+            Assert.Empty(
+                candidate.BlockingTransactionIds);
+
+            var reversal =
+                BuildPostedReversal(
+                    candidate,
+                    Guid.NewGuid(),
+                    "Dependency raced with reversal.");
+
+            var receipt =
+                CreateReceipt(
+                    reversal.Id,
+                    "dependency-race-reversal");
+
+            // Simulate another writer introducing a valid posted
+            // dependency after eligibility/candidate loading.
+            PostedDependencyFixture dependency;
+
+            await using (var dependencyContext =
+                         database.CreateContext())
+            {
+                dependency =
+                    await SeedPostedPositiveDependencyAsync(
+                        dependencyContext,
+                        purchase.LotId);
+            }
+
+            // The stale candidate still believes the reversal is eligible.
+            // SQLite must be the final authority and reject the posting.
+            var result =
+                await store.TryCommitAsync(
+                    receipt,
+                    reversal,
+                    candidate.AffectedLots);
+
+            var conflict =
+                Assert.IsType<
+                    ReversalCommitResult.DependencyConflict>(
+                        result);
+
+            Assert.Equal(
+                new[]
+                {
+            dependency.TransactionId
+                },
+                conflict.BlockingTransactionIds);
+
+            // Fresh context proves the failed reversal transaction was
+            // completely rolled back while the independently committed
+            // dependency remains.
+            await using var verificationContext =
+                database.CreateContext();
+
+            Assert.Equal(
+                0,
+                await verificationContext
+                    .LedgerTransactions
+                    .AsNoTracking()
+                    .CountAsync(
+                        x =>
+                            x.Id
+                            == reversal.Id));
+
+            Assert.Equal(
+                0,
+                await verificationContext
+                    .TransactionEntries
+                    .AsNoTracking()
+                    .CountAsync(
+                        x =>
+                            x.TransactionId
+                            == reversal.Id));
+
+            Assert.Equal(
+                0,
+                await verificationContext
+                    .CommandReceipts
+                    .AsNoTracking()
+                    .CountAsync(
+                        x =>
+                            x.ResultTransactionId
+                            == reversal.Id));
+
+            Assert.Equal(
+                0,
+                await (
+                    from allocation
+                        in verificationContext
+                            .LotEntryAllocations
+                            .AsNoTracking()
+                    join entry
+                        in verificationContext
+                            .TransactionEntries
+                            .AsNoTracking()
+                        on allocation.TransactionEntryId
+                        equals entry.Id
+                    where
+                        entry.TransactionId
+                        == reversal.Id
+                    select allocation.Id
+                ).CountAsync());
+
+            // Only the original opening allocation and the newly
+            // introduced dependency remain on the lot.
+            Assert.Equal(
+                2,
+                await verificationContext
+                    .LotEntryAllocations
+                    .AsNoTracking()
+                    .CountAsync(
+                        x =>
+                            x.AssetLotId
+                            == purchase.LotId));
+
+            var persistedDependency =
+                await verificationContext
+                    .LedgerTransactions
+                    .AsNoTracking()
+                    .SingleAsync(
+                        x =>
+                            x.Id
+                            == dependency.TransactionId);
+
+            Assert.Equal(
+                TransactionStatus.Posted,
+                persistedDependency.Status);
+        }
+
         private static async Task<Guid>
             SeedPostedContributionAsync(
                 WealthLedgerDbContext context)
@@ -1435,6 +1598,61 @@ namespace WealthLedger.Infrastructure.Tests.Persistence
                     == TransactionStatus.Posted
                 select allocation.QuantityDeltaE8
             ).SumAsync();
+        }
+
+        private static async Task<PostedDependencyFixture>
+    SeedPostedPositiveDependencyAsync(
+        WealthLedgerDbContext context,
+        Guid lotId)
+        {
+            var transactionId =
+                Guid.NewGuid();
+
+            var entryId =
+                Guid.NewGuid();
+
+            context.LedgerTransactions.Add(
+                CoreLedgerTestData.CreateDraftTransaction(
+                    transactionId,
+                    TransactionType.Adjustment));
+
+            context.TransactionEntries.Add(
+                CoreLedgerTestData.CreateEntry(
+                    entryId,
+                    transactionId,
+                    0,
+                    CoreLedgerTestData.FundAssetId,
+                    40_000_000,
+                    EntryRole.Adjustment));
+
+            context.LotEntryAllocations.Add(
+                new LotEntryAllocationRow
+                {
+                    Id =
+                        Guid.NewGuid(),
+
+                    AssetLotId =
+                        lotId,
+
+                    TransactionEntryId =
+                        entryId,
+
+                    QuantityDeltaE8 =
+                        40_000_000,
+
+                    CreatedAtUtc =
+                        CoreLedgerTestData.CreatedAtUtc
+                });
+
+            await context.SaveChangesAsync();
+
+            await CoreLedgerTestData.PostAsync(
+                context,
+                transactionId);
+
+            return new PostedDependencyFixture(
+                transactionId,
+                entryId);
         }
 
         private sealed record PostedPurchaseFixture(

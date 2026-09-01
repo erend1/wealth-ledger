@@ -4,9 +4,12 @@ Status: Canonical target for the first persistence milestone
 
 Target: EF Core with SQLite
 
-Migration: 001_CoreLedger
+Migrations:
+- `20260824074930_001_CoreLedger`
+- `20260827072019_002_CommandReceipt`
+- `20260831113310_003_ReversalDependencySemantics`
 
-Last distilled: 2026-08-24
+Last distilled: 2026-08-31
 
 ## Design goals
 
@@ -336,9 +339,44 @@ Some invariants are better enforced in Application code and tested against the d
 - semantic shape of every transaction type;
 - exact sum of all allocations for one entry;
 - lot balance never becoming negative across history;
-- acquisition reversal dependency ordering;
+- acquisition reversal eligibility is evaluated in Application and independently
+  re-enforced by the SQLite posting trigger;
 - FIFO selection;
 - arithmetic/rounding.
+
+### M003 reversal-dependency semantics
+
+Migration `20260831113310_003_ReversalDependencySemantics` is a behavior-only
+migration. It does not add an authoritative financial table and does not modify
+historical migration `20260824074930_001_CoreLedger`.
+
+The migration drops and recreates
+`TR_LedgerTransaction_ValidateBeforePosting` with the complete existing
+validation body intact except for the acquisition-reversal dependency
+predicate.
+
+When a Posted reversal targets an acquisition transaction, a downstream lot
+allocation remains a blocker when all of the following are true:
+
+- the downstream transaction is Posted;
+- the downstream transaction is not itself a Reversal;
+- it is not the acquisition being reversed; and
+- no Posted Reversal exists whose `ReversalOfTransactionId` equals that
+  downstream transaction's identity.
+
+Therefore a downstream original paired with its own valid Posted reversal is
+neutralized for acquisition-reversal eligibility. Draft or Cancelled reversals
+do not neutralize it. A reversal transaction is not itself treated as a new
+blocker, and unrelated transactions whose quantities happen to net the lot do
+not substitute for explicit reversal lineage.
+
+The Application candidate query implements the same predicate. SQLite remains
+the final authority if a dependency is introduced after Application eligibility
+has been evaluated. The reversal graph, mirrored allocations, command receipt,
+and final Posted transition share one explicit database transaction, so a
+trigger rejection rolls back the attempted reversal completely.
+
+The migration `Down` path restores the previous stricter dependency predicate.
 
 ## Indexes
 
@@ -395,3 +433,10 @@ Their eventual schemas must reference the ledger rather than duplicating it and 
 - reject allocation asset/sign mismatches;
 - reject cross-household entries;
 - round-trip the maximum supported fixed-point values and detect overflow in calculations.
+- reject acquisition reversal while an outstanding Posted downstream lot
+  transaction depends on its acquisition lot;
+- permit acquisition reversal after that exact downstream transaction receives
+  its own Posted reversal;
+- reject unrelated quantity netting as a substitute for reversal lineage;
+- reject and atomically roll back a reversal when a new dependency appears
+  after Application eligibility evaluation.

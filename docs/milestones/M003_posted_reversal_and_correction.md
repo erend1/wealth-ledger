@@ -1,12 +1,15 @@
 # M003: Posted Reversal and Correction Workflow
 
-Status: Accepted
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-08-28
+Last reviewed: 2026-08-31
 
 Accepted: 2026-08-28
+
+Verified: 2026-08-31
+
 
 ## User outcome
 
@@ -20,40 +23,59 @@ Posted and all three economic facts remain auditable.
 
 ## Current evidence
 
-M001 already established the Domain and SQLite reversal invariants:
+M003 is implemented and verified.
 
-- `LedgerTransaction.CreateReversal` accepts only a posted non-reversal,
-  preserves its effective business dates, and creates opposite entries in the
-  same sequence;
-- a partial unique index permits at most one reversal row per original;
-- posting triggers require the same household, dates, entries, prices, roles,
-  and opposite lot allocations on the same lots;
-- a reversal cannot add cost-component or cash-flow metadata;
-- the original remains Posted and posted graphs cannot be edited or deleted.
+Domain-owned reconstitution restores posted transaction and lot aggregates from
+persisted snapshots without exposing Infrastructure rows or inventing new
+identity. Exact reversal creation preserves the original transaction's
+effective dates, entry sequence, portfolio, account, asset, role, unit price,
+and currency while negating every quantity. Existing-lot allocations are
+mirrored on the same lot, and checked negation rejects non-negatable persisted
+quantities.
 
-The existing Domain and real-SQLite tests prove inverse entry creation,
-reversal posting, uniqueness, same-lot allocation mirroring, original-plus-
-reversal netting, and rejection when an acquisition lot has downstream posted
-allocations.
+Application exposes generic reversal eligibility preview and a retry-safe
+reversal command. Reversal reasons are normalized and validated, and the
+versioned `REVERSE_POSTED_TRANSACTION` fingerprint contains the original
+transaction identity and normalized reason. Receipt replay takes precedence
+over current eligibility both before candidate loading and after the
+multi-query candidate load, closing the concurrent-winner visibility window.
 
-M002 added retry-safe contribution and fund-purchase submission, dedicated
-`CommandReceipt` storage, and `GET /api/ledger/transactions/{transactionId}`.
-The transaction read model exposes `ReversalOfTransactionId`, but an original
-does not yet expose the transaction that reverses it and neither side exposes
-its lot-allocation effects.
+Infrastructure reconstructs reversal candidates from normalized persisted
+facts, loads deterministic blocker identities, persists reversal entries,
+same-lot inverse allocations, the command receipt, and the final Posted
+transition inside one explicit SQLite transaction. Same-key concurrent writers
+recover the winning scoped receipt, while different-key writers recover the
+unique winning reversal identity. No losing receipt or partial reversal graph
+is retained.
 
-There is no Application reversal use case, reversal-specific persistence port,
-eligibility preview, or HTTP reversal command. No current supported workflow
-can therefore correct posted history without bypassing the Application layer.
+Migration `20260831113310_003_ReversalDependencySemantics` preserves the
+complete existing posting-validation trigger and changes only the acquisition
+dependency predicate. A Posted non-reversal transaction that allocates a lot
+opened by the acquisition remains a blocker until that exact dependent
+transaction has its own Posted reversal. Draft or Cancelled reversals do not
+neutralize the blocker, reversal rows are not blockers themselves, and
+unrelated coincidental quantity netting does not neutralize dependency
+lineage. The migration `Down` path restores the previous stricter predicate.
 
-One persistence mismatch must be resolved in this milestone. The current
-`TR_LedgerTransaction_ValidateBeforePosting` trigger treats every posted lot
-allocation after an acquisition as a permanent dependency. It still blocks the
-acquisition after the downstream transaction has itself been validly reversed.
-That behavior does not complete ADR-002's accepted workflow of correcting
-dependent activity first and then reversing the acquisition.
+The Minimal API exposes reversal eligibility preview and retry-safe reversal
+submission. Transaction readback exposes both `ReversalOfTransactionId` and
+derived `ReversedByTransactionId` together with ordered lot-allocation effects.
+A successful reversal returns `201 Created` with a resolvable transaction
+Location. Equivalent replay returns the same reversal identity and Location;
+stable sanitized errors cover invalid input, idempotency conflict, ineligible
+targets, outstanding dependencies, unsupported persisted shapes, and
+already-reversed targets.
 
-The verified baseline before this proposal is 163 passing tests, no formatting
+Verification covers contribution, acquisition, and allocated-disposal
+reversal behavior; exact inverse entries and allocations; original-plus-
+reversal position netting; preservation of acquisition lots and cost basis;
+restart readback; equivalent and conflicting replay; same-key and
+different-key races through independent DbContexts and HTTP clients; dependency
+neutralization; direct-SQL enforcement; a dependency introduced after
+eligibility evaluation; atomic rollback; corrected replacement as a separate
+auditable transaction; and stable sanitized HTTP contracts.
+
+Final verification on 2026-08-31 completed with 243 passing tests, no formatting
 drift, and no pending EF model changes.
 
 ## Why now

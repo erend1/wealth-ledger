@@ -1,24 +1,28 @@
 # WealthLedger Project State
 
-As of: 2026-08-28
+As of: 2026-08-31
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
 ## Current checkpoint
 
 The Domain v1 baseline, core SQLite persistence, Minimal API boundary,
-first-run setup, and M002 retry-safe transaction submission/readback milestone
-are implemented and verified.
+first-run setup, M002 retry-safe transaction submission/readback, and M003
+posted reversal and correction workflow are implemented and verified.
 
 Starting from an empty SQLite file, the supported synthetic-data path can apply
 migrations when explicitly enabled, initialize required master data, record
 retry-safe contributions and fund purchases, create acquisition lots, read
-posted transactions back through stable HTTP projections, and derive positions
-from immutable posted entry history.
+posted transactions through stable HTTP projections, derive positions from
+immutable posted entry history, preview reversal eligibility, and post an exact
+retry-safe reversal without editing or deleting the original transaction.
 
-Equivalent retries cannot create duplicate contribution or fund-purchase
-history. A successful fund-purchase replay preserves both the original
-transaction identity and acquisition-lot identity.
+Posted originals remain Posted. Reversals are separate immutable Posted
+transactions linked through `ReversalOfTransactionId`; transaction readback
+also derives `ReversedByTransactionId` and exposes ordered lot-allocation
+effects. Where a corrected replacement is required, it remains a separate
+normal submission with its own idempotency identity and no fabricated durable
+replacement relationship.
 
 ## Delivery planning
 
@@ -31,11 +35,12 @@ was accepted on 2026-08-24 and verified on 2026-08-27. ADR-006 records the
 decision to keep command retry identity separate from external financial
 references.
 
-No milestone is currently In Progress.
 [`M003: Posted Reversal and Correction Workflow`](milestones/M003_posted_reversal_and_correction.md)
-was accepted by the human owner on 2026-08-28 and is the next delivery
-milestone. Its implementation has not yet started and no M003 runtime behavior
-is claimed by this acceptance.
+was accepted on 2026-08-28 and verified on 2026-08-31.
+
+No milestone is currently In Progress. M004, safe local data operations, is the
+next Planned delivery candidate and is not authorized for implementation until
+its required decisions and milestone contract are explicitly accepted.
 
 ## Verified implementation
 
@@ -54,6 +59,14 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - Explicit configurations: `src/WealthLedger.Infrastructure/Persistence/Mapping/CoreLedgerConfigurations.cs`.
 - Stable text-code mappings: `src/WealthLedger.Infrastructure/Persistence/Mapping/StableCodeMappings.cs`.
 - Initial migration: `20260824074930_001_CoreLedger`.
+- M002 migration: `20260827072019_002_CommandReceipt`.
+- M003 migration: `20260831113310_003_ReversalDependencySemantics`.
+- SQLite concurrency policy outside the scoped idempotent submission and
+  reversal collision handling verified by M002 and M003.
+  
+M002 adds dedicated `CommandReceipt` persistence. M003 is behavior-only: it
+replaces the posting-validation trigger while preserving all previous guards
+and changes only the acquisition-reversal dependency predicate.
 
 M002 adds a second schema migration for dedicated `CommandReceipt` persistence.
 A receipt is identified by household, stable operation code, and idempotency
@@ -145,6 +158,42 @@ Infrastructure accepts setup only when all core master tables are empty and inse
 `POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly true. `Database:ApplyMigrationsOnStartup` is also false by default and applies migrations only when explicitly enabled. The setup endpoint returns stable initialized identities but deliberately emits
 no `Location` until a matching household read endpoint exists.
 
+### Posted reversal and correction
+
+Application exposes a read-only eligibility preview and a retry-safe reversal
+command using stable operation code `REVERSE_POSTED_TRANSACTION`. The command
+normalizes a required reversal reason, fingerprints the original transaction
+identity plus normalized reason, and resolves an existing scoped receipt before
+current eligibility. A second receipt lookup after candidate reconstruction
+preserves equivalent same-key replay when another writer commits during that
+multi-query read window.
+
+Infrastructure reconstructs posted Domain transaction and lot aggregates from
+persisted identities, derives deterministic dependency blockers, mirrors
+reversal allocations onto existing lots, and persists the reversal graph,
+receipt, and final Posted transition atomically. Database uniqueness remains
+the final arbiter for concurrent reversal submissions. Same-key equivalent
+writers converge on one receipt and reversal identity; different-key writers
+produce one winner and a sanitized already-reversed result containing that
+winner identity.
+
+Migration `20260831113310_003_ReversalDependencySemantics` updates the posting
+trigger without changing historical migration `001_CoreLedger`. A downstream
+Posted non-reversal transaction remains an acquisition-reversal blocker only
+while it lacks its own Posted reversal. Draft or Cancelled dependent reversals
+do not unblock it, and unrelated quantity netting does not substitute for
+reversal lineage.
+
+The API additionally exposes:
+
+- `GET /api/ledger/transactions/{transactionId}/reversal-preview`;
+- `POST /api/ledger/transactions/{transactionId}/reversals`.
+
+The existing transaction-detail GET now includes
+`ReversalOfTransactionId`, derived `ReversedByTransactionId`, and ordered
+lot-allocation effects so both sides of a reversal remain inspectable after a
+fresh database context or process restart.
+
 ## Verification
 
 Last verified commands:
@@ -157,47 +206,33 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 
 Results:
 
-- Domain tests: 76 passed, 0 failed.
-- Application tests: 33 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 37 passed, 0 failed.
-- API tests against real SQLite files: 17 passed, 0 failed.
-- Total: 163 passed, 0 failed.
+- Domain tests: 82 passed, 0 failed.
+- Application tests: 70 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 53 passed, 0 failed.
+- API tests against real SQLite files: 38 passed, 0 failed.
+- Total: 243 passed, 0 failed.
 - Formatting drift: none.
 - EF model drift: none.
 
-The M002 suite additionally proves deterministic contribution and fund-purchase
-fingerprints, equivalent replay, replay conflicts, stable purchase transaction
-and lot identities, atomic command-receipt persistence, concurrent receipt
-submission, resolvable transaction Locations, transaction readback, sanitized
-404/409 behavior, and removal of the unsupported setup Location.
+The M003 suite proves exact Domain reversal and reconstitution, normalized
+reason and deterministic fingerprinting, receipt-first replay, generic
+eligibility preview, same-lot inverse allocation, atomic SQLite persistence and
+rollback, neutralized downstream dependencies, direct-SQL trigger enforcement,
+same-key and different-key concurrency, dependency races introduced after
+eligibility evaluation, restart readback, exact position/allocation netting,
+stable sanitized HTTP errors, and a separate corrected-replacement flow.
 
 The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
 ## Next delivery candidate
 
-M003 is the next Accepted coherent ledger slice: posted reversal and
-correction.
+M004 is the next Planned coherent slice: safe local data operations.
 
-Its intended user outcome is to correct immutable posted history through a
-separate reversal transaction and, where needed, a replacement transaction
-without editing or deleting the original posted facts.
-
-The accepted milestone applies M002 retry safety to reversal, adds eligibility
-preview, mirrors allocations on their existing lots, and extends transaction
-readback with reverse navigation and allocation effects. It keeps corrected
-replacement submission separate and does not invent a structured replacement
-relationship.
-
-Repository inspection found one implementation mismatch that the proposal
-makes explicit: the current posting trigger treats every downstream posted lot
-allocation as a permanent acquisition-reversal blocker, even after that
-downstream transaction has its own valid posted reversal. The accepted M003
-migration aligns Application and SQLite with ADR-002's reverse-dependency
-correction sequence without editing the historical `001_CoreLedger` migration.
-
-The human owner accepted the seven M003 decisions on 2026-08-28 after review
-against the verified M002 contracts. Implementation may now begin under the
-accepted milestone, but no implementation or migration is present yet.
+Its roadmap outcome is explicit local database location, source-control
+exclusions, backup, restore verification, and local exposure policy. M004
+requires its unresolved operations and encryption decisions to be accepted
+before implementation begins; no M004 runtime behavior is claimed by the
+verified M003 checkpoint.
 
 ## Accepted M003 delivery outline
 
