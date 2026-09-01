@@ -8,7 +8,7 @@ namespace WealthLedger.Api.Tests;
 public sealed class SetupApiTests
 {
     [Fact]
-    public async Task Setup_AppliesOptInMigrationAndRejectsRepeatInitialization()
+    public async Task Setup_UsesExplicitlyInitializedDatabaseAndRejectsRepeat()
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
@@ -51,8 +51,7 @@ public sealed class SetupApiTests
     public async Task Setup_WhenDisabled_IsNotMapped()
     {
         using var factory = new WealthLedgerApiFactory(
-            setupEnabled: false,
-            applyMigrationsOnStartup: false);
+            setupEnabled: false);
         using var client = factory.CreateClient();
 
         var response = await client.PostAsJsonAsync(

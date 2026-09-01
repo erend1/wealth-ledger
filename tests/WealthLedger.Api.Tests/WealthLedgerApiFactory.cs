@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using WealthLedger.Infrastructure.Persistence;
 
 namespace WealthLedger.Api.Tests;
 
@@ -9,14 +11,12 @@ internal sealed class WealthLedgerApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _directoryPath;
     private readonly bool _setupEnabled;
-    private readonly bool _applyMigrationsOnStartup;
 
     internal WealthLedgerApiFactory(
         bool setupEnabled = true,
-        bool applyMigrationsOnStartup = true)
+        bool initializeDatabase = true)
     {
         _setupEnabled = setupEnabled;
-        _applyMigrationsOnStartup = applyMigrationsOnStartup;
         _directoryPath = Path.Combine(
             Path.GetTempPath(),
             "WealthLedger.Api.Tests",
@@ -24,19 +24,28 @@ internal sealed class WealthLedgerApiFactory : WebApplicationFactory<Program>
 
         Directory.CreateDirectory(_directoryPath);
 
-        var databasePath = Path.Combine(
+        DatabasePath = Path.Combine(
             _directoryPath,
             "wealthledger.db");
 
-        ConnectionString = new SqliteConnectionStringBuilder
+        var connectionString = new SqliteConnectionStringBuilder
         {
-            DataSource = databasePath,
+            DataSource = DatabasePath,
             ForeignKeys = true,
             Pooling = false
         }.ToString();
+
+        if (initializeDatabase)
+        {
+            var options = new DbContextOptionsBuilder<WealthLedgerDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            using var context = new WealthLedgerDbContext(options);
+            context.Database.Migrate();
+        }
     }
 
-    internal string ConnectionString { get; }
+    internal string DatabasePath { get; }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -47,11 +56,10 @@ internal sealed class WealthLedgerApiFactory : WebApplicationFactory<Program>
                 configuration.AddInMemoryCollection(
                     new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:WealthLedger"] =
-                            ConnectionString,
-                        ["Database:ApplyMigrationsOnStartup"] =
-                            _applyMigrationsOnStartup.ToString(),
-                        ["Setup:Enabled"] = _setupEnabled.ToString()
+                        ["Storage:DatabasePath"] = DatabasePath,
+                        ["Setup:Enabled"] = _setupEnabled.ToString(),
+                        ["urls"] = "http://127.0.0.1:0",
+                        ["AllowedHosts"] = "localhost;127.0.0.1;[::1]"
                     });
             });
     }

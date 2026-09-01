@@ -400,9 +400,6 @@ public sealed class LedgerApiTests
     public async Task PersistenceFailure_ReturnsSanitizedConflictProblem()
     {
         using var factory = new WealthLedgerApiFactory();
-        using var setupClient = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(setupClient);
-
         using var failingFactory = factory.WithWebHostBuilder(
             builder => builder.ConfigureServices(services =>
             {
@@ -423,6 +420,7 @@ public sealed class LedgerApiTests
             }));
 
         using var client = failingFactory.CreateClient();
+        var setup = await InitializeCoreLedgerAsync(client);
 
         client.DefaultRequestHeaders.Add(
             "Idempotency-Key",
