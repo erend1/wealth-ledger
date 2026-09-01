@@ -63,7 +63,7 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - M003 migration: `20260831113310_003_ReversalDependencySemantics`.
 - SQLite concurrency policy outside the scoped idempotent submission and
   reversal collision handling verified by M002 and M003.
-  
+
 M002 adds dedicated `CommandReceipt` persistence. M003 is behavior-only: it
 replaces the posting-validation trigger while preserving all previous guards
 and changes only the acquisition-reversal dependency predicate.
