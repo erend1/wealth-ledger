@@ -91,6 +91,13 @@ are clearly separated from recorded facts.
 Manages household master data, assets, institutions, accounts, portfolios,
 backup and restore, exports, data-source settings, privacy, and diagnostics.
 
+The later Settings UI must wrap the verified M004 Application operations for
+status, backup creation and verification, isolated restore, migration, and
+confirmed active replacement. It must display the sanitized operation result
+and any required confirmation; it must not manipulate SQLite, archives, locks,
+or filesystem paths directly. M004 provides these contracts and its operations
+CLI, but does not add a UI.
+
 ## First-run experience
 
 The first-run flow should:
@@ -106,7 +113,10 @@ The first-run flow should:
 7. Disable the setup path after successful initialization.
 
 The implementation may split this flow across milestones. The user must never
-need to construct GUIDs or raw transport values manually.
+need to construct GUIDs or raw transport values manually. Database location,
+initialization, and backup-destination readiness use the M004 operations
+contracts; a later UI may guide those actions without introducing a second
+lifecycle path.
 
 ## Monthly review flow
 
@@ -255,4 +265,3 @@ The interaction model is usable when a non-developer can initialize synthetic
 data, create an opening position, record a contribution and acquisition, find
 the resulting transaction and position, correct an error, and verify a backup
 without issuing an HTTP request or editing SQLite directly.
-

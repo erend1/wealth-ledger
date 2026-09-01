@@ -1,8 +1,8 @@
 # WealthLedger Security and Operations Requirements
 
-Status: Proposed operational baseline
+Status: Accepted operational requirements
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-09-01
 
 ## Purpose
 
@@ -11,24 +11,40 @@ records. Correct Domain logic is insufficient if the live database can be
 committed accidentally, exposed over a network, corrupted during backup, or
 lost with one workstation.
 
-This document defines required outcomes. It does not claim that they are all
-implemented. Verified operational reality remains in `PROJECT_STATE.md`.
+This document defines required outcomes. M004 implements the bounded local-data
+baseline identified below; later requirements remain explicit rather than being
+implied by that milestone. Verified repository reality remains in
+`PROJECT_STATE.md`, and the operator procedure is in `OPERATIONS.md`.
 
-## Current verified gaps
+## Implemented M004 baseline
 
-As of 2026-08-24:
+As verified for M004 on 2026-09-01:
 
-- the API's default SQLite connection uses a relative `wealthledger.db` path;
-- the repository ignore rules do not explicitly cover SQLite database, WAL, or
-  shared-memory files;
-- no supported backup or restore workflow exists;
-- encryption-at-rest and deployment are open decisions;
-- authentication and authorization are open decisions;
-- migration and setup are disabled by default, which is a useful safety
-  baseline but not a complete operating model.
+- the authoritative SQLite path resolves absolutely below the per-user local
+  application-data directory unless an equally validated absolute override is
+  supplied;
+- live databases, SQLite companions, operation locks, restore stages, and
+  `.wlbackup` packages are ignored by source control;
+- the API binds only to accepted loopback addresses, owns the database for its
+  lifetime, validates compatibility, and never migrates at startup;
+- the explicit operations CLI initializes, reports status, creates and verifies
+  SQLite-consistent backups, stages restores, replaces the active database with
+  rollback protection, and migrates only after a verified pre-migration backup;
+- path ownership, package integrity, schema compatibility, representative
+  ledger reads, and privacy-safe failures are enforced with fail-closed tests;
+- application backup packages are explicitly plaintext. Operators must confirm
+  external destination separation and encryption rather than treating a digest
+  as confidentiality or authenticity.
 
-Synthetic development and tests may continue. Real household data must not rely
-on the repository as its only operational protection.
+## Remaining operational boundaries
+
+M004 does not implement application-managed encryption, authentication,
+authorization, remote access, a remote/off-site provider, automatic scheduling
+or retention deletion, governed exports, or a UI. Full-disk/destination
+encryption, recovery-key custody, physical separation, cadence, and restore
+drills remain operator responsibilities. Real household data must not rely on
+the repository, a single workstation, or one untested package as its only
+protection.
 
 ## Initial threat model
 
@@ -59,6 +75,9 @@ or diagnostically expose the resolved path without logging private contents.
 Relative repository-root storage may remain available only for tests or an
 explicit development profile.
 
+M004 satisfies this requirement for normal API and operations composition.
+Tests use explicit, unique synthetic roots and never relax normal path policy.
+
 ### OPS-002: Source-control protection
 
 Repository ignore rules must cover at least:
@@ -79,6 +98,10 @@ not tracked.
 Ignore rules reduce mistakes; they do not replace placing live data outside the
 repository.
 
+M004 also ignores rollback journals, `.sqlite3` companions, `.wlbackup`,
+`.wlrestore`, and `.wloperation.lock` artifacts and verifies the patterns with
+repository-protection checks.
+
 ### OPS-003: Local exposure policy
 
 The initial API/UI host must bind only to the intended local interface unless a
@@ -89,12 +112,19 @@ Remote access, reverse proxies, shared-machine use, and multi-user access
 require an accepted authentication, authorization, and transport-security
 design.
 
+M004 implements loopback-only validation for tracked settings, environment
+overrides, and process startup. It deliberately does not authorize remote use.
+
 ### OPS-004: Setup and migration control
 
 One-time setup remains disabled during normal operation. Database migration is
 an explicit, observable operation with a pre-migration backup and a documented
 failure path. A normal application restart must not silently recreate master
 data or discard a failed database.
+
+M004 implements explicit initialization and migration commands. Normal API
+startup acquires ownership and validates readiness but neither creates nor
+migrates the database.
 
 ### OPS-005: Consistent backup
 
@@ -112,6 +142,10 @@ Each backup records or exposes:
 - encryption state;
 - verification status.
 
+M004 uses SQLite's online backup API, verifies a standalone snapshot before and
+after packaging, and publishes a new immutable generation atomically. The
+versioned manifest records operational metadata only.
+
 ### OPS-006: Restore verification
 
 Restore always targets an explicit path and never overwrites the only working
@@ -126,6 +160,11 @@ copy without a recoverable pre-restore backup. The workflow must:
 
 A backup is not trusted until this workflow has succeeded at least once.
 
+M004 implements both isolated staging and confirmed active replacement. Active
+replacement first creates a verified pre-restore generation, stages on the same
+filesystem, preserves the superseded database, and rolls back a failed
+promotion check.
+
 ### OPS-007: Multiple recoverable copies
 
 The operating guide should recommend at least three recoverable copies across
@@ -135,6 +174,10 @@ service, or another accepted medium.
 
 Synchronization is not automatically a backup. Deletion or corruption that
 replicates immediately must not erase every recoverable version.
+
+`OPERATIONS.md` carries this recommendation and requires operators to confirm
+destination separation. M004 does not provision, upload, schedule, or prune
+copies.
 
 ### OPS-008: Encryption decision
 
@@ -150,12 +193,21 @@ about:
 Do not introduce custom cryptography. Use established platform or library
 mechanisms only after a concrete design is accepted and tested.
 
+The accepted M004 decision is `PLAINTEXT` at the application-package layer,
+with explicit operator confirmation of established external encryption and
+recovery-key custody. Application-managed database or package encryption is
+deferred; a SHA-256 digest provides corruption detection, not authenticity or
+confidentiality.
+
 ### OPS-009: Secrets and configuration
 
 Connection strings containing secrets, provider credentials, encryption keys,
 and backup credentials must use supported configuration or secret storage and
 must not be committed. Production-like values do not belong in screenshots,
 tests, or canonical docs.
+
+M004 adds no secrets. Its paths and protection acknowledgements use ordinary
+configuration overrides and all test values are synthetic.
 
 ### OPS-010: Privacy-safe diagnostics
 
@@ -168,6 +220,11 @@ requested and protected.
 Problem Details returned by the API must not expose SQLite, EF Core, filesystem,
 or stack-trace internals.
 
+M004 operations and API-startup failures map implementation details to bounded,
+stable categories. Process tests inspect standard output and error for private
+values, SQL, connection strings, paths supplied as private markers, and stack
+traces.
+
 ### OPS-011: Governed exports
 
 An export states its schema/version, effective time, included regions, and
@@ -175,11 +232,17 @@ whether private fields are redacted. Exporting does not mutate the ledger.
 Machine-readable exports use stable identifiers and exact decimal strings or
 integer representations without binary floating-point loss.
 
+Governed exports remain outside M004.
+
 ### OPS-012: Direct-write prohibition
 
 Routine tools, UI, importers, scripts, and agents write only through Application
 use cases. Direct SQL is restricted to migrations, verified recovery, or
 explicit diagnostics and must not silently create posted facts.
+
+M004's seven-command surface accepts no SQL and changes no posted ledger fact.
+Application owns the operation-oriented use cases while Infrastructure confines
+the necessary SQLite, EF migration, archive, lock, and filesystem mechanics.
 
 ## Backup cadence recommendation
 
@@ -231,4 +294,3 @@ The implementation milestone must include focused tests or repeatable checks
 for path resolution, source-control ignore behavior, local exposure, consistent
 backup under SQLite use, integrity validation, restore into isolation, schema
 compatibility, migration backup behavior, and privacy-safe failure reporting.
-

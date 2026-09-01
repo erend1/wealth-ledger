@@ -2,18 +2,23 @@
 
 Status: Canonical architecture
 
-Last distilled: 2026-08-24
+Last distilled: 2026-09-01
 
 ## Dependency direction
 
-    WealthLedger.UI ───────────────┐
-                                   │
-    WealthLedger.Api ──> WealthLedger.Application ──> WealthLedger.Domain
-                                   ▲
-                                   │
-    WealthLedger.Infrastructure ───┘
+    WealthLedger.UI ────────────────┐
+                                    │
+    WealthLedger.Api ───────────────┤
+                                    ├──> WealthLedger.Application ──> WealthLedger.Domain
+    WealthLedger.Operations ────────┤
+                                    ▲
+                                    │
+    WealthLedger.Infrastructure ────┘
 
-Domain has no outward dependency. Application depends on Domain. Infrastructure implements Application ports and depends on both as needed. API and UI are delivery mechanisms.
+Domain has no outward dependency. Application depends on Domain. Infrastructure
+implements Application ports and depends on both as needed. API, Operations,
+and the later UI are delivery/composition mechanisms; they do not create
+alternate financial-rule paths.
 
 ## Project responsibilities
 
@@ -46,7 +51,9 @@ Owns:
 - cross-aggregate validation requiring persisted history;
 - authorization/policy hooks when introduced;
 - DTOs/results for callers;
-- deterministic query and calculation services.
+- deterministic query and calculation services;
+- narrow local-data operation ports and orchestration results that contain no
+  filesystem, SQLite, EF, HTTP, archive, or console implementation detail.
 
 Examples of appropriate use cases:
 
@@ -66,6 +73,10 @@ Owns:
 - EF Core entity configurations and value conversions;
 - SQLite migration SQL, constraints, indexes, and triggers;
 - repository/query implementations;
+- canonical local-data path validation and exclusive process ownership;
+- SQLite integrity/compatibility inspection and explicit EF migration mechanics;
+- online backup, bounded archive verification, filesystem staging, journal
+  normalization, active replacement, and rollback mechanics;
 - external provider implementations introduced in later milestones;
 - rebuildable read-model persistence if later justified.
 
@@ -82,6 +93,26 @@ Owns:
 - error-to-HTTP translation.
 
 The API does not expose EF entities and does not contain portfolio mathematics.
+
+Normal API hosting is loopback-only. Startup acquires the same authoritative
+database ownership used by lifecycle operations, validates the current schema,
+and fails closed when initialization or explicit migration is required. It does
+not invoke EF migration APIs and exposes no backup, restore, file-browser,
+migration, or SQL endpoint.
+
+### WealthLedger.Operations
+
+Owns:
+
+- parsing the seven accepted local lifecycle commands;
+- composition of the focused Application local-data use cases;
+- privacy-safe text output and stable numeric exit categories;
+- cancellation wiring for the console process.
+
+It accepts no caller-supplied SQL. Filesystem, archive, SQLite, locking, backup,
+restore, and migration work remains in Infrastructure. Destructive active
+replacement requires the literal `--confirm-replace-active` option and still
+passes through Application orchestration and Infrastructure safety checks.
 
 ### WealthLedger.UI
 
@@ -198,7 +229,12 @@ Invalid-default-sensitive value objects such as CurrencyCode, Money, UnitPrice, 
 
 Domain-rule failures should be explicit and stable enough for Application/API translation.
 
-SQLite writes must use transactions. Concurrency strategy beyond SQLite's normal transactional behavior is not yet an accepted design; do not add distributed locks, queues, or infrastructure without a demonstrated case.
+SQLite writes must use transactions. M004 adds one local, adjacent,
+cross-process ownership lock for the authoritative database: the API holds it
+during normal write service, while initialize, backup creation, migration, and
+active replacement require exclusive lifecycle ownership. The open exclusive
+file handle is authoritative; an unlocked stale marker is not. This is not a
+distributed lock or remote multi-writer design.
 
 ## Testing layers
 
@@ -209,3 +245,8 @@ Application tests exercise use-case orchestration and cross-aggregate rules.
 Integration tests use real SQLite to verify mappings, constraints, triggers, transactions, and derived queries. Do not rely only on EF's in-memory provider for SQLite behavior.
 
 API tests cover transport mapping and status/error behavior after the first slice exists.
+
+Operations tests use unique temporary directories and real processes to verify
+path independence, ownership collisions, stable CLI parsing/exits, WAL and
+rollback-journal backups, hostile archives, isolated restore, active rollback,
+pre-migration protection, restart/readback, and privacy-safe diagnostics.

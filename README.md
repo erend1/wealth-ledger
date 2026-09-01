@@ -10,6 +10,7 @@ The ledger is the source of truth. Posted transactions are immutable, correction
 - `src/WealthLedger.Application` contains focused use cases and persistence ports.
 - `src/WealthLedger.Infrastructure` contains the EF Core SQLite implementation.
 - `src/WealthLedger.Api` contains the ASP.NET Core Minimal API boundary.
+- `src/WealthLedger.Operations` contains the explicit local data lifecycle CLI.
 - `tests` contains the unit and real-SQLite integration suites.
 - `docs` contains product, delivery, architecture, domain, database, project-state, operations, milestone, and ADR material at each document's stated status.
 
@@ -25,7 +26,8 @@ See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint a
 | [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Concise verified repository checkpoint |
 | [docs/UX_MVP.md](docs/UX_MVP.md) | Framework-independent proposed interaction model |
 | [docs/DATA_CAPTURE.md](docs/DATA_CAPTURE.md) | Source facts each financial workflow should preserve |
-| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Proposed local-data, backup, restore, and privacy baseline |
+| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted security/operations requirements and implemented M004 boundary |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Canonical database, backup, restore, migration, and recovery guide |
 | [docs/milestones/README.md](docs/milestones/README.md) | Milestone statuses, template, agent prompts, and definition of done |
 | [docs/decisions/README.md](docs/decisions/README.md) | Accepted architectural decisions |
 
@@ -45,15 +47,33 @@ dotnet tool restore
 dotnet restore WealthLedger.slnx
 ```
 
-## Local database initialization
+## Local database operations
 
-Database migration and the one-time setup endpoint are disabled by default. For an explicit first local initialization, run:
+Normal API startup never creates or migrates a database. Configure an absolute,
+separated backup directory, then use the explicit operations project:
 
 ```powershell
-dotnet run --project src/WealthLedger.Api/WealthLedger.Api.csproj -- --Database:ApplyMigrationsOnStartup=true --Setup:Enabled=true
+$wlBackupDirectory = 'E:\Encrypted WealthLedger Backups'
+$wlProtectionArgs = @(
+  "--Backup:Directory=$wlBackupDirectory"
+  '--Backup:DestinationSeparationConfirmed=true'
+  '--Backup:DestinationEncryptionConfirmed=true'
+)
+
+dotnet run --project src/WealthLedger.Operations/WealthLedger.Operations.csproj -- status @wlProtectionArgs
+dotnet run --project src/WealthLedger.Operations/WealthLedger.Operations.csproj -- database initialize @wlProtectionArgs
+dotnet run --project src/WealthLedger.Operations/WealthLedger.Operations.csproj -- backup create @wlProtectionArgs
 ```
 
-Call `POST /api/setup/core-ledger` once to create the initial currency, household, institution, portfolio, account, cash asset, and fund asset. Stop the process afterward and restart without the setup flags for normal operation.
+Set the confirmation values to `true` only after verifying the destination's
+actual separation, encryption, and recovery-key custody. Application packages
+are plaintext. See [docs/OPERATIONS.md](docs/OPERATIONS.md) before using real
+data; it covers verification, restore drills, migration, active replacement,
+failure recovery, and stable exit categories.
+
+After database initialization, one-time master-data setup remains an explicit,
+default-off API action. Start the loopback API with `Setup:Enabled=true`, call
+`POST /api/setup/core-ledger` once, then restart without that flag.
 
 ## Verification
 
