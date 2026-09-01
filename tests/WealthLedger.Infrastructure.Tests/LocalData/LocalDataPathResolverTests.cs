@@ -125,6 +125,39 @@ public sealed class LocalDataPathResolverTests : IDisposable
         Assert.Equal(LocalDataFailureCategory.UnsafePath, result.Failure!.Category);
     }
 
+    [Theory]
+    [InlineData("wealthledger.wlbackup")]
+    [InlineData("wealthledger.wlrestore")]
+    [InlineData("wealthledger.wloperation.lock")]
+    public void ReservedOperationalExtension_CannotBeAuthoritativeDatabase(
+        string fileName)
+    {
+        var resolver = CreateResolver(
+            databasePath: Path.Combine(_testRoot, "live", fileName));
+
+        var result = resolver.ResolveDatabasePath();
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(LocalDataFailureCategory.UnsafePath, result.Failure!.Category);
+    }
+
+    [Fact]
+    public void DatabaseResolutionRejectsConfiguredBackupOverlap()
+    {
+        var databasePath = Path.Combine(
+            _testRoot,
+            "live",
+            "wealthledger.db");
+        var resolver = CreateResolver(
+            databasePath,
+            backupDirectory: Path.Combine(_testRoot, "live", "backups"));
+
+        var result = resolver.ResolveDatabasePath();
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(LocalDataFailureCategory.UnsafePath, result.Failure!.Category);
+    }
+
     [Fact]
     public void BackupDirectory_MustBeAbsoluteDistinctAndNarrow()
     {

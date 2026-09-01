@@ -87,7 +87,48 @@ internal sealed class LocalDataPathResolver
                 "wealthledger.db");
         }
 
-        return ValidateFilePath(candidate, "database");
+        var databaseResult = ValidateFilePath(candidate, "database");
+
+        if (!databaseResult.Succeeded)
+        {
+            return databaseResult;
+        }
+
+        var databasePath = databaseResult.Value!.FullPath;
+        var extension = Path.GetExtension(databasePath);
+
+        if (extension.Equals(".wlbackup", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".wlrestore", StringComparison.OrdinalIgnoreCase)
+            || databasePath.EndsWith(
+                ".wloperation.lock",
+                PathComparison))
+        {
+            return InvalidPath(
+                "The authoritative database cannot use a backup, staging, or lock extension.");
+        }
+
+        var configuredBackupDirectory = _getConfigurationValue(
+            BackupDirectoryConfigurationKey);
+
+        if (configuredBackupDirectory is not null)
+        {
+            if (string.IsNullOrWhiteSpace(configuredBackupDirectory))
+            {
+                return LocalDataOperationResult<ResolvedLocalDataPath>.Failed(
+                    LocalDataFailureCategory.InvalidInputOrConfiguration,
+                    "Backup:Directory cannot be empty when configured.");
+            }
+
+            var backupResult = ResolveBackupDirectory(databasePath);
+
+            if (!backupResult.Succeeded)
+            {
+                return LocalDataResult<ResolvedLocalDataPath>.FromFailure(
+                    backupResult.Failure!);
+            }
+        }
+
+        return databaseResult;
     }
 
     internal LocalDataOperationResult<ResolvedLocalDataPath>
