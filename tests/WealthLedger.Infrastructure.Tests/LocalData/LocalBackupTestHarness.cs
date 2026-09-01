@@ -24,7 +24,9 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
         LocalDatabaseOwnershipGuard ownershipGuard,
         SqliteDatabaseVerifier databaseVerifier,
         LocalBackupPackageReader packageReader,
-        SqliteBackupService backupService)
+        SqliteBackupService backupService,
+        SqliteRestoreService restoreService,
+        ILocalDataOperationHooks hooks)
     {
         _allowedRoot = allowedRoot;
         RootPath = rootPath;
@@ -35,11 +37,16 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
         DatabaseVerifier = databaseVerifier;
         PackageReader = packageReader;
         BackupService = backupService;
+        RestoreService = restoreService;
+        Hooks = hooks;
         Creator = new SqliteLocalBackupCreator(
             resolver,
             ownershipGuard,
             backupService);
         Verifier = new SqliteLocalBackupVerifier(resolver, packageReader);
+        RestoreStager = new SqliteLocalRestoreStager(
+            resolver,
+            restoreService);
     }
 
     internal string RootPath { get; }
@@ -58,9 +65,15 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
 
     internal SqliteBackupService BackupService { get; }
 
+    internal SqliteRestoreService RestoreService { get; }
+
     internal SqliteLocalBackupCreator Creator { get; }
 
     internal SqliteLocalBackupVerifier Verifier { get; }
+
+    internal SqliteLocalRestoreStager RestoreStager { get; }
+
+    internal ILocalDataOperationHooks Hooks { get; }
 
     internal static async Task<LocalBackupTestHarness> CreateAsync(
         ILocalDataOperationHooks? hooks = null,
@@ -101,12 +114,18 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
         var databaseVerifier = new SqliteDatabaseVerifier();
         var packageReader = new LocalBackupPackageReader(databaseVerifier);
         var timeProvider = new FixedTimeProvider(OperationTime);
+        var effectiveHooks = hooks ?? NoOpLocalDataOperationHooks.Instance;
         var backupService = new SqliteBackupService(
             resolver,
             databaseVerifier,
             packageReader,
             timeProvider,
-            hooks);
+            effectiveHooks);
+        var restoreService = new SqliteRestoreService(
+            packageReader,
+            databaseVerifier,
+            timeProvider,
+            effectiveHooks);
         var harness = new LocalBackupTestHarness(
             allowedRoot,
             rootPath,
@@ -116,7 +135,9 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
             ownershipGuard,
             databaseVerifier,
             packageReader,
-            backupService);
+            backupService,
+            restoreService,
+            effectiveHooks);
 
         if (targetMigration is null)
         {
@@ -147,9 +168,137 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
         return harness;
     }
 
+    internal SqliteLocalDatabaseReplacementSessionFactory
+        CreateReplacementSessionFactory()
+        => new(
+            Resolver,
+            OwnershipGuard,
+            RestoreService,
+            BackupService,
+            PackageReader,
+            DatabaseVerifier,
+            new FixedTimeProvider(OperationTime),
+            Hooks);
+
     internal async Task<LocalDataOperationResult<LocalBackupCreation>>
         CreateBackupAsync()
         => await Creator.CreateAsync();
+
+    internal async Task InsertSyntheticHouseholdAsync(string name)
+    {
+        await using var connection =
+            SqliteLocalDataConnectionFactory.CreateConnection(
+                DatabasePath,
+                SqliteOpenMode.ReadWrite);
+        await connection.OpenAsync();
+        await using (var currency = connection.CreateCommand())
+        {
+            currency.CommandText =
+                """
+                INSERT OR IGNORE INTO Currency (Code, Name, MinorUnitDigits)
+                VALUES ('ZZZ', 'Synthetic Currency', 2);
+                """;
+            _ = await currency.ExecuteNonQueryAsync();
+        }
+
+        await using var household = connection.CreateCommand();
+        household.CommandText =
+            """
+            INSERT INTO Household (Id, Name, BaseCurrencyCode, CreatedAtUtc)
+            VALUES ($id, $name, 'ZZZ', '2026-09-01T10:15:30.0000000Z');
+            """;
+        household.Parameters.AddWithValue(
+            "$id",
+            Guid.NewGuid().ToString("D"));
+        household.Parameters.AddWithValue("$name", name);
+        _ = await household.ExecuteNonQueryAsync();
+    }
+
+    internal async Task CreateDetachedWalGenerationAsync(string name)
+    {
+        byte[] mainFile;
+        byte[] walFile;
+        byte[] sharedMemoryFile;
+
+        await using (var connection =
+                     SqliteLocalDataConnectionFactory.CreateConnection(
+                         DatabasePath,
+                         SqliteOpenMode.ReadWrite))
+        {
+            await connection.OpenAsync();
+            await using (var mode = connection.CreateCommand())
+            {
+                mode.CommandText =
+                    "PRAGMA journal_mode = WAL; PRAGMA wal_autocheckpoint = 0;";
+                _ = await mode.ExecuteNonQueryAsync();
+            }
+
+            await using (var currency = connection.CreateCommand())
+            {
+                currency.CommandText =
+                    """
+                    INSERT OR IGNORE INTO Currency (Code, Name, MinorUnitDigits)
+                    VALUES ('ZZZ', 'Synthetic Currency', 2);
+                    """;
+                _ = await currency.ExecuteNonQueryAsync();
+            }
+
+            await using (var household = connection.CreateCommand())
+            {
+                household.CommandText =
+                    """
+                    INSERT INTO Household (Id, Name, BaseCurrencyCode, CreatedAtUtc)
+                    VALUES ($id, $name, 'ZZZ', '2026-09-01T10:15:30.0000000Z');
+                    """;
+                household.Parameters.AddWithValue(
+                    "$id",
+                    Guid.NewGuid().ToString("D"));
+                household.Parameters.AddWithValue("$name", name);
+                _ = await household.ExecuteNonQueryAsync();
+            }
+
+            mainFile = await ReadSharedBytesAsync(DatabasePath);
+            walFile = await ReadSharedBytesAsync(DatabasePath + "-wal");
+            sharedMemoryFile = await ReadSharedBytesAsync(
+                DatabasePath + "-shm");
+        }
+
+        await File.WriteAllBytesAsync(DatabasePath, mainFile);
+        await File.WriteAllBytesAsync(DatabasePath + "-wal", walFile);
+        await File.WriteAllBytesAsync(
+            DatabasePath + "-shm",
+            sharedMemoryFile);
+    }
+
+    private static async Task<byte[]> ReadSharedBytesAsync(string path)
+    {
+        await using var input = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 64 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await using var output = new MemoryStream();
+        await input.CopyToAsync(output);
+        return output.ToArray();
+    }
+
+    internal static async Task<long> CountSyntheticHouseholdsAsync(
+        string databasePath,
+        string name)
+    {
+        await using var connection =
+            SqliteLocalDataConnectionFactory.CreateConnection(
+                databasePath,
+                SqliteOpenMode.ReadOnly);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT COUNT(*) FROM Household WHERE Name = $name;";
+        command.Parameters.AddWithValue("$name", name);
+        return (long)(await command.ExecuteScalarAsync())!;
+    }
 
     internal static async Task<PackageParts> ReadPackagePartsAsync(
         string packagePath)

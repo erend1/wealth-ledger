@@ -176,6 +176,11 @@ internal static class LocalDatabaseFiles
         => CompanionSuffixes.Any(
             suffix => File.Exists(databasePath + suffix));
 
+    internal static bool AnyCompanionArtifactExists(string databasePath)
+        => CompanionSuffixes
+            .Where(suffix => suffix.Length > 0)
+            .Any(suffix => File.Exists(databasePath + suffix));
+
     internal static string CreateUniqueSiblingPath(
         string path,
         string extension)
@@ -206,6 +211,42 @@ internal static class LocalDatabaseFiles
             {
                 // The caller reports the primary failure. Cleanup is best effort.
             }
+        }
+    }
+
+    internal static void DeleteCompanionArtifacts(string databasePath)
+    {
+        SqliteConnection.ClearAllPools();
+
+        foreach (var suffix in CompanionSuffixes.Where(
+                     suffix => suffix.Length > 0))
+        {
+            try
+            {
+                File.Delete(databasePath + suffix);
+            }
+            catch (Exception exception)
+                when (exception is IOException
+                      or UnauthorizedAccessException)
+            {
+                // The caller must recheck that companion cleanup succeeded.
+            }
+        }
+    }
+
+    internal static void DeleteMainDatabaseFile(string databasePath)
+    {
+        SqliteConnection.ClearAllPools();
+
+        try
+        {
+            File.Delete(databasePath);
+        }
+        catch (Exception exception)
+            when (exception is IOException
+                  or UnauthorizedAccessException)
+        {
+            // The caller verifies whether cleanup completed.
         }
     }
 }

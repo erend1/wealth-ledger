@@ -42,6 +42,12 @@ public static class DependencyInjection
                 serviceProvider.GetRequiredService<LocalBackupPackageReader>(),
                 serviceProvider.GetRequiredService<TimeProvider>(),
                 serviceProvider.GetRequiredService<ILocalDataOperationHooks>()));
+        services.AddSingleton(
+            serviceProvider => new SqliteRestoreService(
+                serviceProvider.GetRequiredService<LocalBackupPackageReader>(),
+                serviceProvider.GetRequiredService<SqliteDatabaseVerifier>(),
+                serviceProvider.GetRequiredService<TimeProvider>(),
+                serviceProvider.GetRequiredService<ILocalDataOperationHooks>()));
         services.AddSingleton<ILocalDataStatusReader>(
             serviceProvider => new SqliteLocalDataStatusReader(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
@@ -64,6 +70,21 @@ public static class DependencyInjection
             serviceProvider => new SqliteLocalBackupVerifier(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
                 serviceProvider.GetRequiredService<LocalBackupPackageReader>()));
+        services.AddSingleton<ILocalRestoreStager>(
+            serviceProvider => new SqliteLocalRestoreStager(
+                serviceProvider.GetRequiredService<LocalDataPathResolver>(),
+                serviceProvider.GetRequiredService<SqliteRestoreService>()));
+        services.AddSingleton<ILocalDatabaseReplacementSessionFactory>(
+            serviceProvider =>
+                new SqliteLocalDatabaseReplacementSessionFactory(
+                    serviceProvider.GetRequiredService<LocalDataPathResolver>(),
+                    serviceProvider.GetRequiredService<LocalDatabaseOwnershipGuard>(),
+                    serviceProvider.GetRequiredService<SqliteRestoreService>(),
+                    serviceProvider.GetRequiredService<SqliteBackupService>(),
+                    serviceProvider.GetRequiredService<LocalBackupPackageReader>(),
+                    serviceProvider.GetRequiredService<SqliteDatabaseVerifier>(),
+                    serviceProvider.GetRequiredService<TimeProvider>(),
+                    serviceProvider.GetRequiredService<ILocalDataOperationHooks>()));
         services.AddSingleton<ILocalApiDatabaseStartup>(
             serviceProvider => new LocalApiDatabaseStartup(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
