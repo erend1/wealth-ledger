@@ -1,10 +1,12 @@
 # M004: Safe Local Data Operations
 
-Status: Proposed
+Status: Accepted
 
 Owner: Human and agent
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
+
+Accepted: 2026-09-01
 
 ## User outcome
 
@@ -82,11 +84,11 @@ longer In Progress, and its implementation branch must first be rebased onto the
 verified M003 checkpoint. This preserves the one-In-Progress rule and lets the
 pre-migration backup tests exercise the actual post-M003 migration chain.
 
-## Decisions and decision gates
+## Accepted decisions and decision gates
 
-Every decision below is Proposed. Human acceptance is required before M004
-becomes Accepted. An implementation must not silently choose a different
-operating model.
+The human owner accepted all ten Recommended decisions below exactly as written
+on 2026-09-01. An implementation must not silently choose a different operating
+model.
 
 ### Decision 1: delivery sequencing
 

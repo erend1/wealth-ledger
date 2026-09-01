@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-08-31
+As of: 2026-09-01
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
@@ -39,14 +39,11 @@ references.
 was accepted on 2026-08-28 and verified on 2026-08-31.
 
 [`M004: Safe Local Data Operations`](milestones/M004_safe_local_data_operations.md)
-is the next Proposed delivery candidate for human review. No milestone is
-currently In Progress, and M004 is not authorized for implementation until its
-required decisions and milestone contract are explicitly accepted. The
-proposal records recommended decisions for the live-data path, local operations
-surface, process ownership, backup and restore format, explicit migration,
-loopback exposure, and encryption boundary; none of that behavior is currently
-claimed as implemented. M003's verification satisfies M004's delivery-order
-prerequisite.
+was accepted on 2026-09-01 after the human owner approved all ten Recommended
+decisions exactly as written. ADR-007 records the accepted local-data operating
+model. No milestone is currently In Progress, and none of the M004 runtime
+behavior is yet claimed as implemented. M003's verification satisfies M004's
+delivery-order prerequisite.
 
 [`M005: Master Data and Ledger Navigation`](milestones/M005_master_data_and_ledger_navigation.md)
 is also Proposed for parallel planning and human review only. It cannot become
@@ -271,13 +268,12 @@ behavior as implemented.
 
 ## Next delivery candidate
 
-M004 is the next Proposed coherent slice: safe local data operations.
+M004 is the next Accepted coherent slice: safe local data operations.
 
 Its roadmap outcome is explicit local database location, source-control
 exclusions, backup, restore verification, and local exposure policy. M004
-requires its unresolved operations and encryption decisions to be accepted
-before implementation begins; no M004 runtime behavior is claimed by the
-verified M003 checkpoint.
+records its accepted operations and encryption boundary in ADR-007; no M004
+runtime behavior is claimed by the verified M003 checkpoint.
 
 ## Accepted M003 delivery outline
 
@@ -304,8 +300,8 @@ Do not start live market data, provider-specific integration, optimization, AI/L
   presentation choices remain subject to human acceptance and an ADR.
 - Market/reference-data schemas and provider contracts.
 - Authentication and authorization.
-- The Proposed M004 choices for backup, encryption-at-rest, and local database
-  deployment remain subject to human acceptance.
+- Application-level database or package encryption beyond M004's accepted
+  OS/device-encryption reliance remains deferred to a separate ADR.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
 - SQLite concurrency policy outside the scoped idempotent-submission collision
   handled by M002.

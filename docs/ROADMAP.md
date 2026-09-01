@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
 ## How to read this roadmap
 
@@ -42,7 +42,7 @@ Statuses used here:
 | M001 | Verified | Core immutable ledger, fixed-point persistence, setup, contribution, fund purchase, lot creation, and one position query | Existing checkpoint in `PROJECT_STATE.md` |
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
-| M004 | Proposed | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Human acceptance of the ten decision gates; implementation begins only after M003 is Verified |
+| M004 | Accepted | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; implementation begins from verified M003 |
 | M005 | Proposed | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Human acceptance of the ten decision gates; implementation begins only after M003 and M004 are Verified |
 | M006 | Proposed | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Human acceptance of the eleven decision gates and UI ADR; implementation begins only after M003-M005 are Verified |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
@@ -71,12 +71,11 @@ sanitized conflict. Corrected replacement remains a separate normal submission
 without a structured replacement relationship.
 
 [`M004_safe_local_data_operations.md`](milestones/M004_safe_local_data_operations.md)
-is now the next Proposed milestone for human review. It does not authorize code
-changes until its ten decision gates are explicitly accepted. Its proposed
-decisions cover the live-data path, local operations surface, process
-ownership, backup package, restore replacement, explicit migration, loopback
-exposure, and encryption boundary. M003's verification satisfies M004's
-delivery-order prerequisite.
+is now Accepted for implementation. Its ten Recommended decisions were accepted
+exactly as written on 2026-09-01 and are recorded by ADR-007. They cover the
+live-data path, local operations surface, process ownership, backup package,
+restore replacement, explicit migration, loopback exposure, and encryption
+boundary. M003's verification satisfies M004's delivery-order prerequisite.
 
 [`M005_master_data_and_ledger_navigation.md`](milestones/M005_master_data_and_ledger_navigation.md)
 is also Proposed for planning and human review only. It defines bounded
@@ -146,7 +145,7 @@ milestone becomes Accepted:
 |---|---|---|
 | Dedicated idempotency identity versus reusing ExternalReference | M002 | Resolved by ADR-006 |
 | Separate reversal/replacement commands, required reason, structured replacement-link boundary, neutralized lot dependencies, and preview contract | M003 | Resolved by accepted M003 on 2026-08-28; new ADR only if a durable replacement relationship or another cross-cutting rule changes |
-| Local database directory, operations surface, backup/restore format, local exposure, migration, and encryption-at-rest policy | M004 | Proposed M004 decision gates; ADR and operations documentation after human acceptance |
+| Local database directory, operations surface, backup/restore format, local exposure, migration, and encryption-at-rest policy | M004 | Resolved by accepted M004 on 2026-09-01 and ADR-007 |
 | Master projection fields, current-label semantics, cursor contract, recent-ledger boundary, and invalid position-scope behavior | M005 | Proposed M005 decision gates and API contract tests; ADR only if accepted review changes a cross-cutting architecture rule |
 | UI framework, single-host topology, readiness modes, direct Application boundary, exact presentation, and browser verification | M006 | Proposed M006 decision gates; next available ADR after human acceptance |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
