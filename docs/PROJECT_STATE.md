@@ -41,9 +41,9 @@ was accepted on 2026-08-28 and verified on 2026-08-31.
 [`M004: Safe Local Data Operations`](milestones/M004_safe_local_data_operations.md)
 was accepted on 2026-09-01 after the human owner approved all ten Recommended
 decisions exactly as written. ADR-007 records the accepted local-data operating
-model. No milestone is currently In Progress, and none of the M004 runtime
-behavior is yet claimed as implemented. M003's verification satisfies M004's
-delivery-order prerequisite.
+model. M004 is now the one In Progress milestone; its implementation remains
+unverified until the complete acceptance and recovery workflow passes. M003's
+verification satisfies M004's delivery-order prerequisite.
 
 [`M005: Master Data and Ledger Navigation`](milestones/M005_master_data_and_ledger_navigation.md)
 is also Proposed for parallel planning and human review only. It cannot become
@@ -268,7 +268,7 @@ behavior as implemented.
 
 ## Next delivery candidate
 
-M004 is the next Accepted coherent slice: safe local data operations.
+M004 is the active In Progress coherent slice: safe local data operations.
 
 Its roadmap outcome is explicit local database location, source-control
 exclusions, backup, restore verification, and local exposure policy. M004

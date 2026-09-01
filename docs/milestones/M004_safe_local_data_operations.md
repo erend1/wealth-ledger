@@ -1,6 +1,6 @@
 # M004: Safe Local Data Operations
 
-Status: Accepted
+Status: In Progress
 
 Owner: Human and agent
 
