@@ -3,8 +3,10 @@
   <Project Path="./src/WealthLedger.Application/WealthLedger.Application.csproj" />
   <Project Path="./src/WealthLedger.Domain/WealthLedger.Domain.csproj" />
   <Project Path="./src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj" />
+  <Project Path="./src/WealthLedger.Operations/WealthLedger.Operations.csproj" />
   <Project Path="./tests/WealthLedger.Application.Tests/WealthLedger.Application.Tests.csproj" />
   <Project Path="./tests/WealthLedger.Api.Tests/WealthLedger.Api.Tests.csproj" />
   <Project Path="./tests/WealthLedger.Domain.Tests/WealthLedger.Domain.Tests.csproj" />
   <Project Path="./tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj" />
+  <Project Path="./tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.csproj" />
 </Solution>
