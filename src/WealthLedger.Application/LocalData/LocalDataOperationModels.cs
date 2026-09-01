@@ -86,7 +86,7 @@ public sealed record LocalDataStatus(
     LocalBackupSummary? LatestVerifiedBackup,
     bool DestinationSeparationConfirmed,
     bool DestinationEncryptionConfirmed,
-    bool RealDataReady,
+    bool LocalProtectionReady,
     string EncryptionMode);
 
 public sealed record LocalDatabaseInitialization(

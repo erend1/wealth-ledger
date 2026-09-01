@@ -8,8 +8,20 @@ public sealed class WealthLedgerDesignTimeDbContextFactory
 {
     public WealthLedgerDbContext CreateDbContext(string[] args)
     {
-        var connectionString = args.FirstOrDefault()
-            ?? "Data Source=wealthledger.design.db;Foreign Keys=True";
+        var syntheticDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "WealthLedger.DesignTime",
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        var syntheticDatabasePath = Path.Combine(
+            syntheticDirectory,
+            "wealthledger.design.db");
+        Directory.CreateDirectory(syntheticDirectory);
+        var connectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+        {
+            DataSource = syntheticDatabasePath,
+            ForeignKeys = true,
+            Pooling = false
+        }.ToString();
 
         var options = new DbContextOptionsBuilder<WealthLedgerDbContext>()
             .UseSqlite(

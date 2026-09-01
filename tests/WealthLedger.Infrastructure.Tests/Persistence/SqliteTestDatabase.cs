@@ -8,15 +8,22 @@ internal sealed class SqliteTestDatabase : IAsyncDisposable
 {
     private readonly string _directoryPath;
 
-    private SqliteTestDatabase(string directoryPath, string connectionString)
+    private SqliteTestDatabase(
+        string directoryPath,
+        string databasePath,
+        string connectionString)
     {
         _directoryPath = directoryPath;
+        DatabasePath = databasePath;
         ConnectionString = connectionString;
     }
 
+    internal string DatabasePath { get; }
+
     internal string ConnectionString { get; }
 
-    internal static async Task<SqliteTestDatabase> CreateAsync()
+    internal static async Task<SqliteTestDatabase> CreateAsync(
+        string? targetMigration = null)
     {
         var directoryPath = Path.Combine(
             Path.GetTempPath(),
@@ -33,10 +40,21 @@ internal sealed class SqliteTestDatabase : IAsyncDisposable
             Pooling = false
         }.ToString();
 
-        var database = new SqliteTestDatabase(directoryPath, connectionString);
+        var database = new SqliteTestDatabase(
+            directoryPath,
+            databasePath,
+            connectionString);
 
         await using var context = database.CreateContext();
-        await context.Database.MigrateAsync();
+
+        if (targetMigration is null)
+        {
+            await context.Database.MigrateAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync(targetMigration);
+        }
 
         return database;
     }
