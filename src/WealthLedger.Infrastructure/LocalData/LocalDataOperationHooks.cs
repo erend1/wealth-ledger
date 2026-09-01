@@ -5,6 +5,7 @@ internal enum LocalDataOperationCheckpoint
     BeforeInitializePublish,
     BeforeBackupPublish,
     BeforeMigrationApply,
+    AfterMigrationApply,
     BeforeRestoreStagePublish,
     AfterRestoreStagePublish,
     BeforeRestorePromotion,

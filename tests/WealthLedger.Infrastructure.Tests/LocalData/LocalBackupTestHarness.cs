@@ -77,7 +77,8 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
 
     internal static async Task<LocalBackupTestHarness> CreateAsync(
         ILocalDataOperationHooks? hooks = null,
-        string? targetMigration = null)
+        string? targetMigration = null,
+        bool includeBackupConfiguration = true)
     {
         var allowedRoot = Path.Combine(
             Path.GetTempPath(),
@@ -91,18 +92,24 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
             "live",
             "wealthledger.db");
         var backupDirectory = Path.Combine(rootPath, "backups");
+        var configuration = new Dictionary<string, string?>
+        {
+            [LocalDataPathResolver.DatabasePathConfigurationKey] =
+                databasePath,
+            [LocalDataPathResolver
+                .DestinationSeparationConfigurationKey] = "true",
+            [LocalDataPathResolver
+                .DestinationEncryptionConfigurationKey] = "true"
+        };
+
+        if (includeBackupConfiguration)
+        {
+            configuration[LocalDataPathResolver
+                .BackupDirectoryConfigurationKey] = backupDirectory;
+        }
+
         var resolver = new LocalDataPathResolver(
-            new Dictionary<string, string?>
-            {
-                [LocalDataPathResolver.DatabasePathConfigurationKey] =
-                    databasePath,
-                [LocalDataPathResolver.BackupDirectoryConfigurationKey] =
-                    backupDirectory,
-                [LocalDataPathResolver
-                    .DestinationSeparationConfigurationKey] = "true",
-                [LocalDataPathResolver
-                    .DestinationEncryptionConfigurationKey] = "true"
-            },
+            configuration,
             new LocalDataPathEnvironment(
                 "Testing",
                 FindRepositoryRoot(),
@@ -174,6 +181,17 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
             Resolver,
             OwnershipGuard,
             RestoreService,
+            BackupService,
+            PackageReader,
+            DatabaseVerifier,
+            new FixedTimeProvider(OperationTime),
+            Hooks);
+
+    internal SqliteLocalDatabaseMigrationSessionFactory
+        CreateMigrationSessionFactory()
+        => new(
+            Resolver,
+            OwnershipGuard,
             BackupService,
             PackageReader,
             DatabaseVerifier,

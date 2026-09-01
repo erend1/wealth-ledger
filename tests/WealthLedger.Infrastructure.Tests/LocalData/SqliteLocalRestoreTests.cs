@@ -156,19 +156,21 @@ public sealed class SqliteLocalRestoreTests
 
     [Theory]
     [InlineData(
-        3,
+        "before",
         LocalDataFailureCategory.IoFailure)]
     [InlineData(
-        4,
+        "after",
         LocalDataFailureCategory.IoFailure)]
     public async Task RestoreStage_InjectedIoFailureRemovesOwnedTargetAndStage(
-        int checkpointValue,
+        string checkpointName,
         LocalDataFailureCategory expectedCategory)
     {
         await using var source = await LocalBackupTestHarness.CreateAsync();
         var backup = await source.CreateBackupAsync();
         var hooks = new CheckpointFailureHooks(
-            (LocalDataOperationCheckpoint)checkpointValue,
+            checkpointName == "before"
+                ? LocalDataOperationCheckpoint.BeforeRestoreStagePublish
+                : LocalDataOperationCheckpoint.AfterRestoreStagePublish,
             new IOException("Synthetic private restore I/O detail."));
         await using var targetHarness =
             await LocalBackupTestHarness.CreateAsync(hooks);

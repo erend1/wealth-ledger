@@ -85,6 +85,15 @@ public static class DependencyInjection
                     serviceProvider.GetRequiredService<SqliteDatabaseVerifier>(),
                     serviceProvider.GetRequiredService<TimeProvider>(),
                     serviceProvider.GetRequiredService<ILocalDataOperationHooks>()));
+        services.AddSingleton<ILocalDatabaseMigrationSessionFactory>(
+            serviceProvider => new SqliteLocalDatabaseMigrationSessionFactory(
+                serviceProvider.GetRequiredService<LocalDataPathResolver>(),
+                serviceProvider.GetRequiredService<LocalDatabaseOwnershipGuard>(),
+                serviceProvider.GetRequiredService<SqliteBackupService>(),
+                serviceProvider.GetRequiredService<LocalBackupPackageReader>(),
+                serviceProvider.GetRequiredService<SqliteDatabaseVerifier>(),
+                serviceProvider.GetRequiredService<TimeProvider>(),
+                serviceProvider.GetRequiredService<ILocalDataOperationHooks>()));
         services.AddSingleton<ILocalApiDatabaseStartup>(
             serviceProvider => new LocalApiDatabaseStartup(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
