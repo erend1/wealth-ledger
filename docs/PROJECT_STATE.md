@@ -55,6 +55,14 @@ master/reference pages, a bounded recent Posted ledger feed, current-label
 semantics, cursor pagination, and valid-versus-unknown point-position scopes;
 none of those routes or behaviors is currently implemented.
 
+[`M006: Local UI Shell and Guided First Run`](milestones/M006_ui_shell_and_guided_first_run.md)
+is Proposed for parallel planning and human review only. It cannot become In
+Progress until M003-M005 are Verified and its accepted architecture is recorded
+in an ADR. The proposal recommends one Razor Pages UI assembly in the existing
+loopback host, fail-closed readiness modes, a bounded first-run flow, exact
+human value presentation, and Today/Ledger/Settings read pages; no UI project
+or behavior is currently implemented.
+
 ## Verified implementation
 
 ### Domain
@@ -224,8 +232,16 @@ Results:
 - Infrastructure tests against real SQLite files: 53 passed, 0 failed.
 - API tests against real SQLite files: 38 passed, 0 failed.
 - Total: 243 passed, 0 failed.
-- Formatting drift: none.
+- Formatting drift: no committable content diff; see the SDK line-ending caveat
+  below.
 - EF model drift: none.
+
+On the Windows .NET 10.0.400 SDK, a fresh LF checkout currently makes
+`dotnet format --verify-no-changes` report comment-adjacent whitespace at
+`LedgerTransaction.cs` lines 469, 471, and 472. Applying the formatter only
+rewrites that file's raw line endings to CRLF; Git normalizes it back to the
+same LF blob under the repository attributes. This tooling/configuration
+discrepancy remains open and is not introduced by the planning documents.
 
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
@@ -241,7 +257,17 @@ A planning-only audit for the Proposed M004 document on 2026-08-31 originally
 ran against the pre-M003 baseline: all 163 tests passed and the EF model-drift
 check passed. The proposal changes no source file. After M003 verification and
 this planning branch's rebase, the verified baseline is 243 passing tests with
-no formatting or EF model drift.
+no EF model drift; the line-ending-only formatter caveat above remains.
+
+A planning-only M006 audit on 2026-08-31 originally inspected the stacked
+M004/M005 proposal branch, then-current source, local .NET 10 templates, and
+official ASP.NET Core UI/lifetime guidance. Its inherited pre-M003 suite passed
+all 163 tests and the EF model-drift check. After rebasing the proposal onto the
+verified M003 baseline and merged M004/M005 planning documents, the baseline is
+243 passing tests with no EF model drift; the same formatter caveat remains.
+There is still no UI project, page, static-asset pipeline, or browser test.
+M006 changes documentation only and does not claim M004, M005, or any UI
+behavior as implemented.
 
 ## Next delivery candidate
 
@@ -274,7 +300,8 @@ Do not start live market data, provider-specific integration, optimization, AI/L
 
 ## Open decisions
 
-- UI framework and MVP interaction model.
+- The Proposed M006 UI framework, hosting, readiness, interaction, and exact-
+  presentation choices remain subject to human acceptance and an ADR.
 - Market/reference-data schemas and provider contracts.
 - Authentication and authorization.
 - The Proposed M004 choices for backup, encryption-at-rest, and local database
