@@ -53,6 +53,48 @@ namespace WealthLedger.Domain.Lots
 
         private AssetLot(
             Guid id,
+            Guid assetId,
+            Guid openingTransactionEntryId,
+            DateOnly? acquiredOn,
+            CostBasis costBasis,
+            PhysicalGoldLotDetail? physicalGoldDetail,
+            DateTimeOffset createdAtUtc)
+        {
+            if (id == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Asset lot ID cannot be empty.",
+                    nameof(id));
+            }
+
+            if (assetId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Asset ID cannot be empty.",
+                    nameof(assetId));
+            }
+
+            if (openingTransactionEntryId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "Opening transaction entry ID cannot be empty.",
+                    nameof(openingTransactionEntryId));
+            }
+
+            ArgumentNullException.ThrowIfNull(costBasis);
+
+            Id = id;
+            AssetId = assetId;
+            OpeningTransactionEntryId =
+                openingTransactionEntryId;
+            AcquiredOn = acquiredOn;
+            CostBasis = costBasis;
+            PhysicalGoldDetail = physicalGoldDetail;
+            CreatedAtUtc = createdAtUtc.ToUniversalTime();
+        }
+
+        private AssetLot(
+            Guid id,
             Asset asset,
             TransactionEntry openingEntry,
             Quantity openingQuantity,
@@ -60,6 +102,14 @@ namespace WealthLedger.Domain.Lots
             CostBasis costBasis,
             PhysicalGoldLotDetail? physicalGoldDetail,
             DateTimeOffset createdAtUtc)
+            : this(
+                id,
+                asset?.Id ?? Guid.Empty,
+                openingEntry?.Id ?? Guid.Empty,
+                acquiredOn,
+                costBasis,
+                physicalGoldDetail,
+                createdAtUtc)
         {
             ArgumentNullException.ThrowIfNull(asset);
             ArgumentNullException.ThrowIfNull(openingEntry);
@@ -247,6 +297,77 @@ namespace WealthLedger.Domain.Lots
                 throw new DomainRuleViolationException(
                     "Lot allocation cannot exceed the transaction entry quantity.");
             }
+        }
+
+        public static AssetLot Reconstitute(
+            Guid id,
+            Guid assetId,
+            Guid openingTransactionEntryId,
+            DateOnly? acquiredOn,
+            CostBasis costBasis,
+            PhysicalGoldLotDetail? physicalGoldDetail,
+            DateTimeOffset createdAtUtc,
+            IReadOnlyCollection<AssetLotAllocationSnapshot> allocations)
+        {
+            ArgumentNullException.ThrowIfNull(allocations);
+
+            var lot =
+                new AssetLot(
+                    id,
+                    assetId,
+                    openingTransactionEntryId,
+                    acquiredOn,
+                    costBasis,
+                    physicalGoldDetail,
+                    createdAtUtc);
+
+            if (allocations.Count == 0)
+            {
+                throw new DomainRuleViolationException(
+                    "A reconstituted asset lot must contain allocation history.");
+            }
+
+            foreach (var snapshot in allocations)
+            {
+                if (lot._allocations.Any(
+                        x => x.Id == snapshot.Id))
+                {
+                    throw new DomainRuleViolationException(
+                        "Persisted lot allocations cannot contain duplicate IDs.");
+                }
+
+                if (lot._allocations.Any(
+                        x => x.TransactionEntryId
+                            == snapshot.TransactionEntryId))
+                {
+                    throw new DomainRuleViolationException(
+                        "A transaction entry cannot be allocated to the same lot more than once.");
+                }
+
+                lot._allocations.Add(
+                    new LotEntryAllocation(
+                        snapshot.Id,
+                        lot.Id,
+                        snapshot.TransactionEntryId,
+                        snapshot.QuantityDelta));
+            }
+
+            var openingAllocation =
+                lot._allocations.SingleOrDefault(
+                    x => x.TransactionEntryId
+                        == openingTransactionEntryId);
+
+            if (openingAllocation is null
+                || !openingAllocation.QuantityDelta.IsPositive)
+            {
+                throw new DomainRuleViolationException(
+                    "A reconstituted asset lot must contain its positive opening allocation.");
+            }
+
+            // Forces checked summation and negative-balance validation.
+            _ = lot.CurrentQuantity;
+
+            return lot;
         }
     }
 }

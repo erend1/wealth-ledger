@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-08-28
+Last reviewed: 2026-08-31
 
 ## How to read this roadmap
 
@@ -41,7 +41,7 @@ Statuses used here:
 |---|---|---|---|
 | M001 | Verified | Core immutable ledger, fixed-point persistence, setup, contribution, fund purchase, lot creation, and one position query | Existing checkpoint in `PROJECT_STATE.md` |
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
-| M003 | Accepted | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; implementation not yet started |
+| M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
 | M004 | Planned | Safe local data operations: explicit data location, source-control exclusions, backup, restore verification, and local exposure policy | Accepted operations and encryption decisions where needed |
 | M005 | Planned | Master-data and ledger navigation queries with stable, human-oriented contracts | M002 transaction read model |
 | M006 | Planned | UI architecture decision, application shell, first-run experience, and formatted value components | Accepted UI ADR; M004 local safety |
@@ -59,19 +59,22 @@ own schema change.
 
 ## Current verified milestone and next candidate
 
-[`M002_transaction_submission_and_readback.md`](milestones/M002_transaction_submission_and_readback.md)
-was accepted on 2026-08-24 and verified on 2026-08-27.
-
-M002 separates client retry identity from provider/source references, persists
-submission receipts atomically with ledger results, protects contribution and
-fund-purchase writes from equivalent retry duplication, and makes transaction
-Locations resolvable through a stable read model.
-
 [`M003_posted_reversal_and_correction.md`](milestones/M003_posted_reversal_and_correction.md)
-is now the next Accepted milestone. It defines retry-safe reversal preview,
-posting, allocation mirroring, reverse readback, and the acquisition-dependency
-semantics required before broader real-history entry. The human owner accepted
-its seven decisions on 2026-08-28; implementation has not yet started.
+was accepted on 2026-08-28 and verified on 2026-08-31.
+
+M003 provides generic reversal eligibility preview, retry-safe exact reversal
+submission, same-lot inverse allocation, bidirectional transaction readback,
+and neutralized acquisition-dependency semantics. Equivalent concurrent
+same-key submissions converge on the winning receipt and reversal identity;
+different-key races create one reversal and return the winning identity as a
+sanitized conflict. Corrected replacement remains a separate normal submission
+without a structured replacement relationship.
+
+M004 is now the next Planned candidate. It covers safe local data operations:
+explicit data location, source-control exclusions, backup, restore
+verification, and local exposure policy. Its required operations and
+encryption decisions must be explicitly accepted before M004 becomes an
+implementation milestone.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -83,8 +86,10 @@ of the following are verified:
 
 - duplicate submissions cannot create duplicate transactions — verified by M002;
 - every posted transaction can be read back and inspected — verified for the
-  currently supported contribution and fund-purchase workflows by M002;
-- posted mistakes can be reversed through the supported workflow;
+  currently supported contribution, fund-purchase, and reversal workflows by
+  M002 and M003;
+- posted mistakes can be reversed through the supported workflow — verified by
+  M003;
 - the live database is outside the repository and ignored by source control;
 - backup and restore have a user-visible, tested workflow;
 - setup and migration switches are safe for normal startup;

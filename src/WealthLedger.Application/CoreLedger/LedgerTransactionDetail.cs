@@ -14,12 +14,14 @@ namespace WealthLedger.Application.CoreLedger
         string? ExternalReference,
         string? Note,
         Guid? ReversalOfTransactionId,
+        Guid? ReversedByTransactionId,
         DateTimeOffset CreatedAtUtc,
         DateTimeOffset? PostedAtUtc,
         IReadOnlyList<LedgerTransactionEntryDetail> Entries,
         LedgerTransactionCashFlowDetail? CashFlow,
         IReadOnlyList<LedgerTransactionCostDetail> Costs,
-        IReadOnlyList<LedgerTransactionCreatedLotDetail> CreatedLots);
+        IReadOnlyList<LedgerTransactionCreatedLotDetail> CreatedLots,
+        IReadOnlyList<LedgerTransactionLotAllocationDetail> LotAllocations);
 
     public sealed record LedgerTransactionEntryDetail(
         Guid EntryId,
@@ -53,5 +55,12 @@ namespace WealthLedger.Application.CoreLedger
         long? OriginalCostBasisMinorUnits,
         string? CostBasisCurrencyCode,
         CostBasisStatus CostBasisStatus,
+        DateTimeOffset CreatedAtUtc);
+
+    public sealed record LedgerTransactionLotAllocationDetail(
+        Guid AllocationId,
+        Guid AssetLotId,
+        Guid TransactionEntryId,
+        long QuantityDeltaRawE8,
         DateTimeOffset CreatedAtUtc);
 }

@@ -11,12 +11,14 @@ public sealed record LedgerTransactionResponse(
     string? ExternalReference,
     string? Note,
     Guid? ReversalOfTransactionId,
+    Guid? ReversedByTransactionId,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? PostedAtUtc,
     IReadOnlyList<LedgerTransactionEntryResponse> Entries,
     LedgerTransactionCashFlowResponse? CashFlow,
     IReadOnlyList<LedgerTransactionCostResponse> Costs,
-    IReadOnlyList<LedgerTransactionCreatedLotResponse> CreatedLots);
+    IReadOnlyList<LedgerTransactionCreatedLotResponse> CreatedLots,
+    IReadOnlyList<LedgerTransactionLotAllocationResponse> LotAllocations);
 
 public sealed record LedgerTransactionEntryResponse(
     Guid EntryId,
@@ -50,4 +52,11 @@ public sealed record LedgerTransactionCreatedLotResponse(
     long? OriginalCostBasisMinorUnits,
     string? CostBasisCurrencyCode,
     string CostBasisStatusCode,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record LedgerTransactionLotAllocationResponse(
+    Guid AllocationId,
+    Guid AssetLotId,
+    Guid TransactionEntryId,
+    long QuantityDeltaRawE8,
     DateTimeOffset CreatedAtUtc);

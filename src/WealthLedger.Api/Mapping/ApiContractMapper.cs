@@ -67,6 +67,7 @@ internal static class ApiContractMapper
             detail.ExternalReference,
             detail.Note,
             detail.ReversalOfTransactionId,
+            detail.ReversedByTransactionId,
             detail.CreatedAtUtc,
             detail.PostedAtUtc,
 
@@ -116,6 +117,55 @@ internal static class ApiContractMapper
                             lot.CostBasisCurrencyCode,
                             ToCode(lot.CostBasisStatus),
                             lot.CreatedAtUtc))
+                .ToArray(),
+
+            detail.LotAllocations
+                .Select(
+                    allocation =>
+                        new LedgerTransactionLotAllocationResponse(
+                            allocation.AllocationId,
+                            allocation.AssetLotId,
+                            allocation.TransactionEntryId,
+                            allocation.QuantityDeltaRawE8,
+                            allocation.CreatedAtUtc))
+                .ToArray());
+    }
+
+    internal static ReversalPreviewResponse ToResponse(
+        this ReversalPreviewResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        return new ReversalPreviewResponse(
+            result.OriginalTransactionId,
+            result.CanReverse,
+            ToCode(result.EligibilityCode),
+            result.ExistingReversalTransactionId,
+            result.BlockingTransactionIds,
+            result.InverseEntries
+                .OrderBy(x => x.Sequence)
+                .Select(
+                    entry =>
+                        new ReversalPreviewEntryResponse(
+                            entry.Sequence,
+                            entry.PortfolioId,
+                            entry.AccountId,
+                            entry.AssetId,
+                            entry.QuantityDelta.RawE8,
+                            ToCode(entry.Role),
+                            entry.UnitPrice?.RawE8,
+                            entry.UnitPrice?.Currency.Value))
+                .ToArray(),
+            result.InverseLotAllocations
+                .OrderBy(x => x.EntrySequence)
+                .ThenBy(x => x.AssetLotId)
+                .Select(
+                    allocation =>
+                        new ReversalPreviewLotAllocationResponse(
+                            allocation.AssetLotId,
+                            allocation.OriginalTransactionEntryId,
+                            allocation.EntrySequence,
+                            allocation.QuantityDelta.RawE8))
                 .ToArray());
     }
 
@@ -344,6 +394,37 @@ internal static class ApiContractMapper
                 nameof(value),
                 value,
                 "Unsupported cost-basis status.")
+        };
+    }
+
+    private static string ToCode(
+        ReversalEligibilityCode value)
+    {
+        return value switch
+        {
+            ReversalEligibilityCode.Eligible =>
+                "ELIGIBLE",
+
+            ReversalEligibilityCode.NotPosted =>
+                "NOT_POSTED",
+
+            ReversalEligibilityCode.TargetIsReversal =>
+                "TARGET_IS_REVERSAL",
+
+            ReversalEligibilityCode.AlreadyReversed =>
+                "ALREADY_REVERSED",
+
+            ReversalEligibilityCode.BlockedByDependencies =>
+                "BLOCKED_BY_DEPENDENCIES",
+
+            ReversalEligibilityCode.UnsupportedPersistedShape =>
+                "UNSUPPORTED_PERSISTED_SHAPE",
+
+            _ =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    "Unsupported reversal eligibility code.")
         };
     }
 

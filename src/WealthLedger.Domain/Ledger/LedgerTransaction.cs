@@ -121,6 +121,167 @@ namespace WealthLedger.Domain.Ledger
                 note);
         }
 
+        public static LedgerTransaction ReconstitutePosted(
+            Guid id,
+            Guid householdId,
+            TransactionType type,
+            DateTimeOffset createdAtUtc,
+            DateTimeOffset postedAtUtc,
+            DateOnly? orderDate,
+            DateOnly? executionDate,
+            DateOnly? settlementDate,
+            Guid? reversalOfTransactionId,
+            string? externalReference,
+            string? note,
+            IReadOnlyCollection<LedgerTransactionEntrySnapshot> entries,
+            IReadOnlyCollection<LedgerTransactionCostSnapshot> costs,
+            LedgerCashFlowSnapshot? cashFlowDetail)
+        {
+            ArgumentNullException.ThrowIfNull(entries);
+            ArgumentNullException.ThrowIfNull(costs);
+
+            var normalizedPostedAt =
+                postedAtUtc.ToUniversalTime();
+
+            var transaction =
+                new LedgerTransaction(
+                    id,
+                    householdId,
+                    type,
+                    createdAtUtc,
+                    orderDate,
+                    executionDate,
+                    settlementDate,
+                    reversalOfTransactionId,
+                    externalReference,
+                    note);
+
+            if (normalizedPostedAt < transaction.CreatedAtUtc)
+            {
+                throw new DomainRuleViolationException(
+                    "Posted time cannot be earlier than creation time.");
+            }
+
+            if (type == TransactionType.Reversal)
+            {
+                if (reversalOfTransactionId is null)
+                {
+                    throw new DomainRuleViolationException(
+                        "A reversal must reference the original transaction.");
+                }
+            }
+            else if (reversalOfTransactionId is not null)
+            {
+                throw new DomainRuleViolationException(
+                    "Only a reversal transaction may reference an original transaction.");
+            }
+
+            EnsureCanonicalPersistedText(
+                externalReference,
+                transaction.ExternalReference,
+                "external reference");
+
+            EnsureCanonicalPersistedText(
+                note,
+                transaction.Note,
+                "note");
+
+            var orderedEntries =
+                entries
+                    .OrderBy(x => x.Sequence)
+                    .ToArray();
+
+            for (var sequence = 0;
+                 sequence < orderedEntries.Length;
+                 sequence++)
+            {
+                var snapshot =
+                    orderedEntries[sequence];
+
+                if (snapshot.Sequence != sequence)
+                {
+                    throw new DomainRuleViolationException(
+                        "Persisted transaction entry sequences must be contiguous and start at zero.");
+                }
+
+                if (transaction._entries.Any(
+                        x => x.Id == snapshot.Id))
+                {
+                    throw new DomainRuleViolationException(
+                        "Persisted transaction entries cannot contain duplicate IDs.");
+                }
+
+                transaction._entries.Add(
+                    new TransactionEntry(
+                        snapshot.Id,
+                        snapshot.Sequence,
+                        snapshot.PortfolioId,
+                        snapshot.AccountId,
+                        snapshot.AssetId,
+                        snapshot.QuantityDelta,
+                        snapshot.Role,
+                        snapshot.UnitPrice));
+            }
+
+            foreach (var snapshot in costs)
+            {
+                if (transaction._costs.Any(
+                        x => x.Id == snapshot.Id))
+                {
+                    throw new DomainRuleViolationException(
+                        "Persisted transaction costs cannot contain duplicate IDs.");
+                }
+
+                var cost =
+                    new TransactionCostComponent(
+                        snapshot.Id,
+                        snapshot.Type,
+                        snapshot.Treatment,
+                        snapshot.Amount,
+                        snapshot.Note);
+
+                EnsureCanonicalPersistedText(
+                    snapshot.Note,
+                    cost.Note,
+                    "transaction cost note");
+
+                transaction._costs.Add(cost);
+            }
+
+            if (cashFlowDetail is not null)
+            {
+                transaction.CashFlowDetail =
+                    new CashFlowDetail(
+                        cashFlowDetail.Category,
+                        cashFlowDetail.HouseholdMemberId);
+            }
+
+            transaction.ValidateForPosting();
+
+            transaction.Status =
+                TransactionStatus.Posted;
+
+            transaction.PostedAtUtc =
+                normalizedPostedAt;
+
+            return transaction;
+        }
+
+        private static void EnsureCanonicalPersistedText(
+            string? supplied,
+            string? normalized,
+            string fieldName)
+        {
+            if (!string.Equals(
+                    supplied,
+                    normalized,
+                    StringComparison.Ordinal))
+            {
+                throw new DomainRuleViolationException(
+                    $"Persisted {fieldName} is not in canonical form.");
+            }
+        }
+
         public TransactionEntry AddEntry(
             Guid portfolioId,
             Guid accountId,
@@ -731,6 +892,18 @@ namespace WealthLedger.Domain.Ledger
             {
                 throw new DomainRuleViolationException(
                     "A reversal must reference the original transaction.");
+            }
+
+            if (_costs.Count != 0)
+            {
+                throw new DomainRuleViolationException(
+                    "A reversal transaction cannot contain cost components.");
+            }
+
+            if (ExternalReference is not null)
+            {
+                throw new DomainRuleViolationException(
+                    "A reversal transaction cannot contain an external reference.");
             }
         }
 
