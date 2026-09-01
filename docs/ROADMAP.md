@@ -42,7 +42,7 @@ Statuses used here:
 | M001 | Verified | Core immutable ledger, fixed-point persistence, setup, contribution, fund purchase, lot creation, and one position query | Existing checkpoint in `PROJECT_STATE.md` |
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
-| M004 | Planned | Safe local data operations: explicit data location, source-control exclusions, backup, restore verification, and local exposure policy | Accepted operations and encryption decisions where needed |
+| M004 | Proposed | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Human acceptance of the ten decision gates; implementation begins only after M003 is Verified |
 | M005 | Planned | Master-data and ledger navigation queries with stable, human-oriented contracts | M002 transaction read model |
 | M006 | Planned | UI architecture decision, application shell, first-run experience, and formatted value components | Accepted UI ADR; M004 local safety |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
@@ -70,11 +70,13 @@ different-key races create one reversal and return the winning identity as a
 sanitized conflict. Corrected replacement remains a separate normal submission
 without a structured replacement relationship.
 
-M004 is now the next Planned candidate. It covers safe local data operations:
-explicit data location, source-control exclusions, backup, restore
-verification, and local exposure policy. Its required operations and
-encryption decisions must be explicitly accepted before M004 becomes an
-implementation milestone.
+[`M004_safe_local_data_operations.md`](milestones/M004_safe_local_data_operations.md)
+is now the next Proposed milestone for human review. It does not authorize code
+changes until its ten decision gates are explicitly accepted. Its proposed
+decisions cover the live-data path, local operations surface, process
+ownership, backup package, restore replacement, explicit migration, loopback
+exposure, and encryption boundary. M003's verification satisfies M004's
+delivery-order prerequisite.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -125,7 +127,7 @@ milestone becomes Accepted:
 |---|---|---|
 | Dedicated idempotency identity versus reusing ExternalReference | M002 | Resolved by ADR-006 |
 | Separate reversal/replacement commands, required reason, structured replacement-link boundary, neutralized lot dependencies, and preview contract | M003 | Resolved by accepted M003 on 2026-08-28; new ADR only if a durable replacement relationship or another cross-cutting rule changes |
-| Local database directory, backup format, and encryption-at-rest policy | M004 | ADR and operations documentation |
+| Local database directory, operations surface, backup/restore format, local exposure, migration, and encryption-at-rest policy | M004 | Proposed M004 decision gates; ADR and operations documentation after human acceptance |
 | UI framework and hosting model | M006 | ADR |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
 | Performance methodologies and partial-cost rounding when exposed by a real use case | M008/M012 | Tests and ADR if cross-cutting |

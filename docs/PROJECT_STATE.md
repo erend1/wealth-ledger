@@ -38,9 +38,15 @@ references.
 [`M003: Posted Reversal and Correction Workflow`](milestones/M003_posted_reversal_and_correction.md)
 was accepted on 2026-08-28 and verified on 2026-08-31.
 
-No milestone is currently In Progress. M004, safe local data operations, is the
-next Planned delivery candidate and is not authorized for implementation until
-its required decisions and milestone contract are explicitly accepted.
+[`M004: Safe Local Data Operations`](milestones/M004_safe_local_data_operations.md)
+is the next Proposed delivery candidate for human review. No milestone is
+currently In Progress, and M004 is not authorized for implementation until its
+required decisions and milestone contract are explicitly accepted. The
+proposal records recommended decisions for the live-data path, local operations
+surface, process ownership, backup and restore format, explicit migration,
+loopback exposure, and encryption boundary; none of that behavior is currently
+claimed as implemented. M003's verification satisfies M004's delivery-order
+prerequisite.
 
 ## Verified implementation
 
@@ -224,9 +230,15 @@ stable sanitized HTTP errors, and a separate corrected-replacement flow.
 
 The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
+A planning-only audit for the Proposed M004 document on 2026-08-31 originally
+ran against the pre-M003 baseline: all 163 tests passed and the EF model-drift
+check passed. The proposal changes no source file. After M003 verification and
+this planning branch's rebase, the verified baseline is 243 passing tests with
+no formatting or EF model drift.
+
 ## Next delivery candidate
 
-M004 is the next Planned coherent slice: safe local data operations.
+M004 is the next Proposed coherent slice: safe local data operations.
 
 Its roadmap outcome is explicit local database location, source-control
 exclusions, backup, restore verification, and local exposure policy. M004
@@ -258,7 +270,8 @@ Do not start live market data, provider-specific integration, optimization, AI/L
 - UI framework and MVP interaction model.
 - Market/reference-data schemas and provider contracts.
 - Authentication and authorization.
-- Backup, encryption-at-rest, and deployment for the local database.
+- The Proposed M004 choices for backup, encryption-at-rest, and local database
+  deployment remain subject to human acceptance.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
 - SQLite concurrency policy outside the scoped idempotent-submission collision
   handled by M002.
