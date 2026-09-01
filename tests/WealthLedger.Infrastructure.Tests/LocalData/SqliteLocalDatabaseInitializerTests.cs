@@ -43,10 +43,7 @@ public sealed class SqliteLocalDatabaseInitializerTests : IDisposable
         Assert.Equal(
             LocalDatabaseCompatibility.Compatible,
             restarted.Value!.Compatibility);
-        Assert.Empty(
-            Directory.GetFiles(
-                Path.GetDirectoryName(_databasePath)!,
-                "*.wlrestore"));
+        AssertNoInitializationStageArtifacts();
     }
 
     [Fact]
@@ -98,10 +95,7 @@ public sealed class SqliteLocalDatabaseInitializerTests : IDisposable
         Assert.False(result.Succeeded);
         Assert.Equal(LocalDataFailureCategory.IoFailure, result.Failure!.Category);
         Assert.False(File.Exists(_databasePath));
-        Assert.Empty(
-            Directory.GetFiles(
-                Path.GetDirectoryName(_databasePath)!,
-                "*.wlrestore"));
+        AssertNoInitializationStageArtifacts();
         Assert.DoesNotContain("Synthetic", result.Failure.Message);
     }
 
@@ -118,6 +112,7 @@ public sealed class SqliteLocalDatabaseInitializerTests : IDisposable
         Assert.False(result.Succeeded);
         Assert.Equal(LocalDataFailureCategory.Cancelled, result.Failure!.Category);
         Assert.False(File.Exists(_databasePath));
+        AssertNoInitializationStageArtifacts();
     }
 
     public void Dispose()
@@ -166,6 +161,17 @@ public sealed class SqliteLocalDatabaseInitializerTests : IDisposable
             hooks);
 
         return new Components(initializer, verifier);
+    }
+
+    private void AssertNoInitializationStageArtifacts()
+    {
+        var databaseDirectory = Path.GetDirectoryName(_databasePath)!;
+
+        Assert.DoesNotContain(
+            Directory.EnumerateFiles(databaseDirectory),
+            path => Path.GetFileName(path).Contains(
+                ".wlrestore",
+                StringComparison.Ordinal));
     }
 
     private static async Task<string> HashAsync(string path)

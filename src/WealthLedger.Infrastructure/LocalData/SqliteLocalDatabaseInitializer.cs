@@ -98,6 +98,18 @@ internal sealed class SqliteLocalDatabaseInitializer
                         "The initialized database is not compatible with this application.");
             }
 
+            var journalPrepared = await PrepareJournalForPublishAsync(
+                stagedPath,
+                cancellationToken);
+
+            if (!journalPrepared)
+            {
+                return LocalDataOperationResult<LocalDatabaseInitialization>
+                    .Failed(
+                        LocalDataFailureCategory.MigrationFailure,
+                        "The initialized database journal could not be prepared for publication.");
+            }
+
             await _hooks.OnCheckpointAsync(
                 LocalDataOperationCheckpoint.BeforeInitializePublish,
                 stagedPath,
@@ -154,11 +166,38 @@ internal sealed class SqliteLocalDatabaseInitializer
         }
         finally
         {
-            if (stagedPath is not null && File.Exists(stagedPath))
+            if (stagedPath is not null)
             {
                 LocalDatabaseFiles.DeleteDatabaseArtifacts(stagedPath);
             }
         }
+    }
+
+    private static async Task<bool> PrepareJournalForPublishAsync(
+        string stagedPath,
+        CancellationToken cancellationToken)
+    {
+        await using (var connection =
+                     SqliteLocalDataConnectionFactory.CreateConnection(
+                         stagedPath,
+                         SqliteOpenMode.ReadWrite))
+        {
+            await connection.OpenAsync(cancellationToken);
+            await using var checkpoint = connection.CreateCommand();
+            checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            await using var reader = await checkpoint.ExecuteReaderAsync(
+                cancellationToken);
+
+            if (!await reader.ReadAsync(cancellationToken)
+                || reader.GetInt64(0) != 0)
+            {
+                return false;
+            }
+        }
+
+        LocalDatabaseFiles.DeleteCompanionArtifacts(stagedPath);
+
+        return !LocalDatabaseFiles.AnyCompanionArtifactExists(stagedPath);
     }
 }
 
