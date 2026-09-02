@@ -1,12 +1,14 @@
 # M004: Safe Local Data Operations
 
-Status: In Progress
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-02
 
 Accepted: 2026-09-01
+
+Verified: 2026-09-01
 
 ## User outcome
 
@@ -23,51 +25,23 @@ This milestone makes synthetic development and the later UI safer. It does not
 by itself declare the application ready to be the household's sole record of
 real assets; the real-data readiness gate in `ROADMAP.md` still applies.
 
-## Current evidence
+## Pre-implementation baseline
 
-The proposal was compared with `origin/main` at commit `1fec722` on
-2026-08-31. The full suite has 163 passing tests and the EF model-drift check
-passes. The formatting check currently reports pre-existing whitespace in
-`LedgerTransaction.cs`; M004 changes no source file. `PROJECT_STATE.md` records
-the earlier M002 verification as clean, so this baseline discrepancy must be
-resolved by M003 or a separate maintenance change before either later milestone
-is Verified.
+The dedicated implementation branch was created from `origin/main` at
+`965b6beb1237bb1907621b772c7a2d5358aec0d9`, the verified post-M003 checkpoint.
+Before code changes, restore succeeded, all 243 tests passed, and EF reported no
+model drift.
 
-Repository inspection establishes these current facts:
+The Windows .NET 10.0.400 formatting check reproduced only the recorded
+LF/CRLF diagnostic in the untouched `LedgerTransaction.cs` at lines 469, 471,
+and 472. No repository-wide line-ending policy was changed for M004.
 
-- `src/WealthLedger.Api/appsettings.json` uses the relative connection string
-  `Data Source=wealthledger.db;Foreign Keys=True`. Its resolution therefore
-  depends on the process working directory.
-- `src/WealthLedger.Infrastructure/DependencyInjection.cs` consumes that raw
-  connection string directly; there is no canonical live-data path resolver or
-  path safety validation.
-- `WealthLedgerDesignTimeDbContextFactory` falls back to the relative file
-  `wealthledger.design.db`.
-- `.gitignore` does not cover SQLite database, journal, WAL, SHM, backup, or
-  restore-staging artifacts. No such artifact is currently tracked, but a
-  future file would not be protected by the repository rules.
-- `Database:ApplyMigrationsOnStartup` is false by default, but when enabled
-  `DatabaseInitialization` calls `MigrateAsync` during API startup without a
-  pre-migration backup or an isolated recovery path.
-- setup is disabled by default, which remains a useful baseline.
-- there is no supported backup, backup-verification, restore, or database-status
-  command and no operations composition root.
-- `SqliteConnectionPragmaInterceptor` enables foreign keys and a bounded busy
-  timeout. The application does not currently select WAL mode, but safe backup
-  behavior must remain correct if a database has WAL or rollback-journal state.
-- the pinned `Microsoft.Data.Sqlite` version exposes SQLite's supported online
-  backup API; no additional native backup library is currently required.
-- API tests and Infrastructure tests already use isolated unique temporary
-  SQLite files with pooling disabled. That test-only pattern is useful but is
-  not a live-data operating model.
-- the tracked API configuration contains `AllowedHosts: "*"`. The only observed
-  development URLs are in an ignored `launchSettings.json`; ignored launch
-  settings are not a canonical local-exposure boundary.
-- API persistence failures are sanitized by the existing exception handler,
-  but no operational command output has yet been designed or tested.
-
-`SECURITY_OPERATIONS.md` therefore remains a Proposed baseline rather than a
-description of implemented protection.
+Inspection at that base confirmed the relative working-directory database,
+unprotected artifact extensions, optional unprotected startup migration,
+absence of supported backup/restore/status commands, and lack of a tracked
+loopback hosting boundary described by the proposal. Those gaps define the
+before-state; the verified implementation evidence below supersedes them as
+current behavior.
 
 ## Why now
 
@@ -530,6 +504,39 @@ The backup manifest is versioned independently from the EF schema. Readers
 reject unknown future major versions. Additive fields in a known compatible
 version are ignored only under an explicit compatibility rule; required fields
 may not be inferred.
+
+## Verification evidence
+
+Verification on 2026-09-01 used only synthetic databases in unique temporary
+directories and fresh operations processes:
+
+- the full solution passed 387 tests: Domain 83, Application 79,
+  Infrastructure 136, API 66, and Operations 23;
+- named focused suites passed: local-data Application 9, backup-related
+  Infrastructure 42, restore-related Infrastructure 20, local-hosting API 28,
+  operations CLI 23, and the Domain dependency boundary 1;
+- the documented end-to-end process workflow passed initialize, status,
+  consistent backup creation, independent verification, isolated restore,
+  restored status, and restart/readback;
+- separate process workflows passed mandatory verified pre-migration backup
+  from migration 002 to 003 and confirmed active replacement with preserved
+  recovery evidence;
+- WAL, rollback-journal, hostile/corrupt archive, path/reparse, ownership,
+  cancellation, injected I/O, rollback, privacy, and restart cases passed in
+  the focused and full suites;
+- EF reported no pending model changes, confirming that no M004 ledger migration
+  was introduced;
+- all 15 representative artifact paths matched `.gitignore`, `git ls-files`
+  found no database/backup/stage/lock artifact, and a full ignored-file scan
+  found none in the implementation worktree;
+- `git diff --check` passed. `dotnet format --verify-no-changes` reproduced only
+  the three pre-existing Windows SDK line-ending diagnostics recorded in the
+  baseline above and produced no committable difference.
+
+The smoke review found and fixed abandoned initialization-stage WAL/SHM names;
+the regression now checkpoints the stage, proves companion cleanup, and always
+cleans the unique pre-publish basename. The focused initializer tests and the
+complete recovery workflow passed after that fix.
 
 ## Acceptance criteria
 

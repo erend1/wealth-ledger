@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-02
 
 ## How to read this roadmap
 
@@ -42,8 +42,8 @@ Statuses used here:
 | M001 | Verified | Core immutable ledger, fixed-point persistence, setup, contribution, fund purchase, lot creation, and one position query | Existing checkpoint in `PROJECT_STATE.md` |
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
-| M004 | In Progress | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; implementation is active from verified M003 |
-| M005 | Proposed | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Human acceptance of the ten decision gates; implementation begins only after M003 and M004 are Verified |
+| M004 | Verified | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; verified 2026-09-01 |
+| M005 | Proposed | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | M003 and M004 are Verified; implementation still requires human acceptance of the ten M005 decision gates |
 | M006 | Proposed | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Human acceptance of the eleven decision gates and UI ADR; implementation begins only after M003-M005 are Verified |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
 | M008 | Planned | Complete investment-fund lifecycle, including fees, taxes, sale, FIFO allocation, and realized cost | Opening lots and correction path |
@@ -71,20 +71,21 @@ sanitized conflict. Corrected replacement remains a separate normal submission
 without a structured replacement relationship.
 
 [`M004_safe_local_data_operations.md`](milestones/M004_safe_local_data_operations.md)
-is now In Progress. Its ten Recommended decisions were accepted exactly as
-written on 2026-09-01 and are recorded by ADR-007. They cover the live-data
-path, local operations surface, process ownership, backup package, restore
-replacement, explicit migration, loopback exposure, and encryption boundary.
-Implementation began from the verified M003 checkpoint.
+was accepted and verified on 2026-09-01. Its fail-closed local operating model
+now covers the authoritative path, seven-command operations surface, exclusive
+process ownership, consistent versioned backup and verification, isolated and
+confirmed active restore, protected explicit migration, loopback exposure, and
+the plaintext-package/external-encryption boundary recorded by ADR-007.
 
 [`M005_master_data_and_ledger_navigation.md`](milestones/M005_master_data_and_ledger_navigation.md)
-is also Proposed for planning and human review only. It defines bounded
-master/reference pages, a cursor-based recent Posted transaction feed, current
-display-label semantics, and the distinction between a genuine zero position
-and an unknown scope. It deliberately leaves broad transaction search,
-position/lot inventory, and reconciliation in M010. M005 must not become In
-Progress until M003 and M004 are Verified and its implementation branch is
-rebased onto that checkpoint.
+is Proposed and is now the next candidate for planning and human review. It
+defines bounded master/reference pages, a cursor-based recent Posted
+transaction feed, current display-label semantics, and the distinction between
+a genuine zero position and an unknown scope. It deliberately leaves broad
+transaction search, position/lot inventory, and reconciliation in M010. M005
+must not become In
+Progress until its ten decisions are accepted and its implementation branch is
+based on the verified M004 checkpoint.
 
 [`M006_ui_shell_and_guided_first_run.md`](milestones/M006_ui_shell_and_guided_first_run.md)
 is Proposed for planning and human review only. It recommends a Turkish-first,
@@ -110,9 +111,12 @@ of the following are verified:
   M002 and M003;
 - posted mistakes can be reversed through the supported workflow — verified by
   M003;
-- the live database is outside the repository and ignored by source control;
-- backup and restore have a user-visible, tested workflow;
-- setup and migration switches are safe for normal startup;
+- the live database is outside the repository and ignored by source control —
+  verified by M004;
+- backup and restore have a user-visible, tested workflow — verified locally by
+  M004, while off-device protection and recurring drills remain operator duties;
+- setup is default-off and normal startup cannot initialize or migrate —
+  verified by M004;
 - logs, errors, exports, and screenshots do not expose avoidable private data;
 - the user can reconcile an imported or entered position with independent
   evidence.
