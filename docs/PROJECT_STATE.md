@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-09-01
+As of: 2026-09-02
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
@@ -8,12 +8,15 @@ Status source: verified against the repository, the generated EF model, and loca
 
 The Domain v1 baseline, core SQLite persistence, Minimal API boundary,
 first-run setup, M002 retry-safe transaction submission/readback, and M003
-posted reversal and correction workflow are implemented and verified.
+posted reversal and correction workflow are implemented and verified. M004 now
+adds the verified fail-closed local database, ownership, backup, restore,
+migration, and loopback-hosting operating boundary.
 
-Starting from an empty SQLite file, the supported synthetic-data path can apply
-migrations when explicitly enabled, initialize required master data, record
-retry-safe contributions and fund purchases, create acquisition lots, read
-posted transactions through stable HTTP projections, derive positions from
+Starting without a database, the explicit operations CLI can initialize the
+accepted migration chain and verify the resulting file. The default-off setup
+endpoint can then initialize required master data. Supported ledger use cases
+record retry-safe contributions and fund purchases, create acquisition lots,
+read posted transactions through stable HTTP projections, derive positions from
 immutable posted entry history, preview reversal eligibility, and post an exact
 retry-safe reversal without editing or deleting the original transaction.
 
@@ -41,16 +44,16 @@ was accepted on 2026-08-28 and verified on 2026-08-31.
 [`M004: Safe Local Data Operations`](milestones/M004_safe_local_data_operations.md)
 was accepted on 2026-09-01 after the human owner approved all ten Recommended
 decisions exactly as written. ADR-007 records the accepted local-data operating
-model. M004 is now the one In Progress milestone; its implementation remains
-unverified until the complete acceptance and recovery workflow passes. M003's
-verification satisfies M004's delivery-order prerequisite.
+model. M004 was verified on 2026-09-01 after its focused/full suites,
+repository-protection checks, and synthetic recovery workflows passed.
 
 [`M005: Master Data and Ledger Navigation`](milestones/M005_master_data_and_ledger_navigation.md)
-is also Proposed for parallel planning and human review only. It cannot become
-In Progress until M003 and M004 are Verified. The proposal defines read-only
-master/reference pages, a bounded recent Posted ledger feed, current-label
-semantics, cursor pagination, and valid-versus-unknown point-position scopes;
-none of those routes or behaviors is currently implemented.
+is Proposed and is now the next delivery candidate for human review. Its M003
+and M004 ordering prerequisites are satisfied, but it cannot become In Progress
+until its decision gates are accepted. The proposal defines read-only master/
+reference pages, a bounded recent Posted ledger feed, current-label semantics,
+cursor pagination, and valid-versus-unknown point-position scopes; none of
+those routes or behaviors is currently implemented.
 
 [`M006: Local UI Shell and Guided First Run`](milestones/M006_ui_shell_and_guided_first_run.md)
 is Proposed for parallel planning and human review only. It cannot become In
@@ -79,8 +82,9 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - Initial migration: `20260824074930_001_CoreLedger`.
 - M002 migration: `20260827072019_002_CommandReceipt`.
 - M003 migration: `20260831113310_003_ReversalDependencySemantics`.
-- SQLite concurrency policy outside the scoped idempotent submission and
-  reversal collision handling verified by M002 and M003.
+- Local database ownership is one adjacent cross-process exclusive file lock;
+  it is not a distributed or remote multi-writer policy. M002/M003 database
+  constraints still arbitrate scoped submission and reversal races.
 
 M002 adds dedicated `CommandReceipt` persistence. M003 is behavior-only: it
 replaces the posting-validation trigger while preserving all previous guards
@@ -173,8 +177,39 @@ Application provides one focused initialization command for a base currency, hou
 
 Infrastructure accepts setup only when all core master tables are empty and inserts the complete graph in one SQLite transaction. Existing master data returns a stable conflict, while a constraint or trigger failure rolls back currency, household, member, institution, portfolio, account, and assets together. The setup uses the existing `001_CoreLedger` schema and required no model or migration change.
 
-`POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly true. `Database:ApplyMigrationsOnStartup` is also false by default and applies migrations only when explicitly enabled. The setup endpoint returns stable initialized identities but deliberately emits
-no `Location` until a matching household read endpoint exists.
+`POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly
+true. Normal API startup no longer supports initialization or migration; those
+are explicit operations commands. The setup endpoint returns stable initialized
+identities but deliberately emits no `Location` until a matching household read
+endpoint exists.
+
+### Safe local data operations
+
+Normal storage resolves to the absolute per-user local application-data path
+`WealthLedger/data/wealthledger.db`; an advanced override must be absolute and
+pass repository/build-root, broad-root, reparse-point, extension, and path-
+overlap checks. Design-time tooling uses an explicit synthetic temp path.
+
+`WealthLedger.Operations` exposes exactly seven lifecycle commands: status,
+database initialize/migrate, backup create/verify, and restore stage/replace.
+Application owns narrow operation use cases. Infrastructure owns canonical path
+resolution, the adjacent exclusive ownership lock, SQLite integrity/schema and
+representative-read verification, the online backup API, bounded versioned
+archives, staging, replacement rollback, and explicit EF migration mechanics.
+
+Normal API hosting validates loopback-only URLs, holds database ownership for
+its service lifetime, and fails closed with sanitized guidance when the file is
+missing, corrupt, incompatible, or needs migration. It exposes no lifecycle,
+filesystem, or SQL HTTP route.
+
+Every immutable `.wlbackup` contains one standalone SQLite snapshot and one
+privacy-safe versioned manifest with SHA-256 corruption evidence. Packages are
+plaintext at the application layer. Backup creation, pending migration, and
+active replacement require a separate configured backup directory and explicit
+operator acknowledgements for external separation and encryption. Isolated
+restore never overwrites a target; confirmed active replacement first creates
+a verified pre-restore package, preserves the superseded database, and rolls a
+failed promotion back.
 
 ### Posted reversal and correction
 
@@ -224,11 +259,12 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 
 Results:
 
-- Domain tests: 82 passed, 0 failed.
-- Application tests: 70 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 53 passed, 0 failed.
-- API tests against real SQLite files: 38 passed, 0 failed.
-- Total: 243 passed, 0 failed.
+- Domain tests: 83 passed, 0 failed.
+- Application tests: 79 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 136 passed, 0 failed.
+- API tests against real SQLite files: 66 passed, 0 failed.
+- Operations process/contract tests: 23 passed, 0 failed.
+- Total: 387 passed, 0 failed.
 - Formatting drift: no committable content diff; see the SDK line-ending caveat
   below.
 - EF model drift: none.
@@ -238,7 +274,17 @@ On the Windows .NET 10.0.400 SDK, a fresh LF checkout currently makes
 `LedgerTransaction.cs` lines 469, 471, and 472. Applying the formatter only
 rewrites that file's raw line endings to CRLF; Git normalizes it back to the
 same LF blob under the repository attributes. This tooling/configuration
-discrepancy remains open and is not introduced by the planning documents.
+discrepancy remains open and is not introduced by M004.
+
+M004 focused verification passed 9 local-data Application tests, 42 backup-
+related Infrastructure tests, 20 restore-related Infrastructure tests, 28
+local-hosting API tests, all 23 Operations tests, and the Domain dependency
+guard. The documented synthetic process workflows passed initialize, status,
+backup create/verify, isolated restore and restart validation, mandatory
+verified pre-migration backup, and confirmed active replacement with preserved
+recovery evidence. Artifact ignore checks passed for all 15 representative
+extensions, Git tracks none, and no generated local-data artifact exists in the
+implementation worktree.
 
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
@@ -248,49 +294,26 @@ same-key and different-key concurrency, dependency races introduced after
 eligibility evaluation, restart readback, exact position/allocation netting,
 stable sanitized HTTP errors, and a separate corrected-replacement flow.
 
-The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, opt-in migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
-
-A planning-only audit for the Proposed M004 document on 2026-08-31 originally
-ran against the pre-M003 baseline: all 163 tests passed and the EF model-drift
-check passed. The proposal changes no source file. After M003 verification and
-this planning branch's rebase, the verified baseline is 243 passing tests with
-no EF model drift; the line-ending-only formatter caveat above remains.
+The integration suite proves fixed-point and stable-code round trips, GUID/date/timestamp storage, foreign-key enforcement, posted graph immutability through EF and direct SQL, reversal behavior and dependency protection, effective lot balances that exclude drafts, acquisition-lineage and allocation invariants, cost-basis shape, transaction ordering, setup and posting rollback, and an HTTP setup/contribution/purchase/position round trip without authoritative balance tables. API tests also prove default-off setup gating, fail-closed loopback startup without automatic migration, repeat-setup conflict, transport-code validation, semantic rule mapping, sanitized persistence failures, and isolated SQLite databases under parallel execution.
 
 A planning-only M006 audit on 2026-08-31 originally inspected the stacked
 M004/M005 proposal branch, then-current source, local .NET 10 templates, and
 official ASP.NET Core UI/lifetime guidance. Its inherited pre-M003 suite passed
 all 163 tests and the EF model-drift check. After rebasing the proposal onto the
-verified M003 baseline and merged M004/M005 planning documents, the baseline is
-243 passing tests with no EF model drift; the same formatter caveat remains.
+verified M003 baseline and merged M004/M005 planning documents, that planning
+checkpoint had 243 passing tests with no EF model drift; the same formatter
+caveat remains.
+
 There is still no UI project, page, static-asset pipeline, or browser test.
-M006 changes documentation only and does not claim M004, M005, or any UI
-behavior as implemented.
+M006 changes documentation only and does not claim M005 or any UI behavior as
+implemented; its M004 dependency is now verified.
 
 ## Next delivery candidate
 
-M004 is the active In Progress coherent slice: safe local data operations.
-
-Its roadmap outcome is explicit local database location, source-control
-exclusions, backup, restore verification, and local exposure policy. M004
-records its accepted operations and encryption boundary in ADR-007; no M004
-runtime behavior is claimed by the verified M003 checkpoint.
-
-## Accepted M003 delivery outline
-
-After write safety and readback, the next coherent ledger feature applies the
-reversal rules already accepted by the Domain and ADRs:
-
-1. Add focused preview and command use cases that load one immutable original,
-   replay an existing receipt first, and validate reversal/dependency state.
-2. Create the Domain reversal and mirror original allocations on their existing
-   lots without changing the original transaction's Posted status.
-3. Persist reversal, allocations, and receipt atomically, including explicit
-   recovery from reversal-uniqueness races.
-4. Align the posting trigger with neutralized downstream reversal pairs through
-   a new migration rather than modifying `001_CoreLedger`.
-5. Expose preview, command, reverse navigation, and allocation readback through
-   sanitized HTTP contracts and prove them across Application, SQLite, restart,
-   concurrency, and API tests.
+M005 is the next coherent delivery candidate: master-data and ledger
+navigation. Its proposal may be reviewed, but no M005 implementation is
+authorized until its ten decision gates receive explicit human acceptance.
+There is currently no In Progress milestone.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
@@ -303,7 +326,7 @@ Do not start live market data, provider-specific integration, optimization, AI/L
 - Application-level database or package encryption beyond M004's accepted
   OS/device-encryption reliance remains deferred to a separate ADR.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
-- SQLite concurrency policy outside the scoped idempotent-submission collision
-  handled by M002.
+- SQLite concurrency beyond M004's single-machine ownership boundary and the
+  scoped database collisions handled by M002/M003.
 
 Record a new ADR only when one of these or another cross-cutting architectural choice is accepted or superseded.
