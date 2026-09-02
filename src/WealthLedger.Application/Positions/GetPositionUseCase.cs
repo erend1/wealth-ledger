@@ -1,4 +1,5 @@
 using WealthLedger.Domain.ValueObjects;
+using WealthLedger.Application.Navigation;
 
 namespace WealthLedger.Application.Positions;
 
@@ -19,11 +20,16 @@ public sealed record GetPositionResult(
 public sealed class GetPositionUseCase
 {
     private readonly IPostedEntrySource _entrySource;
+    private readonly INavigationScopeReadStore _scopeReadStore;
 
-    public GetPositionUseCase(IPostedEntrySource entrySource)
+    public GetPositionUseCase(
+        IPostedEntrySource entrySource,
+        INavigationScopeReadStore scopeReadStore)
     {
         _entrySource = entrySource
             ?? throw new ArgumentNullException(nameof(entrySource));
+        _scopeReadStore = scopeReadStore
+            ?? throw new ArgumentNullException(nameof(scopeReadStore));
     }
 
     public async Task<GetPositionResult> ExecuteAsync(
@@ -32,10 +38,23 @@ public sealed class GetPositionUseCase
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        EnsureNonEmpty(query.HouseholdId, nameof(query.HouseholdId));
-        EnsureNonEmpty(query.PortfolioId, nameof(query.PortfolioId));
-        EnsureNonEmpty(query.AccountId, nameof(query.AccountId));
-        EnsureNonEmpty(query.AssetId, nameof(query.AssetId));
+        if (query.HouseholdId == Guid.Empty
+            || query.PortfolioId == Guid.Empty
+            || query.AccountId == Guid.Empty
+            || query.AssetId == Guid.Empty)
+        {
+            throw new PositionScopeNotFoundException();
+        }
+
+        if (!await _scopeReadStore.PositionScopeExistsAsync(
+                query.HouseholdId,
+                query.PortfolioId,
+                query.AccountId,
+                query.AssetId,
+                cancellationToken))
+        {
+            throw new PositionScopeNotFoundException();
+        }
 
         var entries = await _entrySource.ListPositionEntriesAsync(
             query.HouseholdId,
@@ -64,13 +83,4 @@ public sealed class GetPositionUseCase
             entries.Count);
     }
 
-    private static void EnsureNonEmpty(Guid value, string parameterName)
-    {
-        if (value == Guid.Empty)
-        {
-            throw new ArgumentException(
-                $"{parameterName} cannot be empty.",
-                parameterName);
-        }
-    }
 }

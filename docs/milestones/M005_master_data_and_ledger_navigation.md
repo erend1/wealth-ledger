@@ -1,10 +1,14 @@
 # M005: Master Data and Ledger Navigation
 
-Status: Proposed
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-08-31
+Accepted: 2026-09-02 (all ten Recommended decisions exactly as written)
+
+Verified: 2026-09-02
+
+Last reviewed: 2026-09-02
 
 ## User outcome
 
@@ -23,7 +27,7 @@ M005 is a read-only navigation slice for later UI and opening-balance work. It
 does not add master-data editing, broad transaction search, position or lot
 inventory, valuation, reconciliation, or a graphical interface.
 
-## Current evidence
+## Planning-time current evidence
 
 This proposal was audited on 2026-08-31 against the documentation branch at
 commit `1f56dec`, which is based on `origin/main` commit `1fec722`. The full
@@ -69,6 +73,35 @@ M003 is being implemented separately by the human owner and M004 remains
 Proposed. Both source realities must be re-audited before M005 implementation;
 this document claims neither milestone's runtime behavior.
 
+## Implementation reconciliation
+
+Implementation began from clean commit `31c61b0`, where final M003 and M004
+were already Verified and the complete baseline contained 388 passing tests.
+That source and its tests superseded the older planning-time evidence above.
+No material contract contradiction was found.
+
+The verified implementation provides every accepted route and field, scoped
+versioned keyset cursors, active filtering, current display context, a fixed
+three-reader-command non-empty ledger feed, and position-scope validation. It
+changes no Domain behavior and adds no write route, UI, broad search, inventory,
+valuation, or later-milestone capability.
+
+The exact production query used the existing execution-date index and
+`USE TEMP B-TREE FOR ORDER BY` before migration. Migration
+`20260902112549_004_LedgerNavigationQueries` adds only
+`IX_LedgerTransaction_Household_Status_Posted_Id`; the same plan then uses that
+index with no temporary sort. Its `Down` removes only that index, and the
+up/down test preserves seeded rows.
+
+Focused verification passed 16 Application tests, 8 real-SQLite
+Infrastructure tests, and 5 API tests. The full suite passed 417 tests. EF
+reports no pending model changes. The accepted M004 workflow created and
+verified a synthetic M003 pre-migration package, explicitly migrated the live
+copy, verified its integrity and preserved data, and staged an isolated restore
+of the old copy. Formatting verification reports only the pre-existing,
+byte-for-byte non-committable `LedgerTransaction.cs` Windows line-ending caveat
+documented in `PROJECT_STATE.md`; no M005 file is reported.
+
 ## Why now
 
 M002 makes transaction identities resolvable, and M003 makes corrections
@@ -89,8 +122,8 @@ In Progress.
 
 ## Decisions and decision gates
 
-Every decision below is Proposed. Human acceptance of all ten decisions is
-required before M005 becomes Accepted.
+The human owner accepted all ten Recommended decisions exactly as written on
+2026-09-02. Their wording is preserved below as the implementation contract.
 
 ### Decision 1: delivery sequencing
 

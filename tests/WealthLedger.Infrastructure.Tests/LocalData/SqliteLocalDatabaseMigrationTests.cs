@@ -14,8 +14,10 @@ public sealed class SqliteLocalDatabaseMigrationTests
             "20260824074930_001_CoreLedger";
         const string commandReceiptMigration =
             "20260827072019_002_CommandReceipt";
-        const string endingMigration =
+        const string reversalSemanticsMigration =
             "20260831113310_003_ReversalDependencySemantics";
+        const string endingMigration =
+            "20260902112549_004_LedgerNavigationQueries";
         var hooks = new RecordingMigrationHooks();
         await using var harness = await LocalBackupTestHarness.CreateAsync(
             hooks,
@@ -33,7 +35,11 @@ public sealed class SqliteLocalDatabaseMigrationTests
             [startingMigration],
             initialVerification.Value.AppliedMigrations);
         Assert.Equal(
-            [commandReceiptMigration, endingMigration],
+            [
+                commandReceiptMigration,
+                reversalSemanticsMigration,
+                endingMigration
+            ],
             initialVerification.Value.PendingMigrations);
 
         var result = await CreateUseCase(harness).ExecuteAsync();
@@ -67,7 +73,7 @@ public sealed class SqliteLocalDatabaseMigrationTests
         Assert.Equal(
             LocalDatabaseCompatibility.Compatible,
             restarted.Value!.Compatibility);
-        Assert.Equal(3, restarted.Value.AppliedMigrations.Count);
+        Assert.Equal(4, restarted.Value.AppliedMigrations.Count);
         Assert.Empty(restarted.Value.PendingMigrations);
         Assert.Equal(
             1L,
@@ -94,12 +100,16 @@ public sealed class SqliteLocalDatabaseMigrationTests
     }
 
     [Fact]
-    public async Task Migration_PendingChainRequiresVerifiedBackupBeforeEfApply()
+    public async Task Migration_FromM003CreatesVerifiedBackupAndRestoresOldState()
     {
+        const string startingMigration =
+            "20260831113310_003_ReversalDependencySemantics";
+        const string endingMigration =
+            "20260902112549_004_LedgerNavigationQueries";
         var hooks = new RecordingMigrationHooks();
         await using var harness = await LocalBackupTestHarness.CreateAsync(
             hooks,
-            "20260827072019_002_CommandReceipt");
+            startingMigration);
         await harness.InsertSyntheticHouseholdAsync(LedgerMarker);
         var useCase = CreateUseCase(harness);
 
@@ -110,10 +120,10 @@ public sealed class SqliteLocalDatabaseMigrationTests
         Assert.True(result.Succeeded, result.Failure?.Message);
         Assert.False(result.Value!.WasNoOp);
         Assert.Equal(
-            "20260827072019_002_CommandReceipt",
+            startingMigration,
             result.Value.StartingMigration);
         Assert.Equal(
-            "20260831113310_003_ReversalDependencySemantics",
+            endingMigration,
             result.Value.EndingMigration);
         Assert.NotNull(result.Value.PreMigrationBackupPath);
         Assert.True(File.Exists(result.Value.PreMigrationBackupPath));
@@ -141,6 +151,31 @@ public sealed class SqliteLocalDatabaseMigrationTests
         Assert.Equal(
             LocalDatabaseCompatibility.MigrationRequired,
             backupVerification.Value!.Compatibility);
+        Assert.Equal(
+            [
+                "20260824074930_001_CoreLedger",
+                "20260827072019_002_CommandReceipt",
+                startingMigration
+            ],
+            backupVerification.Value.AppliedMigrations);
+
+        var recoveryTarget = Path.Combine(
+            harness.RootPath,
+            "m003-recovery",
+            "recovered.db");
+        var recovery = await harness.RestoreStager.StageAsync(
+            result.Value.PreMigrationBackupPath!,
+            recoveryTarget);
+
+        Assert.True(recovery.Succeeded);
+        Assert.Equal(
+            LocalDatabaseCompatibility.MigrationRequired,
+            recovery.Value!.Compatibility);
+        Assert.Equal(
+            1L,
+            await LocalBackupTestHarness.CountSyntheticHouseholdsAsync(
+                recoveryTarget,
+                LedgerMarker));
     }
 
     [Fact]
@@ -291,7 +326,7 @@ public sealed class SqliteLocalDatabaseMigrationTests
             LocalDataFailureCategory.MigrationFailure,
             result.Failure!.Category);
         Assert.Equal(
-            "20260831113310_003_ReversalDependencySemantics",
+            "20260902112549_004_LedgerNavigationQueries",
             result.Value.EndingMigration);
         Assert.True(File.Exists(result.Value.PreMigrationBackupPath));
         Assert.True(liveVerification.Succeeded);

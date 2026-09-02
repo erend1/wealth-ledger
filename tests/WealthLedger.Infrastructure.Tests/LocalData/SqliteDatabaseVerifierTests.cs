@@ -27,7 +27,7 @@ public sealed class SqliteDatabaseVerifierTests
             LocalDatabaseCompatibility.Compatible,
             first.Value!.Compatibility);
         Assert.Equal(LocalDataIntegrityStatus.Passed, first.Value.IntegrityStatus);
-        Assert.Equal(3, first.Value.AppliedMigrations.Count);
+        Assert.Equal(4, first.Value.AppliedMigrations.Count);
         Assert.Empty(first.Value.PendingMigrations);
         Assert.NotEmpty(first.Value.RepresentativeFingerprint);
         Assert.Equal(
@@ -49,7 +49,10 @@ public sealed class SqliteDatabaseVerifierTests
             LocalDatabaseCompatibility.MigrationRequired,
             result.Value!.Compatibility);
         Assert.Equal(
-            ["20260831113310_003_ReversalDependencySemantics"],
+            [
+                "20260831113310_003_ReversalDependencySemantics",
+                "20260902112549_004_LedgerNavigationQueries"
+            ],
             result.Value.PendingMigrations);
     }
 

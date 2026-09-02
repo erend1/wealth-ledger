@@ -89,7 +89,8 @@ public sealed class CoreLedgerVerticalSliceTests
 
         await using var reopenedContext = database.CreateContext();
         var positionUseCase = new GetPositionUseCase(
-            new EfCorePostedEntrySource(reopenedContext));
+            new EfCorePostedEntrySource(reopenedContext),
+            new EfCoreNavigationScopeReadStore(reopenedContext));
 
         var fundPosition = await positionUseCase.ExecuteAsync(
             new GetPositionQuery(

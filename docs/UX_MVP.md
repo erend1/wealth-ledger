@@ -98,6 +98,24 @@ and any required confirmation; it must not manipulate SQLite, archives, locks,
 or filesystem paths directly. M004 provides these contracts and its operations
 CLI, but does not add a UI.
 
+M005 now provides the verified read-only API foundation for later selectors
+and navigation, but still adds no UI:
+
+- Today may consume the bounded recent Posted feed for its recent-activity
+  region without treating execution date as posting recency;
+- Ledger may use that same default feed and follow a transaction identity to
+  the complete detail route; the broad filters described above remain M010;
+- Settings and guided setup may populate household, member, institution,
+  portfolio, account, currency, and asset choices from the bounded current-
+  display routes, including inactive/history choices when explicitly requested;
+- account choices carry nullable current Institution context, while entry
+  effects carry enough stable scope identities to open the point-position route;
+- a valid empty position is distinct from the sanitized unknown/cross-household
+  scope error.
+
+Master-data editing, local operation UI, selector caching, and presentation
+formatting remain responsibilities of later accepted milestones.
+
 ## First-run experience
 
 The first-run flow should:

@@ -1,6 +1,6 @@
 # WealthLedger Database Design
 
-Status: Canonical target for the first persistence milestone
+Status: Canonical implemented persistence design through M005
 
 Target: EF Core with SQLite
 
@@ -8,8 +8,9 @@ Migrations:
 - `20260824074930_001_CoreLedger`
 - `20260827072019_002_CommandReceipt`
 - `20260831113310_003_ReversalDependencySemantics`
+- `20260902112549_004_LedgerNavigationQueries`
 
-Last distilled: 2026-08-31
+Last distilled: 2026-09-02
 
 ## Design goals
 
@@ -378,11 +379,33 @@ trigger rejection rolls back the attempted reversal completely.
 
 The migration `Down` path restores the previous stricter dependency predicate.
 
+### M005 recent-ledger navigation index
+
+Migration `20260902112549_004_LedgerNavigationQueries` adds only the index:
+
+```text
+IX_LedgerTransaction_Household_Status_Posted_Id
+    (HouseholdId ASC, StatusCode ASC, PostedAtUtc DESC, Id DESC)
+```
+
+It supports the bounded household feed of Posted transactions ordered by
+posting time and immutable transaction identity, both descending. The existing
+household/status/execution-date index remains for business-date queries.
+
+`EXPLAIN QUERY PLAN` is exercised against the exact command emitted by the
+production EF read store. On the M003 schema, SQLite selects
+`IX_LedgerTransaction_Household_Status_Date` and reports
+`USE TEMP B-TREE FOR ORDER BY`. After migration 004, it selects the M005 index
+and no temporary sort. The migration `Down` removes only the M005 index; real-
+SQLite up/down tests preserve all seeded rows.
+
 ## Indexes
 
 Beyond PK/unique indexes, evaluate query-driven indexes for:
 
 - LedgerTransaction by HouseholdId, StatusCode, ExecutionDate;
+- LedgerTransaction by HouseholdId, StatusCode, PostedAtUtc descending, and Id
+  descending for verified M005 recent navigation;
 - TransactionEntry by TransactionId;
 - TransactionEntry by PortfolioId, AssetId;
 - TransactionEntry by AccountId, AssetId;

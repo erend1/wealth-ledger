@@ -309,7 +309,8 @@ internal sealed class SqliteDatabaseVerifier
         }
 
         var positionUseCase = new GetPositionUseCase(
-            new EfCorePostedEntrySource(context));
+            new EfCorePostedEntrySource(context),
+            new EfCoreNavigationScopeReadStore(context));
         var position = await positionUseCase.ExecuteAsync(
             new GetPositionQuery(
                 representativeScope.HouseholdId,
