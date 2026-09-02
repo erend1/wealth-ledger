@@ -44,7 +44,7 @@ was accepted on 2026-08-28 and verified on 2026-08-31.
 [`M004: Safe Local Data Operations`](milestones/M004_safe_local_data_operations.md)
 was accepted on 2026-09-01 after the human owner approved all ten Recommended
 decisions exactly as written. ADR-007 records the accepted local-data operating
-model. M004 was verified on 2026-09-01 after its focused/full suites,
+model. M004 was verified on 2026-09-02 after its focused/full suites,
 repository-protection checks, and synthetic recovery workflows passed.
 
 [`M005: Master Data and Ledger Navigation`](milestones/M005_master_data_and_ledger_navigation.md)
@@ -205,11 +205,12 @@ filesystem, or SQL HTTP route.
 Every immutable `.wlbackup` contains one standalone SQLite snapshot and one
 privacy-safe versioned manifest with SHA-256 corruption evidence. Packages are
 plaintext at the application layer. Backup creation, pending migration, and
-active replacement require a separate configured backup directory and explicit
-operator acknowledgements for external separation and encryption. Isolated
-restore never overwrites a target; confirmed active replacement first creates
-a verified pre-restore package, preserves the superseded database, and rolls a
-failed promotion back.
+active replacement require a separate configured backup directory. The
+separation and encryption acknowledgements determine real-data readiness; they
+do not replace the operator's verification of those protections or gate the
+local lifecycle command itself. Isolated restore never overwrites a target;
+confirmed active replacement first creates a verified pre-restore package,
+preserves the superseded database, and rolls a failed promotion back.
 
 ### Posted reversal and correction
 
@@ -261,10 +262,10 @@ Results:
 
 - Domain tests: 83 passed, 0 failed.
 - Application tests: 79 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 136 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 137 passed, 0 failed.
 - API tests against real SQLite files: 66 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 387 passed, 0 failed.
+- Total: 388 passed, 0 failed.
 - Formatting drift: no committable content diff; see the SDK line-ending caveat
   below.
 - EF model drift: none.
@@ -285,6 +286,13 @@ verified pre-migration backup, and confirmed active replacement with preserved
 recovery evidence. Artifact ignore checks passed for all 15 representative
 extensions, Git tracks none, and no generated local-data artifact exists in the
 implementation worktree.
+
+A focused regression additionally proves that a valid M001 database is
+classified as `MigrationRequired`, receives an independently verified
+pre-migration package, migrates through M002 and M003, and preserves its
+synthetic data both in the upgraded live file and an isolated restore of the
+M001 package. Representative table checks are limited to tables introduced by
+the applied migration prefix.
 
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic

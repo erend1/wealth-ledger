@@ -42,7 +42,7 @@ Statuses used here:
 | M001 | Verified | Core immutable ledger, fixed-point persistence, setup, contribution, fund purchase, lot creation, and one position query | Existing checkpoint in `PROJECT_STATE.md` |
 | M002 | Verified | Retry-safe transaction submission and resolvable transaction readback | ADR-006; verified 2026-08-27 |
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
-| M004 | Verified | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; verified 2026-09-01 |
+| M004 | Verified | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; verified 2026-09-02 |
 | M005 | Proposed | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | M003 and M004 are Verified; implementation still requires human acceptance of the ten M005 decision gates |
 | M006 | Proposed | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Human acceptance of the eleven decision gates and UI ADR; implementation begins only after M003-M005 are Verified |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
@@ -71,11 +71,12 @@ sanitized conflict. Corrected replacement remains a separate normal submission
 without a structured replacement relationship.
 
 [`M004_safe_local_data_operations.md`](milestones/M004_safe_local_data_operations.md)
-was accepted and verified on 2026-09-01. Its fail-closed local operating model
-now covers the authoritative path, seven-command operations surface, exclusive
-process ownership, consistent versioned backup and verification, isolated and
-confirmed active restore, protected explicit migration, loopback exposure, and
-the plaintext-package/external-encryption boundary recorded by ADR-007.
+was accepted on 2026-09-01 and verified on 2026-09-02. Its fail-closed local
+operating model now covers the authoritative path, seven-command operations
+surface, exclusive process ownership, consistent versioned backup and
+verification, isolated and confirmed active restore, protected explicit
+migration, loopback exposure, and the plaintext-package/external-encryption
+boundary recorded by ADR-007.
 
 [`M005_master_data_and_ledger_navigation.md`](milestones/M005_master_data_and_ledger_navigation.md)
 is Proposed and is now the next candidate for planning and human review. It
