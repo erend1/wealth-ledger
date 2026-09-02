@@ -8,6 +8,92 @@ public sealed class SqliteLocalDatabaseMigrationTests
     private const string LedgerMarker = "SYNTHETIC_MIGRATION_MARKER";
 
     [Fact]
+    public async Task Migration_FromM001BacksUpFullChainAndPreservesData()
+    {
+        const string startingMigration =
+            "20260824074930_001_CoreLedger";
+        const string commandReceiptMigration =
+            "20260827072019_002_CommandReceipt";
+        const string endingMigration =
+            "20260831113310_003_ReversalDependencySemantics";
+        var hooks = new RecordingMigrationHooks();
+        await using var harness = await LocalBackupTestHarness.CreateAsync(
+            hooks,
+            startingMigration);
+        await harness.InsertSyntheticHouseholdAsync(LedgerMarker);
+
+        var initialVerification = await harness.DatabaseVerifier.VerifyAsync(
+            harness.DatabasePath);
+
+        Assert.True(initialVerification.Succeeded);
+        Assert.Equal(
+            LocalDatabaseCompatibility.MigrationRequired,
+            initialVerification.Value!.Compatibility);
+        Assert.Equal(
+            [startingMigration],
+            initialVerification.Value.AppliedMigrations);
+        Assert.Equal(
+            [commandReceiptMigration, endingMigration],
+            initialVerification.Value.PendingMigrations);
+
+        var result = await CreateUseCase(harness).ExecuteAsync();
+
+        Assert.True(result.Succeeded, result.Failure?.Message);
+        Assert.False(result.Value!.WasNoOp);
+        Assert.Equal(startingMigration, result.Value.StartingMigration);
+        Assert.Equal(endingMigration, result.Value.EndingMigration);
+        Assert.True(File.Exists(result.Value.PreMigrationBackupPath));
+        Assert.Equal(
+            [
+                LocalDataOperationCheckpoint.BeforeBackupPublish,
+                LocalDataOperationCheckpoint.BeforeMigrationApply,
+                LocalDataOperationCheckpoint.AfterMigrationApply
+            ],
+            hooks.RelevantCheckpoints);
+
+        var restarted = await harness.DatabaseVerifier.VerifyAsync(
+            harness.DatabasePath);
+        var backupVerification = await harness.Verifier.VerifyAsync(
+            result.Value.PreMigrationBackupPath!);
+        var recoveryTarget = Path.Combine(
+            harness.RootPath,
+            "m001-recovery",
+            "recovered.db");
+        var recovery = await harness.RestoreStager.StageAsync(
+            result.Value.PreMigrationBackupPath!,
+            recoveryTarget);
+
+        Assert.True(restarted.Succeeded);
+        Assert.Equal(
+            LocalDatabaseCompatibility.Compatible,
+            restarted.Value!.Compatibility);
+        Assert.Equal(3, restarted.Value.AppliedMigrations.Count);
+        Assert.Empty(restarted.Value.PendingMigrations);
+        Assert.Equal(
+            1L,
+            await LocalBackupTestHarness.CountSyntheticHouseholdsAsync(
+                harness.DatabasePath,
+                LedgerMarker));
+
+        Assert.True(backupVerification.Succeeded);
+        Assert.Equal(
+            LocalDatabaseCompatibility.MigrationRequired,
+            backupVerification.Value!.Compatibility);
+        Assert.Equal(
+            [startingMigration],
+            backupVerification.Value.AppliedMigrations);
+        Assert.True(recovery.Succeeded);
+        Assert.Equal(
+            LocalDatabaseCompatibility.MigrationRequired,
+            recovery.Value!.Compatibility);
+        Assert.Equal(
+            1L,
+            await LocalBackupTestHarness.CountSyntheticHouseholdsAsync(
+                recoveryTarget,
+                LedgerMarker));
+    }
+
+    [Fact]
     public async Task Migration_PendingChainRequiresVerifiedBackupBeforeEfApply()
     {
         var hooks = new RecordingMigrationHooks();
