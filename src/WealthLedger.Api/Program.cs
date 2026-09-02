@@ -3,6 +3,7 @@ using WealthLedger.Api.ErrorHandling;
 using WealthLedger.Api.Startup;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
+using WealthLedger.Application.Navigation;
 using WealthLedger.Application.Positions;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure;
@@ -25,6 +26,15 @@ builder.Services.AddScoped<InitializeCoreLedgerUseCase>();
 builder.Services.AddScoped<GetLedgerTransactionUseCase>();
 builder.Services.AddScoped<PreviewPostedTransactionReversalUseCase>();
 builder.Services.AddScoped<ReversePostedTransactionUseCase>();
+builder.Services.AddScoped<ListHouseholdsUseCase>();
+builder.Services.AddScoped<GetHouseholdUseCase>();
+builder.Services.AddScoped<ListHouseholdMembersUseCase>();
+builder.Services.AddScoped<ListInstitutionsUseCase>();
+builder.Services.AddScoped<ListPortfoliosUseCase>();
+builder.Services.AddScoped<ListAccountsUseCase>();
+builder.Services.AddScoped<ListCurrenciesUseCase>();
+builder.Services.AddScoped<ListAssetsUseCase>();
+builder.Services.AddScoped<ListRecentLedgerTransactionsUseCase>();
 
 var app = builder.Build();
 
@@ -52,6 +62,7 @@ app.Logger.LogInformation(
 
 app.UseExceptionHandler();
 app.MapLedgerEndpoints();
+app.MapNavigationEndpoints();
 app.MapPositionEndpoints();
 
 if (app.Configuration.GetValue<bool>("Setup:Enabled"))

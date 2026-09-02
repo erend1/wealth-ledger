@@ -133,6 +133,11 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             migration => migration.EndsWith(
                 "_003_ReversalDependencySemantics",
                 StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            applied,
+            migration => migration.EndsWith(
+                "_004_LedgerNavigationQueries",
+                StringComparison.Ordinal));
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

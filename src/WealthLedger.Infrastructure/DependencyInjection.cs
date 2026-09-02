@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
+using WealthLedger.Application.Navigation;
 using WealthLedger.Application.Positions;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure.LocalData;
@@ -120,6 +121,15 @@ public static class DependencyInjection
 
         services.AddScoped<ILedgerReferenceData, EfCoreLedgerReferenceData>();
         services.AddScoped<IPostedEntrySource, EfCorePostedEntrySource>();
+        services.AddScoped<
+            IMasterNavigationReadStore,
+            EfCoreMasterNavigationReadStore>();
+        services.AddScoped<
+            INavigationScopeReadStore,
+            EfCoreNavigationScopeReadStore>();
+        services.AddScoped<
+            ILedgerNavigationReadStore,
+            EfCoreLedgerNavigationReadStore>();
         services.AddScoped<ICoreLedgerSetupStore, EfCoreLedgerSetupStore>();
 
         services.AddScoped<EfCoreLedgerPostingStore>();

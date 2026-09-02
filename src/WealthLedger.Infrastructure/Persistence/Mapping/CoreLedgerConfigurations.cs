@@ -447,6 +447,18 @@ internal sealed class LedgerTransactionConfiguration : IEntityTypeConfiguration<
 
         builder.HasIndex(x => new { x.HouseholdId, x.Status, x.ExecutionDate })
             .HasDatabaseName("IX_LedgerTransaction_Household_Status_Date");
+
+        builder.HasIndex(
+                x => new
+                {
+                    x.HouseholdId,
+                    x.Status,
+                    x.PostedAtUtc,
+                    x.Id
+                })
+            .IsDescending(false, false, true, true)
+            .HasDatabaseName(
+                "IX_LedgerTransaction_Household_Status_Posted_Id");
     }
 }
 

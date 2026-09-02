@@ -45,7 +45,7 @@ public sealed class SqliteLocalDataStatusReaderTests : IDisposable
         Assert.Equal(
             LocalDatabaseCompatibility.Compatible,
             result.Value.Compatibility);
-        Assert.Equal(3, result.Value.AppliedMigrations.Count);
+        Assert.Equal(4, result.Value.AppliedMigrations.Count);
         Assert.False(result.Value.BackupDirectoryExists);
         Assert.False(result.Value.LocalProtectionReady);
         Assert.Equal("PLAINTEXT", result.Value.EncryptionMode);
@@ -84,7 +84,7 @@ public sealed class SqliteLocalDataStatusReaderTests : IDisposable
         Assert.Equal(
             LocalDatabaseCompatibility.MigrationRequired,
             result.Value!.Compatibility);
-        Assert.Single(result.Value.PendingMigrations);
+        Assert.Equal(2, result.Value.PendingMigrations.Count);
     }
 
     [Fact]

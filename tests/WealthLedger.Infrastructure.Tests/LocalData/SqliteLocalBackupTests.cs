@@ -29,7 +29,7 @@ public sealed class SqliteLocalBackupTests
         Assert.True(result.Succeeded);
         Assert.EndsWith(".wlbackup", result.Value!.FilePath);
         Assert.Equal(LocalBackupTestHarness.OperationTime, result.Value.CreatedAtUtc);
-        Assert.Equal(3, result.Value.AppliedMigrations.Count);
+        Assert.Equal(4, result.Value.AppliedMigrations.Count);
         Assert.Equal("PLAINTEXT", result.Value.EncryptionMode);
         Assert.Equal(12, result.Value.DigestPrefix.Length);
 
