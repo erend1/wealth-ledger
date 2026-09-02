@@ -154,7 +154,9 @@ Repository ports belong in Application unless a concrete Domain service genuinel
 - determine whether an original transaction was already reversed;
 - load open lots for one asset in FIFO order;
 - save a transaction and related lot changes atomically;
-- query derived positions.
+- query derived positions;
+- page current master display context or recent Posted effects;
+- validate one household-safe position scope.
 
 Do not expose IQueryable outside Infrastructure. Do not make one IRepository of T abstraction cover unrelated aggregate semantics.
 
@@ -187,6 +189,24 @@ Derived queries may read normalized tables efficiently without rehydrating aggre
     deterministic query/projection
         ↓
     position, cost basis, value, performance, or allocation result
+
+M005 navigation follows the same inward boundary without creating a
+materialized read model:
+
+    API page/filter text
+        ↓
+    Application validation and scoped versioned cursor
+        ↓
+    narrow Application read port
+        ↓
+    bounded Infrastructure AsNoTracking projection
+        ↓
+    stable current-display or exact ledger-effect result
+
+Household predicates remain in SQLite. Cursor content selects only a frozen
+keyset shape; it never supplies a column name, SQL fragment, or free-form
+predicate. The recent ledger projection batches effects for the bounded page
+rather than resolving each transaction or master row separately.
 
 A later materialized read model is allowed only when:
 

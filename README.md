@@ -75,6 +75,64 @@ After database initialization, one-time master-data setup remains an explicit,
 default-off API action. Start the loopback API with `Setup:Enabled=true`, call
 `POST /api/setup/core-ledger` once, then restart without that flag.
 
+## Read-only navigation API
+
+The loopback API exposes current master display context without making it
+ledger history. Stable identities always accompany names and codes:
+
+```text
+GET /api/households
+GET /api/households/{householdId}
+GET /api/households/{householdId}/members
+GET /api/households/{householdId}/portfolios
+GET /api/households/{householdId}/accounts
+GET /api/institutions
+GET /api/currencies
+GET /api/assets
+GET /api/households/{householdId}/ledger/transactions
+```
+
+Every collection accepts `pageSize` from 1 through 100 (default 50) and an
+opaque continuation `cursor`. Members, portfolios, accounts, institutions, and
+assets also accept `includeInactive=true`; active-only is the default. A
+synthetic request and envelope are:
+
+```http
+GET /api/households/10000000-0000-0000-0000-000000000001/accounts?pageSize=25&includeInactive=true
+```
+
+```json
+{
+  "items": [
+    {
+      "accountId": "50000000-0000-0000-0000-000000000001",
+      "householdId": "10000000-0000-0000-0000-000000000001",
+      "institution": null,
+      "code": "SYNTHETIC_ACCOUNT",
+      "name": "Synthetic Account",
+      "typeCode": "INVESTMENT",
+      "isActive": true,
+      "openedOn": "2026-01-01",
+      "closedOn": null
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+The household ledger route returns recently recorded Posted transactions by
+`postedAtUtc` and transaction ID, descending. Its entry effects include exact
+raw E8 quantities and current Portfolio, Account, nullable Institution, and
+Asset context. Follow `transactionId` with
+`GET /api/ledger/transactions/{transactionId}` for complete details; summaries
+omit notes, costs, cash-flow expansion, lots, and allocations.
+
+Malformed page/filter/cursor input returns a stable 400 navigation code.
+Unknown nested households return `HOUSEHOLD_NOT_FOUND`. The existing point-
+position route still returns a genuine zero for a valid empty scope, while an
+unknown or cross-household scope returns the sanitized 404 code
+`POSITION_SCOPE_NOT_FOUND`.
+
 ## Verification
 
 Run the full test suite:

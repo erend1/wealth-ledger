@@ -10,7 +10,9 @@ The Domain v1 baseline, core SQLite persistence, Minimal API boundary,
 first-run setup, M002 retry-safe transaction submission/readback, and M003
 posted reversal and correction workflow are implemented and verified. M004 now
 adds the verified fail-closed local database, ownership, backup, restore,
-migration, and loopback-hosting operating boundary.
+migration, and loopback-hosting operating boundary. M005 adds verified bounded
+master/reference navigation, a recent Posted ledger feed, and valid-versus-
+unknown position-scope behavior.
 
 Starting without a database, the explicit operations CLI can initialize the
 accepted migration chain and verify the resulting file. The default-off setup
@@ -19,6 +21,8 @@ record retry-safe contributions and fund purchases, create acquisition lots,
 read posted transactions through stable HTTP projections, derive positions from
 immutable posted entry history, preview reversal eligibility, and post an exact
 retry-safe reversal without editing or deleting the original transaction.
+Callers can now discover the current stable identities and labels needed for
+those operations without reading SQLite or retaining setup output.
 
 Posted originals remain Posted. Reversals are separate immutable Posted
 transactions linked through `ReversalOfTransactionId`; transaction readback
@@ -48,20 +52,19 @@ model. M004 was verified on 2026-09-02 after its focused/full suites,
 repository-protection checks, and synthetic recovery workflows passed.
 
 [`M005: Master Data and Ledger Navigation`](milestones/M005_master_data_and_ledger_navigation.md)
-is Proposed and is now the next delivery candidate for human review. Its M003
-and M004 ordering prerequisites are satisfied, but it cannot become In Progress
-until its decision gates are accepted. The proposal defines read-only master/
-reference pages, a bounded recent Posted ledger feed, current-label semantics,
-cursor pagination, and valid-versus-unknown point-position scopes; none of
-those routes or behaviors is currently implemented.
+was accepted and verified on 2026-09-02 after the human owner approved all ten
+Recommended decisions exactly as written. It exposes read-only master/reference
+pages, a bounded recent Posted ledger feed with current display context, scoped
+restart-safe cursors, and sanitized invalid position scopes. No M006 or later
+scope was implemented.
 
 [`M006: Local UI Shell and Guided First Run`](milestones/M006_ui_shell_and_guided_first_run.md)
-is Proposed for parallel planning and human review only. It cannot become In
-Progress until M003-M005 are Verified and its accepted architecture is recorded
-in an ADR. The proposal recommends one Razor Pages UI assembly in the existing
-loopback host, fail-closed readiness modes, a bounded first-run flow, exact
-human value presentation, and Today/Ledger/Settings read pages; no UI project
-or behavior is currently implemented.
+is Proposed for planning and human review only. Its M003-M005 ordering gate is
+now satisfied, but it cannot become In Progress until its eleven decisions are
+accepted and its architecture is recorded in an ADR. The proposal recommends
+one Razor Pages UI assembly in the existing loopback host, fail-closed readiness
+modes, a bounded first-run flow, exact human value presentation, and Today/
+Ledger/Settings read pages; no UI project or behavior is currently implemented.
 
 ## Verified implementation
 
@@ -82,13 +85,16 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - Initial migration: `20260824074930_001_CoreLedger`.
 - M002 migration: `20260827072019_002_CommandReceipt`.
 - M003 migration: `20260831113310_003_ReversalDependencySemantics`.
+- M005 migration: `20260902112549_004_LedgerNavigationQueries`.
 - Local database ownership is one adjacent cross-process exclusive file lock;
   it is not a distributed or remote multi-writer policy. M002/M003 database
   constraints still arbitrate scoped submission and reversal races.
 
 M002 adds dedicated `CommandReceipt` persistence. M003 is behavior-only: it
 replaces the posting-validation trigger while preserving all previous guards
-and changes only the acquisition-reversal dependency predicate.
+and changes only the acquisition-reversal dependency predicate. M005 adds only
+the descending recent-ledger query index; it adds no table or authoritative
+financial field.
 
 M002 adds a second schema migration for dedicated `CommandReceipt` persistence.
 A receipt is identified by household, stable operation code, and idempotency
@@ -115,6 +121,11 @@ Application contains focused commands and ports for:
 - recording a fund purchase with separate fund principal and cash consideration entries;
 - creating the fund acquisition lot with known minor-unit cost basis and an exact opening allocation;
 - querying a signed position for one household, portfolio, account, and asset.
+
+The position use case first validates that every requested master exists and
+that Portfolio and Account belong to the Household. A valid empty or net-zero
+scope retains the existing 200 payload and arithmetic; an unknown or cross-
+household scope is a sanitized `POSITION_SCOPE_NOT_FOUND` 404.
 
 Currency-asset quantities are converted deterministically from signed integer minor units to E8 using the persisted currency precision with checked arithmetic. Executed unit price remains a preserved source fact; cash consideration remains a separate entry.
 
@@ -156,6 +167,12 @@ the transaction.
 - `POST /api/ledger/contributions`;
 - `POST /api/ledger/fund-purchases`;
 - `GET /api/ledger/transactions/{transactionId}`;
+- `GET /api/households` and `GET /api/households/{householdId}`;
+- `GET /api/households/{householdId}/members`;
+- `GET /api/households/{householdId}/portfolios`;
+- `GET /api/households/{householdId}/accounts`;
+- `GET /api/institutions`, `GET /api/currencies`, and `GET /api/assets`;
+- `GET /api/households/{householdId}/ledger/transactions`;
 - `GET /api/households/{householdId}/portfolios/{portfolioId}/accounts/{accountId}/positions/{assetId}`.
 
 Contribution and fund-purchase submissions require a bounded opaque
@@ -171,6 +188,31 @@ Transport contracts continue to use signed integer minor units and raw E8
 integers. Public enum-like values are mapped to explicit stable text codes
 rather than exposing implementation enum names.
 
+### Master and ledger navigation
+
+Application defines explicit page queries, current-display results, use cases,
+and narrow master, ledger, and scope read ports. Every collection uses the
+same `{ items, nextCursor }` envelope, defaults to 50 items, accepts 1 through
+100, and uses an opaque versioned cursor bound to its resource, household, and
+active-filter state. Cursor and query-shape validation happens before
+persistence access.
+
+Infrastructure uses bounded `AsNoTracking` projections. Members, portfolios,
+accounts, transactions, and position scopes are household-safe in SQLite;
+Institution, Currency, and Asset remain global under the implemented schema.
+Lifecycle-bearing master pages default to active rows and can include inactive,
+closed, or archived current state. Account projections preserve nullable or
+inactive Institution context.
+
+The recent feed returns Posted transactions ordered by `PostedAtUtc` then
+transaction identity, both descending. It selects bounded transaction keys and
+loads every ordered entry/master effect in one batched query, so a non-empty
+page uses three reader commands including household validation regardless of
+item count. Effects retain exact raw E8 quantities, stable identities/codes,
+and current Portfolio, Account, nullable Institution, and Asset context. Notes,
+costs, cash-flow details, lots, and allocations remain on the existing detail
+route and are absent from summaries.
+
 ### First-run setup
 
 Application provides one focused initialization command for a base currency, household, optional member, institution, portfolio, account, cash asset, and required-lot fund asset. It constructs the existing Domain master entities, generates their identities, and submits one setup graph through `ICoreLedgerSetupStore`; no generic master-data repository or service layer was introduced.
@@ -180,8 +222,8 @@ Infrastructure accepts setup only when all core master tables are empty and inse
 `POST /api/setup/core-ledger` is mapped only when `Setup:Enabled` is explicitly
 true. Normal API startup no longer supports initialization or migration; those
 are explicit operations commands. The setup endpoint returns stable initialized
-identities but deliberately emits no `Location` until a matching household read
-endpoint exists.
+identities and still emits no `Location`; M005 adds the matching household read
+route without changing the verified setup response contract.
 
 ### Safe local data operations
 
@@ -261,11 +303,11 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Results:
 
 - Domain tests: 83 passed, 0 failed.
-- Application tests: 79 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 137 passed, 0 failed.
-- API tests against real SQLite files: 66 passed, 0 failed.
+- Application tests: 95 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 145 passed, 0 failed.
+- API tests against real SQLite files: 71 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 388 passed, 0 failed.
+- Total: 417 passed, 0 failed.
 - Formatting drift: no committable content diff; see the SDK line-ending caveat
   below.
 - EF model drift: none.
@@ -275,7 +317,7 @@ On the Windows .NET 10.0.400 SDK, a fresh LF checkout currently makes
 `LedgerTransaction.cs` lines 469, 471, and 472. Applying the formatter only
 rewrites that file's raw line endings to CRLF; Git normalizes it back to the
 same LF blob under the repository attributes. This tooling/configuration
-discrepancy remains open and is not introduced by M004.
+discrepancy remains open and is not introduced by M005.
 
 M004 focused verification passed 9 local-data Application tests, 42 backup-
 related Infrastructure tests, 20 restore-related Infrastructure tests, 28
@@ -289,10 +331,21 @@ implementation worktree.
 
 A focused regression additionally proves that a valid M001 database is
 classified as `MigrationRequired`, receives an independently verified
-pre-migration package, migrates through M002 and M003, and preserves its
-synthetic data both in the upgraded live file and an isolated restore of the
-M001 package. Representative table checks are limited to tables introduced by
-the applied migration prefix.
+pre-migration package, migrates through M002, M003, and the M005 index
+migration, and preserves its synthetic data both in the upgraded live file and
+an isolated restore of the M001 package. Representative table checks are
+limited to tables introduced by the applied migration prefix.
+
+M005 focused verification passed 16 Application navigation/position-scope
+tests, 8 real-SQLite navigation/position-scope/query-plan tests, and 5 API
+navigation tests. The exact pre-migration production query plan used
+`IX_LedgerTransaction_Household_Status_Date` and a temporary B-tree for its
+posting-time order; migration 004 changes that plan to
+`IX_LedgerTransaction_Household_Status_Posted_Id` with no temporary sort. The
+non-empty recent feed remains fixed at three reader commands for page sizes one
+and two. A dedicated synthetic M003-to-M005 recovery test verifies the
+pre-migration package, explicit migration, live integrity, data preservation,
+and an isolated restore of the old schema.
 
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
@@ -313,14 +366,15 @@ checkpoint had 243 passing tests with no EF model drift; the same formatter
 caveat remains.
 
 There is still no UI project, page, static-asset pipeline, or browser test.
-M006 changes documentation only and does not claim M005 or any UI behavior as
-implemented; its M004 dependency is now verified.
+M006 remains Proposed and claims no UI behavior as implemented; its M003-M005
+ordering prerequisites are now verified, but its decision gates and ADR remain
+unaccepted.
 
 ## Next delivery candidate
 
-M005 is the next coherent delivery candidate: master-data and ledger
-navigation. Its proposal may be reviewed, but no M005 implementation is
-authorized until its ten decision gates receive explicit human acceptance.
+M006 is the next coherent delivery candidate: the local UI shell and guided
+first run. Its Proposed contract still requires explicit human acceptance of
+all decision gates and the accepted UI architecture ADR before implementation.
 There is currently no In Progress milestone.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
