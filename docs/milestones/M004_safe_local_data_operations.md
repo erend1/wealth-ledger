@@ -8,7 +8,7 @@ Last reviewed: 2026-09-02
 
 Accepted: 2026-09-01
 
-Verified: 2026-09-01
+Verified: 2026-09-02
 
 ## User outcome
 
@@ -507,11 +507,11 @@ may not be inferred.
 
 ## Verification evidence
 
-Verification on 2026-09-01 used only synthetic databases in unique temporary
+Verification on 2026-09-02 used only synthetic databases in unique temporary
 directories and fresh operations processes:
 
-- the full solution passed 387 tests: Domain 83, Application 79,
-  Infrastructure 136, API 66, and Operations 23;
+- the full solution passed 388 tests: Domain 83, Application 79,
+  Infrastructure 137, API 66, and Operations 23;
 - named focused suites passed: local-data Application 9, backup-related
   Infrastructure 42, restore-related Infrastructure 20, local-hosting API 28,
   operations CLI 23, and the Domain dependency boundary 1;
@@ -521,6 +521,10 @@ directories and fresh operations processes:
 - separate process workflows passed mandatory verified pre-migration backup
   from migration 002 to 003 and confirmed active replacement with preserved
   recovery evidence;
+- the M001 regression classified the valid older schema as
+  `MigrationRequired`, created and independently verified its pre-migration
+  package, applied M002 and M003 in order, and preserved synthetic data in both
+  the upgraded database and an isolated restore of the M001 package;
 - WAL, rollback-journal, hostile/corrupt archive, path/reparse, ownership,
   cancellation, injected I/O, rollback, privacy, and restart cases passed in
   the focused and full suites;

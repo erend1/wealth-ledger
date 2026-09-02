@@ -2,7 +2,7 @@
 
 Status: Canonical M004 operator guide
 
-Last verified: 2026-09-01
+Last verified: 2026-09-02
 
 ## Safety boundary
 
@@ -166,6 +166,11 @@ check, and only then invokes EF Core. It reports starting and ending migration
 identifiers and the recovery-package path. A backup or verification failure
 prevents the first schema-changing command.
 
+Every known applied migration prefix is verified against only the tables that
+prefix introduced. In particular, a valid M001 database does not require the
+M002 `CommandReceipt` table before backup; it is reported as
+`MigrationRequired` and can follow the protected M001-to-current chain.
+
 If migration reports failure:
 
 1. Stop all writers and do not initialize, delete, overwrite, or edit either
@@ -264,6 +269,8 @@ dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.cs
 dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.csproj --no-restore --filter FullyQualifiedName~OperationsCli_MigrationCreatesOneVerifiedPreMigrationGeneration --verbosity minimal
 
 dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.csproj --no-restore --filter FullyQualifiedName~OperationsCli_ReplacementRequiresConfirmationAndPreservesEvidence --verbosity minimal
+
+dotnet test tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj --no-restore --filter FullyQualifiedName~Migration_FromM001BacksUpFullChainAndPreservesData --verbosity minimal
 ```
 
 These checks cover initialize, status, consistent package creation, independent

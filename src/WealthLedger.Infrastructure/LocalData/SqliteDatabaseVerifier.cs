@@ -12,14 +12,24 @@ namespace WealthLedger.Infrastructure.LocalData;
 
 internal sealed class SqliteDatabaseVerifier
 {
-    private static readonly string[] RepresentativeTables =
-    [
-        "LedgerTransaction",
-        "TransactionEntry",
-        "AssetLot",
-        "LotEntryAllocation",
-        "CommandReceipt"
-    ];
+    private const string CoreLedgerMigration =
+        "20260824074930_001_CoreLedger";
+    private const string CommandReceiptMigration =
+        "20260827072019_002_CommandReceipt";
+
+    private static readonly IReadOnlyDictionary<string, string[]>
+        RepresentativeTablesByIntroducingMigration =
+            new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                [CoreLedgerMigration] =
+                [
+                    "LedgerTransaction",
+                    "TransactionEntry",
+                    "AssetLot",
+                    "LotEntryAllocation"
+                ],
+                [CommandReceiptMigration] = ["CommandReceipt"]
+            };
 
     internal async Task<LocalDataOperationResult<SqliteDatabaseVerification>>
         VerifyAsync(
@@ -100,7 +110,10 @@ internal sealed class SqliteDatabaseVerifier
                         RepresentativeFingerprint: string.Empty));
             }
 
-            await RunBoundedTableChecksAsync(connection, cancellationToken);
+            await RunBoundedTableChecksAsync(
+                connection,
+                appliedMigrations,
+                cancellationToken);
             var representativeFingerprint =
                 await RunRepresentativeApplicationQueriesAsync(
                     context,
@@ -237,13 +250,24 @@ internal sealed class SqliteDatabaseVerifier
 
     private static async Task RunBoundedTableChecksAsync(
         SqliteConnection connection,
+        IReadOnlyList<string> appliedMigrations,
         CancellationToken cancellationToken)
     {
-        foreach (var table in RepresentativeTables)
+        foreach (var migration in appliedMigrations)
         {
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT 1 FROM \"{table}\" LIMIT 1;";
-            _ = await command.ExecuteScalarAsync(cancellationToken);
+            if (!RepresentativeTablesByIntroducingMigration.TryGetValue(
+                    migration,
+                    out var representativeTables))
+            {
+                continue;
+            }
+
+            foreach (var table in representativeTables)
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"SELECT 1 FROM \"{table}\" LIMIT 1;";
+                _ = await command.ExecuteScalarAsync(cancellationToken);
+            }
         }
     }
 

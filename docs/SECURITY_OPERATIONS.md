@@ -2,7 +2,7 @@
 
 Status: Accepted operational requirements
 
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-02
 
 ## Purpose
 
@@ -18,7 +18,7 @@ implied by that milestone. Verified repository reality remains in
 
 ## Implemented M004 baseline
 
-As verified for M004 on 2026-09-01:
+As verified for M004 on 2026-09-02:
 
 - the authoritative SQLite path resolves absolutely below the per-user local
   application-data directory unless an equally validated absolute override is
