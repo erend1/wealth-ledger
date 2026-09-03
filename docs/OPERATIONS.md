@@ -108,9 +108,46 @@ migration, bounded storage, transaction-readback, and position checks, computes
 SHA-256, verifies the completed package again, and atomically publishes it.
 
 The manifest and filename contain operational metadata only: version, UTC
-times, application and schema versions, digest, verification outcomes, and the
-literal encryption mode `PLAINTEXT`. They contain no household, account, asset,
-transaction, note, balance, or source-reference values.
+times, application and schema versions, digest, verification outcomes, the
+source workspace identity, and the literal encryption mode `PLAINTEXT`. They
+contain no household, account, asset, transaction, note, balance, or
+source-reference values.
+
+## Understand which backups protect this database
+
+Every database carries a random opaque workspace identity, created with the
+database and preserved by backup, isolated restore, and active replacement.
+A package protects a database only when its snapshot carries the same identity.
+
+`status` reports this directly:
+
+```text
+WorkspaceIdPrefix: 3f9c1a2b
+UnrelatedVerifiedBackupCount: 0
+LatestBackupWorkspaceBinding: Matched
+```
+
+A valid package from a different workspace is counted under
+`UnrelatedVerifiedBackupCount` and never becomes `LatestBackupFile`. If the
+configured directory holds packages but none are yours, `status` says so:
+
+```text
+WARNING UNRELATED_BACKUPS_ONLY: The configured directory contains verified
+packages, but none belong to this database. Create a backup of this database.
+```
+
+This matters when one directory serves more than one database, when a database
+is re-initialized after a loss, and after an active replacement, which
+correctly rebinds the live database to the promoted package's lineage.
+
+Two consequences are worth knowing before you rely on it:
+
+- Packages created before this behaviour existed carry no identity. They remain
+  valid, verifiable, and restorable, but they cannot prove their origin and do
+  not count as protection. **After upgrading, run `backup create` once.** The
+  same applies immediately after `database migrate` upgrades an older database.
+- Two machines restored from the same package share one identity. The check
+  proves lineage, not that two copies still hold the same data.
 
 Status inspects at most 256 packages in the configured active backup directory.
 Move older generations to another retained encrypted archive before that bound

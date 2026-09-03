@@ -101,7 +101,7 @@ public sealed class OperationsProcessTests : IDisposable
             "StartingMigration: 20260827072019_002_CommandReceipt",
             migrated.StandardOutput);
         Assert.Contains(
-            "EndingMigration: 20260902112549_004_LedgerNavigationQueries",
+            "EndingMigration: 20260903075104_005_WorkspaceIdentity",
             migrated.StandardOutput);
         var preMigrationBackup = ReadOutputPath(
             migrated,

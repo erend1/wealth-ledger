@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-09-02
+As of: 2026-09-03
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
@@ -59,12 +59,22 @@ restart-safe cursors, and sanitized invalid position scopes. No M006 or later
 scope was implemented.
 
 [`M006: Local UI Shell and Guided First Run`](milestones/M006_ui_shell_and_guided_first_run.md)
-is Proposed for planning and human review only. Its M003-M005 ordering gate is
-now satisfied, but it cannot become In Progress until its eleven decisions are
-accepted and its architecture is recorded in an ADR. The proposal recommends
-one Razor Pages UI assembly in the existing loopback host, fail-closed readiness
-modes, a bounded first-run flow, exact human value presentation, and Today/
-Ledger/Settings read pages; no UI project or behavior is currently implemented.
+remains Proposed. Its M003-M005 ordering gate is satisfied, but ten of its
+eleven decisions are still unaccepted and its UI architecture is not yet
+recorded in an ADR. The proposal recommends one Razor Pages UI assembly in the
+existing loopback host, fail-closed readiness modes, a bounded first-run flow,
+exact human value presentation, and Today/Ledger/Settings read pages. No UI
+project, page, static-asset pipeline, or browser test exists.
+
+One bounded part of M006 was accepted and implemented ahead of the rest. A
+pre-implementation reconciliation on 2026-09-03 proved that the Decision 4
+readiness gate could not be met by the verified M004 status contract: a
+database with no backups of its own reported protection against an unrelated
+workspace's package. The human owner accepted the amended Decision 4 on
+2026-09-03 and authorized the workspace-binding correction as M006's first
+commit boundary, explicitly ahead of any UI work. That correction is
+implemented and verified; the remaining M006 decisions and the UI itself are
+not.
 
 ## Verified implementation
 
@@ -86,6 +96,7 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - M002 migration: `20260827072019_002_CommandReceipt`.
 - M003 migration: `20260831113310_003_ReversalDependencySemantics`.
 - M005 migration: `20260902112549_004_LedgerNavigationQueries`.
+- M006 workspace-binding migration: `20260903075104_005_WorkspaceIdentity`.
 - Local database ownership is one adjacent cross-process exclusive file lock;
   it is not a distributed or remote multi-writer policy. M002/M003 database
   constraints still arbitrate scoped submission and reversal races.
@@ -254,6 +265,15 @@ local lifecycle command itself. Isolated restore never overwrites a target;
 confirmed active replacement first creates a verified pre-restore package,
 preserves the superseded database, and rolls a failed promotion back.
 
+Migration `20260903075104_005_WorkspaceIdentity` adds a durable random
+workspace identity to the database file, and protection readiness now requires
+a verified package proved to carry that same identity. The identity survives
+backup, isolated restore, active replacement, and a change of live path; it is
+outside the EF model, referenced by no ledger row, and read with a bounded
+direct query. A package predating the migration remains valid and restorable
+but cannot prove its origin and is not protection, so one new backup is
+required after upgrading. See the M006 Decision 4 amendment.
+
 ### Posted reversal and correction
 
 Application exposes a read-only eligibility preview and a retry-safe reversal
@@ -304,10 +324,10 @@ Results:
 
 - Domain tests: 83 passed, 0 failed.
 - Application tests: 95 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 145 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 156 passed, 0 failed.
 - API tests against real SQLite files: 71 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 417 passed, 0 failed.
+- Total: 428 passed, 0 failed.
 - Formatting drift: no committable content diff; see the SDK line-ending caveat
   below.
 - EF model drift: none.
@@ -347,6 +367,18 @@ and two. A dedicated synthetic M003-to-M005 recovery test verifies the
 pre-migration package, explicit migration, live integrity, data preservation,
 and an isolated restore of the old schema.
 
+The M006 workspace-binding correction adds 11 real-SQLite Infrastructure tests.
+They prove that independently initialized databases receive distinct
+identities, that an unrelated workspace's package is never protection, that a
+newer unrelated package never displaces an older matching one, that a forged or
+stripped manifest lineage is rejected against the snapshot, that a package
+predating lineage stays valid but unknown, that a migrated database does not
+accept its own pre-migration package until one new backup is taken, that the
+identity survives isolated restore and a fresh verifier, and that confirmed
+active replacement rebinds the live database to the promoted lineage. The
+existing local-data, migration, restore, and operations suites pass unchanged
+apart from the migration-chain head moving to 005.
+
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
 eligibility preview, same-lot inverse allocation, atomic SQLite persistence and
@@ -373,8 +405,10 @@ unaccepted.
 ## Next delivery candidate
 
 M006 is the next coherent delivery candidate: the local UI shell and guided
-first run. Its Proposed contract still requires explicit human acceptance of
-all decision gates and the accepted UI architecture ADR before implementation.
+first run. Its amended Decision 4 was accepted on 2026-09-03 and its
+workspace-binding prerequisite is implemented and verified. The remaining ten
+decisions and the UI architecture ADR still require explicit human acceptance
+before any Razor Pages, hosting-mode, first-run, or presentation work begins.
 There is currently no In Progress milestone.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.

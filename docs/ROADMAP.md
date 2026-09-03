@@ -44,7 +44,7 @@ Statuses used here:
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
 | M004 | Verified | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; verified 2026-09-02 |
 | M005 | Verified | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Ten decision gates accepted and implementation verified 2026-09-02 |
-| M006 | Proposed | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | M003-M005 are Verified; human acceptance of the eleven decision gates and UI ADR is still required |
+| M006 | Proposed | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | M003-M005 are Verified; amended Decision 4 accepted and its workspace-binding prerequisite verified on 2026-09-03; the remaining ten decision gates and the UI ADR are still required |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
 | M008 | Planned | Complete investment-fund lifecycle, including fees, taxes, sale, FIFO allocation, and realized cost | Opening lots and correction path |
 | M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
@@ -93,9 +93,18 @@ server-rendered Razor Pages UI in the existing single loopback host, a
 fail-closed blocked/setup/ready startup model, a bounded first-run wizard,
 exact fixed-point presentation, and a small Today/Ledger/Settings shell. It
 deliberately leaves opening positions and ordinary transaction-entry forms to
-their ordered milestones. M006 must not become In Progress until M003-M005 are
-Verified, its eleven decisions are accepted, and the accepted architecture is
-recorded in the next available ADR.
+their ordered milestones.
+
+Pre-implementation reconciliation on 2026-09-03 found that its Decision 4
+readiness gate could not be satisfied by the verified M004 status contract,
+which accepted any valid package in the configured backup directory as
+protection. The human owner accepted the amended decision and authorized the
+workspace-binding correction ahead of the UI; migration 005 and the bound
+readiness contract are implemented and verified.
+
+The rest of M006 must not become In Progress until its remaining ten decisions
+are accepted and the accepted UI architecture is recorded in the next available
+ADR.
 
 No later roadmap item should be implemented merely because it appears in this
 file.

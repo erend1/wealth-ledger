@@ -36,6 +36,12 @@ As verified for M004 on 2026-09-02:
   external destination separation and encryption rather than treating a digest
   as confidentiality or authenticity.
 
+Amended on 2026-09-03 under M006 authorization: local protection readiness now
+requires a verified package proved to belong to the configured live database.
+Packages created before this behaviour carry no lineage; they remain valid and
+restorable but no longer count as protection, so one new backup is required
+after upgrading. See `OPERATIONS.md` for the operator procedure.
+
 ## Remaining operational boundaries
 
 M004 does not implement application-managed encryption, authentication,
@@ -145,6 +151,19 @@ Each backup records or exposes:
 M004 uses SQLite's online backup API, verifies a standalone snapshot before and
 after packaging, and publishes a new immutable generation atomically. The
 versioned manifest records operational metadata only.
+
+As of 2026-09-03 both branches of the source-identity requirement are
+satisfied. Every database carries a random opaque workspace identity, and each
+package records the identity of the database it was taken from. Verification
+requires the recorded value to agree with the identity inside the snapshot, so
+the manifest — which lies outside the snapshot digest — cannot claim a lineage
+its snapshot does not have.
+
+A package is protection for a live database only when that identity matches.
+This closes a gap in the original M004 implementation, where any valid package
+in the configured directory satisfied the protection check regardless of which
+database it came from. The identity is random and opaque; it carries no
+household, account, asset, transaction, or other private value.
 
 ### OPS-006: Restore verification
 

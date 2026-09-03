@@ -16,8 +16,10 @@ public sealed class SqliteLocalDatabaseMigrationTests
             "20260827072019_002_CommandReceipt";
         const string reversalSemanticsMigration =
             "20260831113310_003_ReversalDependencySemantics";
-        const string endingMigration =
+        const string navigationQueriesMigration =
             "20260902112549_004_LedgerNavigationQueries";
+        const string endingMigration =
+            "20260903075104_005_WorkspaceIdentity";
         var hooks = new RecordingMigrationHooks();
         await using var harness = await LocalBackupTestHarness.CreateAsync(
             hooks,
@@ -38,6 +40,7 @@ public sealed class SqliteLocalDatabaseMigrationTests
             [
                 commandReceiptMigration,
                 reversalSemanticsMigration,
+                navigationQueriesMigration,
                 endingMigration
             ],
             initialVerification.Value.PendingMigrations);
@@ -73,7 +76,7 @@ public sealed class SqliteLocalDatabaseMigrationTests
         Assert.Equal(
             LocalDatabaseCompatibility.Compatible,
             restarted.Value!.Compatibility);
-        Assert.Equal(4, restarted.Value.AppliedMigrations.Count);
+        Assert.Equal(5, restarted.Value.AppliedMigrations.Count);
         Assert.Empty(restarted.Value.PendingMigrations);
         Assert.Equal(
             1L,
@@ -105,7 +108,7 @@ public sealed class SqliteLocalDatabaseMigrationTests
         const string startingMigration =
             "20260831113310_003_ReversalDependencySemantics";
         const string endingMigration =
-            "20260902112549_004_LedgerNavigationQueries";
+            "20260903075104_005_WorkspaceIdentity";
         var hooks = new RecordingMigrationHooks();
         await using var harness = await LocalBackupTestHarness.CreateAsync(
             hooks,
@@ -326,7 +329,7 @@ public sealed class SqliteLocalDatabaseMigrationTests
             LocalDataFailureCategory.MigrationFailure,
             result.Failure!.Category);
         Assert.Equal(
-            "20260902112549_004_LedgerNavigationQueries",
+            "20260903075104_005_WorkspaceIdentity",
             result.Value.EndingMigration);
         Assert.True(File.Exists(result.Value.PreMigrationBackupPath));
         Assert.True(liveVerification.Succeeded);

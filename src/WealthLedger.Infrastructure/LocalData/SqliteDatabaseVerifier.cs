@@ -16,6 +16,8 @@ internal sealed class SqliteDatabaseVerifier
         "20260824074930_001_CoreLedger";
     private const string CommandReceiptMigration =
         "20260827072019_002_CommandReceipt";
+    internal const string WorkspaceIdentityMigration =
+        "20260903075104_005_WorkspaceIdentity";
 
     private static readonly IReadOnlyDictionary<string, string[]>
         RepresentativeTablesByIntroducingMigration =
@@ -28,7 +30,8 @@ internal sealed class SqliteDatabaseVerifier
                     "AssetLot",
                     "LotEntryAllocation"
                 ],
-                [CommandReceiptMigration] = ["CommandReceipt"]
+                [CommandReceiptMigration] = ["CommandReceipt"],
+                [WorkspaceIdentityMigration] = ["WorkspaceIdentity"]
             };
 
     internal async Task<LocalDataOperationResult<SqliteDatabaseVerification>>
@@ -107,13 +110,29 @@ internal sealed class SqliteDatabaseVerifier
                         pendingMigrations,
                         compatibility,
                         LocalDataIntegrityStatus.Passed,
-                        RepresentativeFingerprint: string.Empty));
+                        RepresentativeFingerprint: string.Empty,
+                        WorkspaceId: null));
             }
 
             await RunBoundedTableChecksAsync(
                 connection,
                 appliedMigrations,
                 cancellationToken);
+            var workspaceId = await ReadWorkspaceIdentityAsync(
+                connection,
+                appliedMigrations,
+                cancellationToken);
+
+            if (workspaceId is null
+                && appliedMigrations.Contains(
+                    WorkspaceIdentityMigration,
+                    StringComparer.Ordinal))
+            {
+                return LocalDataOperationResult<SqliteDatabaseVerification>.Failed(
+                    LocalDataFailureCategory.IntegrityFailure,
+                    "The database is missing its required workspace identity.");
+            }
+
             var representativeFingerprint =
                 await RunRepresentativeApplicationQueriesAsync(
                     context,
@@ -126,7 +145,8 @@ internal sealed class SqliteDatabaseVerifier
                     pendingMigrations,
                     compatibility,
                     LocalDataIntegrityStatus.Passed,
-                    representativeFingerprint));
+                    representativeFingerprint,
+                    workspaceId));
         }
         catch (OperationCanceledException)
         {
@@ -271,6 +291,42 @@ internal sealed class SqliteDatabaseVerifier
         }
     }
 
+    /*
+     * The workspace identity is operational lineage, not a ledger fact, so it
+     * is read with a bounded direct query in the same way as the migration
+     * history rather than through the EF model. A database that predates the
+     * introducing migration simply has no identity; that is an explicit
+     * unknown, not a failure.
+     */
+    private static async Task<string?> ReadWorkspaceIdentityAsync(
+        SqliteConnection connection,
+        IReadOnlyList<string> appliedMigrations,
+        CancellationToken cancellationToken)
+    {
+        if (!appliedMigrations.Contains(
+                WorkspaceIdentityMigration,
+                StringComparer.Ordinal))
+        {
+            return null;
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT WorkspaceId FROM WorkspaceIdentity WHERE Id = 1;";
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+
+        return value is string text && IsWellFormedWorkspaceId(text)
+            ? text
+            : null;
+    }
+
+    internal static bool IsWellFormedWorkspaceId(string? value)
+        => value is not null
+           && value.Length == 36
+           && value.Equals(value.ToLowerInvariant(), StringComparison.Ordinal)
+           && Guid.TryParseExact(value, "D", out var parsed)
+           && parsed != Guid.Empty;
+
     private static async Task<string> RunRepresentativeApplicationQueriesAsync(
         WealthLedgerDbContext context,
         CancellationToken cancellationToken)
@@ -339,7 +395,8 @@ internal sealed record SqliteDatabaseVerification(
     IReadOnlyList<string> PendingMigrations,
     LocalDatabaseCompatibility Compatibility,
     LocalDataIntegrityStatus IntegrityStatus,
-    string RepresentativeFingerprint)
+    string RepresentativeFingerprint,
+    string? WorkspaceId)
 {
     internal string? LatestMigration => AppliedMigrations.LastOrDefault();
 }

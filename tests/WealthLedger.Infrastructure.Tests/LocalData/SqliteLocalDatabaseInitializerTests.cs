@@ -36,7 +36,7 @@ public sealed class SqliteLocalDatabaseInitializerTests : IDisposable
 
         Assert.True(result.Succeeded);
         Assert.Equal(Path.GetFullPath(_databasePath), result.Value!.DatabasePath);
-        Assert.Equal(4, result.Value.AppliedMigrations.Count);
+        Assert.Equal(5, result.Value.AppliedMigrations.Count);
         Assert.Equal(Now, result.Value.CompletedAtUtc);
         Assert.True(File.Exists(_databasePath));
         Assert.True(restarted.Succeeded);
