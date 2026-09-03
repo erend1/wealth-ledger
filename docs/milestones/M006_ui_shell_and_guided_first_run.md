@@ -1,10 +1,15 @@
 # M006: Local UI Shell and Guided First Run
 
-Status: Proposed
+Status: In Progress
 
 Owner: Human and agent
 
-Last reviewed: 2026-08-31
+Accepted: 2026-09-03 (all eleven Recommended decisions, with Decision 4 amended
+by the workspace-binding gate recorded below and accepted as amended)
+
+Architecture record: [ADR-008](../decisions/ADR-008-local-ui-shell-architecture.md)
+
+Last reviewed: 2026-09-03
 
 ## User outcome
 

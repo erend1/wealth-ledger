@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-09-02
+Last reviewed: 2026-09-03
 
 ## How to read this roadmap
 
@@ -44,7 +44,7 @@ Statuses used here:
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
 | M004 | Verified | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; verified 2026-09-02 |
 | M005 | Verified | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Ten decision gates accepted and implementation verified 2026-09-02 |
-| M006 | Proposed | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | M003-M005 are Verified; amended Decision 4 accepted and its workspace-binding prerequisite verified on 2026-09-03; the remaining ten decision gates and the UI ADR are still required |
+| M006 | Accepted | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; In Progress |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
 | M008 | Planned | Complete investment-fund lifecycle, including fees, taxes, sale, FIFO allocation, and realized cost | Opening lots and correction path |
 | M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
@@ -87,11 +87,10 @@ time navigation index. Broad transaction search, position/lot inventory, and
 reconciliation remain in M010.
 
 [`M006_ui_shell_and_guided_first_run.md`](milestones/M006_ui_shell_and_guided_first_run.md)
-is now the next Proposed candidate for planning and human review. It recommends
-a Turkish-first,
-server-rendered Razor Pages UI in the existing single loopback host, a
-fail-closed blocked/setup/ready startup model, a bounded first-run wizard,
-exact fixed-point presentation, and a small Today/Ledger/Settings shell. It
+is the active delivery. It provides a Turkish-first, server-rendered Razor
+Pages UI in the existing single loopback host, a fail-closed
+blocked/setup/ready startup model, a bounded first-run wizard, exact
+fixed-point presentation, and a small Today/Ledger/Settings shell. It
 deliberately leaves opening positions and ordinary transaction-entry forms to
 their ordered milestones.
 
@@ -102,9 +101,10 @@ protection. The human owner accepted the amended decision and authorized the
 workspace-binding correction ahead of the UI; migration 005 and the bound
 readiness contract are implemented and verified.
 
-The rest of M006 must not become In Progress until its remaining ten decisions
-are accepted and the accepted UI architecture is recorded in the next available
-ADR.
+All eleven decisions were accepted on 2026-09-03 and ADR-008 records the
+resulting architecture. M006 is now In Progress. The UI assembly, presentation
+formatters, fail-closed startup modes, guided first run, read-only shell, and
+browser verification remain to be delivered.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -160,7 +160,8 @@ milestone becomes Accepted:
 | Separate reversal/replacement commands, required reason, structured replacement-link boundary, neutralized lot dependencies, and preview contract | M003 | Resolved by accepted M003 on 2026-08-28; new ADR only if a durable replacement relationship or another cross-cutting rule changes |
 | Local database directory, operations surface, backup/restore format, local exposure, migration, and encryption-at-rest policy | M004 | Resolved by accepted M004 on 2026-09-01 and ADR-007 |
 | Master projection fields, current-label semantics, cursor contract, recent-ledger boundary, and invalid position-scope behavior | M005 | Resolved by accepted M005 on 2026-09-02; no ADR was required |
-| UI framework, single-host topology, readiness modes, direct Application boundary, exact presentation, and browser verification | M006 | Proposed M006 decision gates; next available ADR after human acceptance |
+| UI framework, single-host topology, readiness modes, direct Application boundary, exact presentation, and browser verification | M006 | Resolved by accepted M006 on 2026-09-03 and ADR-008 |
+| Remote or home-server access, authentication, authorization, and transport security | after M006 | New milestone and ADR; ADR-008 keeps normal operation loopback-only |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
 | Performance methodologies and partial-cost rounding when exposed by a real use case | M008/M012 | Tests and ADR if cross-cutting |
 | Agent read-contract and human approval boundary | M013 | ADR |

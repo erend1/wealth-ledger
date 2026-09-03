@@ -59,22 +59,19 @@ restart-safe cursors, and sanitized invalid position scopes. No M006 or later
 scope was implemented.
 
 [`M006: Local UI Shell and Guided First Run`](milestones/M006_ui_shell_and_guided_first_run.md)
-remains Proposed. Its M003-M005 ordering gate is satisfied, but ten of its
-eleven decisions are still unaccepted and its UI architecture is not yet
-recorded in an ADR. The proposal recommends one Razor Pages UI assembly in the
-existing loopback host, fail-closed readiness modes, a bounded first-run flow,
-exact human value presentation, and Today/Ledger/Settings read pages. No UI
-project, page, static-asset pipeline, or browser test exists.
+was accepted on 2026-09-03 after the human owner approved all eleven
+Recommended decisions, with Decision 4 amended by the workspace-binding gate
+found during pre-implementation reconciliation. ADR-008 records the accepted UI
+and hosting architecture and the two explicit refinements it makes to ADR-007.
+M006 is now In Progress and is the only In Progress milestone.
 
-One bounded part of M006 was accepted and implemented ahead of the rest. A
-pre-implementation reconciliation on 2026-09-03 proved that the Decision 4
-readiness gate could not be met by the verified M004 status contract: a
-database with no backups of its own reported protection against an unrelated
-workspace's package. The human owner accepted the amended Decision 4 on
-2026-09-03 and authorized the workspace-binding correction as M006's first
-commit boundary, explicitly ahead of any UI work. That correction is
-implemented and verified; the remaining M006 decisions and the UI itself are
-not.
+Its first commit boundary is complete and verified: local protection readiness
+now requires a verified backup proved to belong to the configured live
+database. The remaining boundaries — the UI assembly, exact value presentation,
+fail-closed startup modes, guided first run, the read-only shell, and browser
+verification — are not implemented. There is still no UI project, page,
+static-asset pipeline, or browser test, and no UI behavior is claimed as
+verified.
 
 ## Verified implementation
 
@@ -404,21 +401,23 @@ unaccepted.
 
 ## Next delivery candidate
 
-M006 is the next coherent delivery candidate: the local UI shell and guided
-first run. Its amended Decision 4 was accepted on 2026-09-03 and its
-workspace-binding prerequisite is implemented and verified. The remaining ten
-decisions and the UI architecture ADR still require explicit human acceptance
-before any Razor Pages, hosting-mode, first-run, or presentation work begins.
-There is currently no In Progress milestone.
+M006 is In Progress and is the active delivery. Its eleven decisions were
+accepted on 2026-09-03 and ADR-008 records the resulting architecture. The
+workspace-binding prerequisite is verified; the UI assembly, presentation
+formatters, startup modes, guided first run, read-only shell, and browser
+verification remain to be delivered under that accepted contract.
+
+M007 remains the next candidate after it.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
 ## Open decisions
 
-- The Proposed M006 UI framework, hosting, readiness, interaction, and exact-
-  presentation choices remain subject to human acceptance and an ADR.
 - Market/reference-data schemas and provider contracts.
-- Authentication and authorization.
+- Authentication, authorization, and transport security. The household intends
+  to move the API to a private home server so the UI can be reached from other
+  devices. ADR-008 keeps normal operation loopback-only; that move requires its
+  own accepted milestone and ADR before any non-loopback binding.
 - Application-level database or package encryption beyond M004's accepted
   OS/device-encryption reliance remains deferred to a separate ADR.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
