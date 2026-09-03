@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    User-visible presentation text.
+
+    Keys are English so code, tests and documentation stay in English. Values
+    are Turkish because Turkish is the shipping user-facing culture, so the
+    neutral resource is the product language and needs no satellite assembly.
+    Adding a second language later means adding PresentationText.<culture>.resx
+    beside this file; lookups already pass an explicit culture.
+
+    Stable contract codes are never translated. These values are the human
+    description shown beside the code, not a replacement for it.
+  -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Bilinmiyor</value>
+    <comment>A fact that exists as a concept but was never recorded.</comment>
+  </data>
+  <data name="State_NotApplicable" xml:space="preserve">
+    <value>Uygulanamaz</value>
+    <comment>A fact that does not apply to this record.</comment>
+  </data>
+  <data name="State_Unavailable" xml:space="preserve">
+    <value>Görüntülenemiyor</value>
+    <comment>A recorded value that could not be rendered.</comment>
+  </data>
+  <data name="Effect_Increase" xml:space="preserve">
+    <value>artış</value>
+    <comment>Direction of a positive signed quantity delta.</comment>
+  </data>
+  <data name="Effect_Decrease" xml:space="preserve">
+    <value>azalış</value>
+    <comment>Direction of a negative signed quantity delta.</comment>
+  </data>
+  <data name="Effect_NoChange" xml:space="preserve">
+    <value>değişim yok</value>
+    <comment>Direction of a zero signed quantity delta.</comment>
+  </data>
+  <data name="Unit_CURRENCY_UNIT" xml:space="preserve">
+    <value>para birimi</value>
+  </data>
+  <data name="Unit_FUND_UNIT" xml:space="preserve">
+    <value>fon birimi</value>
+  </data>
+  <data name="Unit_SHARE" xml:space="preserve">
+    <value>pay</value>
+  </data>
+  <data name="Unit_GROSS_GRAM" xml:space="preserve">
+    <value>gram</value>
+  </data>
+  <data name="Unit_PIECE" xml:space="preserve">
+    <value>adet</value>
+  </data>
+  <data name="Unit_PROPERTY" xml:space="preserve">
+    <value>taşınmaz</value>
+  </data>
+  <data name="Unit_LAND_PARCEL" xml:space="preserve">
+    <value>parsel</value>
+  </data>
+  <data name="Unit_VEHICLE" xml:space="preserve">
+    <value>araç</value>
+  </data>
+  <data name="Unit_OTHER" xml:space="preserve">
+    <value>birim</value>
+  </data>
+  <data name="Code_AssetType_CASH" xml:space="preserve">
+    <value>Nakit</value>
+  </data>
+  <data name="Code_AssetType_CURRENCY" xml:space="preserve">
+    <value>Döviz</value>
+  </data>
+  <data name="Code_AssetType_FUND" xml:space="preserve">
+    <value>Fon</value>
+  </data>
+  <data name="Code_AssetType_EQUITY" xml:space="preserve">
+    <value>Hisse senedi</value>
+  </data>
+  <data name="Code_AssetType_PHYSICAL_GOLD" xml:space="preserve">
+    <value>Fiziki altın</value>
+  </data>
+  <data name="Code_AssetType_REAL_ESTATE" xml:space="preserve">
+    <value>Gayrimenkul</value>
+  </data>
+  <data name="Code_AssetType_LAND" xml:space="preserve">
+    <value>Arsa</value>
+  </data>
+  <data name="Code_AssetType_VEHICLE" xml:space="preserve">
+    <value>Araç</value>
+  </data>
+  <data name="Code_AssetType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_AssetUnit_CURRENCY_UNIT" xml:space="preserve">
+    <value>Para birimi</value>
+  </data>
+  <data name="Code_AssetUnit_FUND_UNIT" xml:space="preserve">
+    <value>Fon birimi</value>
+  </data>
+  <data name="Code_AssetUnit_SHARE" xml:space="preserve">
+    <value>Pay</value>
+  </data>
+  <data name="Code_AssetUnit_GROSS_GRAM" xml:space="preserve">
+    <value>Brüt gram</value>
+  </data>
+  <data name="Code_AssetUnit_PIECE" xml:space="preserve">
+    <value>Adet</value>
+  </data>
+  <data name="Code_AssetUnit_PROPERTY" xml:space="preserve">
+    <value>Taşınmaz</value>
+  </data>
+  <data name="Code_AssetUnit_LAND_PARCEL" xml:space="preserve">
+    <value>Parsel</value>
+  </data>
+  <data name="Code_AssetUnit_VEHICLE" xml:space="preserve">
+    <value>Araç</value>
+  </data>
+  <data name="Code_AssetUnit_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_LotTrackingMode_NONE" xml:space="preserve">
+    <value>Parti takibi yok</value>
+  </data>
+  <data name="Code_LotTrackingMode_OPTIONAL" xml:space="preserve">
+    <value>Parti takibi isteğe bağlı</value>
+  </data>
+  <data name="Code_LotTrackingMode_REQUIRED" xml:space="preserve">
+    <value>Parti takibi zorunlu</value>
+  </data>
+  <data name="Code_InstitutionType_BANK" xml:space="preserve">
+    <value>Banka</value>
+  </data>
+  <data name="Code_InstitutionType_BROKER" xml:space="preserve">
+    <value>Aracı kurum</value>
+  </data>
+  <data name="Code_InstitutionType_ASSET_MANAGER" xml:space="preserve">
+    <value>Portföy yönetim şirketi</value>
+  </data>
+  <data name="Code_InstitutionType_JEWELER" xml:space="preserve">
+    <value>Kuyumcu</value>
+  </data>
+  <data name="Code_InstitutionType_PENSION" xml:space="preserve">
+    <value>Emeklilik şirketi</value>
+  </data>
+  <data name="Code_InstitutionType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_AccountType_CASH" xml:space="preserve">
+    <value>Nakit hesabı</value>
+  </data>
+  <data name="Code_AccountType_INVESTMENT" xml:space="preserve">
+    <value>Yatırım hesabı</value>
+  </data>
+  <data name="Code_AccountType_PHYSICAL_VAULT" xml:space="preserve">
+    <value>Fiziki kasa</value>
+  </data>
+  <data name="Code_AccountType_PENSION" xml:space="preserve">
+    <value>Emeklilik hesabı</value>
+  </data>
+  <data name="Code_AccountType_PROPERTY_REGISTRY" xml:space="preserve">
+    <value>Tapu kaydı</value>
+  </data>
+  <data name="Code_AccountType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_PortfolioStatus_ACTIVE" xml:space="preserve">
+    <value>Etkin</value>
+  </data>
+  <data name="Code_PortfolioStatus_CLOSED" xml:space="preserve">
+    <value>Kapalı</value>
+  </data>
+  <data name="Code_PortfolioStatus_ARCHIVED" xml:space="preserve">
+    <value>Arşivlenmiş</value>
+  </data>
+  <data name="Code_TransactionType_CONTRIBUTION" xml:space="preserve">
+    <value>Katkı</value>
+  </data>
+  <data name="Code_TransactionType_WITHDRAWAL" xml:space="preserve">
+    <value>Çekim</value>
+  </data>
+  <data name="Code_TransactionType_BUY" xml:space="preserve">
+    <value>Alış</value>
+  </data>
+  <data name="Code_TransactionType_SELL" xml:space="preserve">
+    <value>Satış</value>
+  </data>
+  <data name="Code_TransactionType_TRANSFER" xml:space="preserve">
+    <value>Transfer</value>
+  </data>
+  <data name="Code_TransactionType_DIVIDEND" xml:space="preserve">
+    <value>Temettü</value>
+  </data>
+  <data name="Code_TransactionType_INCOME" xml:space="preserve">
+    <value>Gelir</value>
+  </data>
+  <data name="Code_TransactionType_EXPENSE" xml:space="preserve">
+    <value>Gider</value>
+  </data>
+  <data name="Code_TransactionType_FEE" xml:space="preserve">
+    <value>Ücret</value>
+  </data>
+  <data name="Code_TransactionType_TAX" xml:space="preserve">
+    <value>Vergi</value>
+  </data>
+  <data name="Code_TransactionType_CORPORATE_ACTION" xml:space="preserve">
+    <value>Şirket işlemi</value>
+  </data>
+  <data name="Code_TransactionType_OPENING_BALANCE" xml:space="preserve">
+    <value>Açılış bakiyesi</value>
+  </data>
+  <data name="Code_TransactionType_ADJUSTMENT" xml:space="preserve">
+    <value>Düzeltme</value>
+  </data>
+  <data name="Code_TransactionType_REVERSAL" xml:space="preserve">
+    <value>Ters kayıt</value>
+  </data>
+  <data name="Code_TransactionStatus_DRAFT" xml:space="preserve">
+    <value>Taslak</value>
+  </data>
+  <data name="Code_TransactionStatus_ORDERED" xml:space="preserve">
+    <value>Emir verildi</value>
+  </data>
+  <data name="Code_TransactionStatus_POSTED" xml:space="preserve">
+    <value>Kaydedildi</value>
+  </data>
+  <data name="Code_TransactionStatus_CANCELLED" xml:space="preserve">
+    <value>İptal edildi</value>
+  </data>
+  <data name="Code_EntryRole_PRINCIPAL" xml:space="preserve">
+    <value>Ana kalem</value>
+  </data>
+  <data name="Code_EntryRole_CONSIDERATION" xml:space="preserve">
+    <value>Karşılık</value>
+  </data>
+  <data name="Code_EntryRole_TRANSFER" xml:space="preserve">
+    <value>Transfer</value>
+  </data>
+  <data name="Code_EntryRole_INCOME" xml:space="preserve">
+    <value>Gelir</value>
+  </data>
+  <data name="Code_EntryRole_FEE" xml:space="preserve">
+    <value>Ücret</value>
+  </data>
+  <data name="Code_EntryRole_TAX" xml:space="preserve">
+    <value>Vergi</value>
+  </data>
+  <data name="Code_EntryRole_ADJUSTMENT" xml:space="preserve">
+    <value>Düzeltme</value>
+  </data>
+  <data name="Code_CashFlowCategory_SALARY" xml:space="preserve">
+    <value>Maaş</value>
+  </data>
+  <data name="Code_CashFlowCategory_BONUS" xml:space="preserve">
+    <value>Prim</value>
+  </data>
+  <data name="Code_CashFlowCategory_ACADEMIC_INCOME" xml:space="preserve">
+    <value>Akademik gelir</value>
+  </data>
+  <data name="Code_CashFlowCategory_GIFT" xml:space="preserve">
+    <value>Hediye</value>
+  </data>
+  <data name="Code_CashFlowCategory_EXTERNAL_SALE" xml:space="preserve">
+    <value>Dış satış</value>
+  </data>
+  <data name="Code_CashFlowCategory_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_CostType_COMMISSION" xml:space="preserve">
+    <value>Komisyon</value>
+  </data>
+  <data name="Code_CostType_WITHHOLDING_TAX" xml:space="preserve">
+    <value>Stopaj</value>
+  </data>
+  <data name="Code_CostType_OTHER_TAX" xml:space="preserve">
+    <value>Diğer vergi</value>
+  </data>
+  <data name="Code_CostType_MAKING_CHARGE" xml:space="preserve">
+    <value>İşçilik</value>
+  </data>
+  <data name="Code_CostType_BROKERAGE" xml:space="preserve">
+    <value>Aracılık ücreti</value>
+  </data>
+  <data name="Code_CostType_TITLE_DEED" xml:space="preserve">
+    <value>Tapu harcı</value>
+  </data>
+  <data name="Code_CostType_EXPERTISE" xml:space="preserve">
+    <value>Ekspertiz</value>
+  </data>
+  <data name="Code_CostType_NOTARY" xml:space="preserve">
+    <value>Noter</value>
+  </data>
+  <data name="Code_CostType_INSURANCE" xml:space="preserve">
+    <value>Sigorta</value>
+  </data>
+  <data name="Code_CostType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_CostTreatment_ADDITIONAL_CASH_OUTFLOW" xml:space="preserve">
+    <value>Ek nakit çıkışı</value>
+  </data>
+  <data name="Code_CostTreatment_WITHHELD_FROM_PROCEEDS" xml:space="preserve">
+    <value>Hasılattan kesildi</value>
+  </data>
+  <data name="Code_CostTreatment_INCLUDED_IN_CONSIDERATION" xml:space="preserve">
+    <value>Karşılığa dahil</value>
+  </data>
+  <data name="Code_CostTreatment_INFORMATIONAL_ONLY" xml:space="preserve">
+    <value>Yalnızca bilgi</value>
+  </data>
+  <data name="Code_CostBasisStatus_KNOWN" xml:space="preserve">
+    <value>Biliniyor</value>
+  </data>
+  <data name="Code_CostBasisStatus_UNKNOWN" xml:space="preserve">
+    <value>Bilinmiyor</value>
+  </data>
+  <data name="Code_CostBasisStatus_NOT_APPLICABLE" xml:space="preserve">
+    <value>Uygulanamaz</value>
+  </data>
+</root>
