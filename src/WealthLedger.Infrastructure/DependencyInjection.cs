@@ -95,6 +95,13 @@ public static class DependencyInjection
                 serviceProvider.GetRequiredService<SqliteDatabaseVerifier>(),
                 serviceProvider.GetRequiredService<TimeProvider>(),
                 serviceProvider.GetRequiredService<ILocalDataOperationHooks>()));
+        services.AddScoped<ICoreLedgerSetupStateReader, EfCoreLedgerSetupStateReader>();
+        services.AddSingleton<ICoreLedgerSetupSessionFactory>(
+            serviceProvider =>
+                new SqliteCoreLedgerSetupSessionFactory(
+                    serviceProvider.GetRequiredService<LocalDataPathResolver>(),
+                    serviceProvider.GetRequiredService<LocalDatabaseOwnershipGuard>(),
+                    serviceProvider.GetRequiredService<SqliteDatabaseVerifier>()));
         services.AddSingleton<ILocalApiDatabaseStartup>(
             serviceProvider => new LocalApiDatabaseStartup(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
@@ -130,7 +137,6 @@ public static class DependencyInjection
         services.AddScoped<
             ILedgerNavigationReadStore,
             EfCoreLedgerNavigationReadStore>();
-        services.AddScoped<ICoreLedgerSetupStore, EfCoreLedgerSetupStore>();
 
         services.AddScoped<EfCoreLedgerPostingStore>();
         services.AddScoped<ILedgerPostingStore>(
