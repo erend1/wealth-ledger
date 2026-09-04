@@ -51,15 +51,15 @@ public sealed record InitializeCoreLedgerResult(
 
 public sealed class InitializeCoreLedgerUseCase
 {
-    private readonly ICoreLedgerSetupStore _setupStore;
+    private readonly ICoreLedgerSetupSessionFactory _sessionFactory;
     private readonly TimeProvider _timeProvider;
 
     public InitializeCoreLedgerUseCase(
-        ICoreLedgerSetupStore setupStore,
+        ICoreLedgerSetupSessionFactory sessionFactory,
         TimeProvider timeProvider)
     {
-        _setupStore = setupStore
-            ?? throw new ArgumentNullException(nameof(setupStore));
+        _sessionFactory = sessionFactory
+            ?? throw new ArgumentNullException(nameof(sessionFactory));
         _timeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
     }
@@ -155,7 +155,18 @@ public sealed class InitializeCoreLedgerUseCase
             fundAsset,
             initializedAtUtc);
 
-        if (!await _setupStore.TryInitializeAsync(
+        var sessionResult =
+            await _sessionFactory.OpenAsync(cancellationToken);
+
+        if (!sessionResult.Succeeded)
+        {
+            throw new CoreLedgerSetupUnavailableException(
+                sessionResult.Failure!.Category);
+        }
+
+        await using var session = sessionResult.Value!;
+
+        if (!await session.TryInitializeAsync(
                 setup,
                 cancellationToken))
         {
