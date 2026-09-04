@@ -23,6 +23,8 @@ builder.Services.AddScoped<RecordContributionUseCase>();
 builder.Services.AddScoped<RecordFundPurchaseUseCase>();
 builder.Services.AddScoped<GetPositionUseCase>();
 builder.Services.AddScoped<InitializeCoreLedgerUseCase>();
+builder.Services.AddScoped<GetCoreLedgerSetupStateUseCase>();
+builder.Services.AddScoped<SelectLocalStartupModeUseCase>();
 builder.Services.AddScoped<GetLedgerTransactionUseCase>();
 builder.Services.AddScoped<PreviewPostedTransactionReversalUseCase>();
 builder.Services.AddScoped<ReversePostedTransactionUseCase>();
@@ -46,28 +48,70 @@ if (hostingFailure is not null)
     return;
 }
 
-var startupResult = await app.Services
-    .GetRequiredService<ILocalApiDatabaseStartup>()
-    .StartAsync();
+LocalStartupSelection startupSelection;
 
-if (!startupResult.Succeeded)
+await using (var scope =
+             app.Services.CreateAsyncScope())
 {
-    WriteStartupFailure(startupResult.Failure!);
-    return;
+    startupSelection = await scope.ServiceProvider
+        .GetRequiredService<SelectLocalStartupModeUseCase>()
+        .ExecuteAsync();
+}
+
+if (startupSelection.Mode == LocalStartupMode.Ready)
+{
+    var readyStartupResult = await app.Services
+        .GetRequiredService<ILocalApiDatabaseStartup>()
+        .StartAsync();
+
+    if (!readyStartupResult.Succeeded)
+    {
+        startupSelection = new LocalStartupSelection(
+            LocalStartupMode.Blocked,
+            startupSelection.Status,
+            readyStartupResult.Failure,
+            startupSelection.WorkspaceState);
+    }
 }
 
 app.Logger.LogInformation(
-    "Resolved authoritative database path: {DatabasePath}",
-    startupResult.Value!.DatabasePath);
+    "Local startup mode: {StartupMode}",
+    startupSelection.Mode);
+
+if (startupSelection.Mode == LocalStartupMode.Blocked
+    && startupSelection.Failure is not null)
+{
+    app.Logger.LogWarning(
+        "Local startup is blocked: {FailureCategory}",
+        startupSelection.Failure.Category);
+}
 
 app.UseExceptionHandler();
-app.MapLedgerEndpoints();
-app.MapNavigationEndpoints();
-app.MapPositionEndpoints();
 
-if (app.Configuration.GetValue<bool>("Setup:Enabled"))
+switch (startupSelection.Mode)
 {
-    app.MapSetupEndpoints();
+    case LocalStartupMode.Ready:
+        app.MapLedgerEndpoints();
+        app.MapNavigationEndpoints();
+        app.MapPositionEndpoints();
+        break;
+
+    case LocalStartupMode.WorkspaceUninitialized:
+        if (app.Configuration.GetValue<bool>("Setup:Enabled"))
+        {
+            app.MapSetupEndpoints();
+        }
+
+        break;
+
+    case LocalStartupMode.Blocked:
+    case LocalStartupMode.StorageUninitialized:
+    case LocalStartupMode.InitialBackupRequired:
+        break;
+
+    default:
+        throw new InvalidOperationException(
+            $"Unsupported local startup mode: {startupSelection.Mode}.");
 }
 
 app.Run();

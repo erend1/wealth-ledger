@@ -26,8 +26,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -100,8 +99,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 client,
@@ -210,8 +208,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var transactionId =
                 await SeedDraftAdjustmentAsync(
@@ -254,8 +251,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var transactionId =
                 await SeedUnsupportedPostedAdjustmentAsync(
@@ -298,8 +294,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -341,8 +336,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -394,8 +388,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -436,8 +429,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -510,8 +502,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 client,
@@ -760,8 +751,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 client,
@@ -898,8 +888,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -957,8 +946,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -1046,8 +1034,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             var contribution =
                 await PostContributionAsync(
@@ -1120,8 +1107,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 client,
@@ -1283,8 +1269,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    client);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 client,
@@ -1416,8 +1401,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    setupClient);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 setupClient,
@@ -1524,8 +1508,7 @@ namespace WealthLedger.Api.Tests
                 factory.CreateClient();
 
             var setup =
-                await InitializeCoreLedgerAsync(
-                    setupClient);
+                factory.ReadySetup;
 
             await PostContributionAsync(
                 setupClient,
@@ -1631,30 +1614,6 @@ namespace WealthLedger.Api.Tests
                                     == "different-race-a"
                                 || x.IdempotencyKey
                                     == "different-race-b")));
-        }
-
-        private static async Task<
-            InitializeCoreLedgerResponse>
-            InitializeCoreLedgerAsync(
-                HttpClient client)
-        {
-            var response =
-                await client.PostAsJsonAsync(
-                    "/api/setup/core-ledger",
-                    ApiTestData.CreateSetupRequest());
-
-            Assert.Equal(
-                HttpStatusCode.Created,
-                response.StatusCode);
-
-            var setup =
-                await response.Content
-                    .ReadFromJsonAsync<
-                        InitializeCoreLedgerResponse>();
-
-            return Assert.IsType<
-                InitializeCoreLedgerResponse>(
-                    setup);
         }
 
         private static async Task<

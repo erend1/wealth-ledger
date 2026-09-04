@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using WealthLedger.Application.Common;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Common;
@@ -46,6 +47,19 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
                 "Core ledger already initialized",
                 exception.Message,
                 ErrorCode: null),
+            CoreLedgerSetupUnavailableException setupUnavailable =>
+                setupUnavailable.Category
+                    == LocalDataFailureCategory.OwnershipBusy
+                    ? new ApiFailure(
+                        StatusCodes.Status409Conflict,
+                        "Core ledger setup unavailable",
+                        "Another local data operation is already in progress.",
+                        ErrorCode: null)
+                    : new ApiFailure(
+                        StatusCodes.Status409Conflict,
+                        "Core ledger setup unavailable",
+                        "Core ledger setup is not currently available.",
+                        ErrorCode: null),
             NavigationRequestException navigationException => new ApiFailure(
                 StatusCodes.Status400BadRequest,
                 "Invalid navigation request",
