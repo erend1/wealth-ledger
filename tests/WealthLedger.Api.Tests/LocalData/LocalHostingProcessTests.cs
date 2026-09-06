@@ -55,7 +55,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         Assert.True(
             string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
             || IPAddress.TryParse(uri.Host, out var address)
-            && IPAddress.IsLoopback(address));  
+            && IPAddress.IsLoopback(address));
 
         using var client = new HttpClient();
         using var response = await client.GetAsync(
@@ -394,7 +394,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             configuration,
             new LocalDataRuntimeContext(
                 "Testing",
-                _testRoot));
+                Directory.GetCurrentDirectory()));
 
         services.AddScoped<
             InitializeCoreLedgerUseCase>();

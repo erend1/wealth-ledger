@@ -11,6 +11,22 @@ Architecture record: [ADR-008](../decisions/ADR-008-local-ui-shell-architecture.
 
 Last reviewed: 2026-09-03
 
+M006 is now In Progress and is the only In Progress milestone.
+
+The workspace-binding prerequisite, accepted ADR-008 architecture,
+WealthLedger.UI assembly with exact Turkish-first presentation primitives,
+and fail-closed startup-mode boundary are implemented. The host derives
+Blocked, StorageUninitialized, WorkspaceUninitialized,
+InitialBackupRequired, or Ready before route mapping. Only Ready retains
+process-lifetime database ownership and exposes normal ledger routes.
+Core setup uses a lease-scoped session, and setup-state inspection
+distinguishes empty, complete, and partial/conflicting master graphs.
+
+Guided browser initialization, required initial-backup workflow, Ready shell,
+transaction explanation, UI/privacy/accessibility hardening, Playwright
+browser verification, and final M006 documentation verification remain
+unimplemented.
+
 ## User outcome
 
 The household can open WealthLedger in an ordinary browser on the local

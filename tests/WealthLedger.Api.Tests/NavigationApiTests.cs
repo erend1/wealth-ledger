@@ -24,8 +24,7 @@ public sealed class NavigationApiTests
     public async Task Navigation_MasterRoutesExposeStableCurrentFieldsAndScope()
     {
         using var factory =
-            new WealthLedgerApiFactory(
-                ApiTestStartupMode.WorkspaceUninitialized);
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
         var setup = factory.ReadySetup;
         await SeedNavigationMastersAsync(factory, setup);
@@ -137,8 +136,7 @@ public sealed class NavigationApiTests
     public async Task Navigation_InvalidInputsAndUnknownScopesReturnSanitizedStableProblems()
     {
         using var factory =
-            new WealthLedgerApiFactory(
-                ApiTestStartupMode.WorkspaceUninitialized);
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
         var setup = factory.ReadySetup;
 
@@ -210,8 +208,7 @@ public sealed class NavigationApiTests
     public async Task Navigation_RecentLedgerMatchesDetailOmitsExpandedFactsAndPositionsValidateScope()
     {
         using var factory =
-            new WealthLedgerApiFactory(
-                ApiTestStartupMode.WorkspaceUninitialized);
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
         var setup = factory.ReadySetup;
         var contributionResponse = await SendWithIdempotencyAsync(
@@ -315,8 +312,7 @@ public sealed class NavigationApiTests
     public async Task Navigation_LogsOnlyBoundedOperationalMetadata()
     {
         using var factory =
-            new WealthLedgerApiFactory(
-                ApiTestStartupMode.WorkspaceUninitialized);
+            new WealthLedgerApiFactory();
         var provider = new RecordingLoggerProvider();
         using var loggedFactory = factory.WithWebHostBuilder(
             builder => builder.ConfigureLogging(
@@ -407,8 +403,7 @@ public sealed class NavigationApiTests
     public async Task Navigation_DoesNotExposeMasterWritesOrBroadSearchRoutes()
     {
         using var factory =
-            new WealthLedgerApiFactory(
-                ApiTestStartupMode.WorkspaceUninitialized);
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
         var setup = factory.ReadySetup;
         var countsBeforeReads = await ReadDatabaseCountsAsync(factory);
