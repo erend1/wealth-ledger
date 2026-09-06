@@ -1,10 +1,15 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.LocalData;
+using WealthLedger.Application.Setup;
+using WealthLedger.Infrastructure.LocalData;
 using WealthLedger.Infrastructure.Persistence;
+using WealthLedger.Infrastructure;
 
 namespace WealthLedger.Api.Tests.LocalData;
 
@@ -12,25 +17,37 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
 {
     private readonly string _testRoot;
     private readonly string _databasePath;
+    private readonly string _backupDirectory;
 
     public LocalHostingProcessTests()
     {
-        _testRoot = Path.Combine(
-            Path.GetTempPath(),
-            "WealthLedger.Api.Tests",
-            nameof(LocalHostingProcessTests),
-            Guid.NewGuid().ToString("N"));
-        _databasePath = Path.Combine(
-            _testRoot,
-            "live",
-            "wealthledger.db");
+        _testRoot =
+            Path.Combine(
+                Path.GetTempPath(),
+                "WealthLedger.Api.Tests",
+                nameof(LocalHostingProcessTests),
+                Guid.NewGuid().ToString("N"));
+
+        _databasePath =
+            Path.Combine(
+                _testRoot,
+                "live",
+                "wealthledger.db");
+
+        _backupDirectory =
+            Path.Combine(
+                _testRoot,
+                "backups");
+
+        Directory.CreateDirectory(
+            _backupDirectory);
     }
 
     [Fact]
     public async Task LocalHosting_DefaultTrackedHostStartsOnlyOnLoopback()
     {
         await InitializeDatabaseAsync();
-        await using var process = ApiProcess.Start(_databasePath);
+        await using var process = ApiProcess.Start(_databasePath, _backupDirectory);
 
         var listeningUrl = await process.WaitForListeningUrlAsync();
         var uri = new Uri(listeningUrl);
@@ -54,6 +71,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         await InitializeDatabaseAsync();
         await using var process = ApiProcess.Start(
             _databasePath,
+            _backupDirectory,
             "--urls=http://0.0.0.0:0");
 
         var exitCode = await process.WaitForExitAsync();
@@ -69,75 +87,226 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LocalHosting_ProcessOwnershipRejectsCollisionAndRecoversAfterExit()
+    public async Task
+        LocalHosting_ReadyOwnershipCollisionBlocksSecondHostAndRecoversAfterExit()
     {
-        await InitializeDatabaseAsync();
-        await using var first = ApiProcess.Start(_databasePath);
-        _ = await first.WaitForListeningUrlAsync();
+        await PrepareReadyWorkspaceAsync();
 
-        await using var collision = ApiProcess.Start(_databasePath);
-        var collisionExit = await collision.WaitForExitAsync();
+        await using var first =
+            ApiProcess.Start(
+                _databasePath,
+                _backupDirectory);
+
+        var firstUrl =
+            await first.WaitForListeningUrlAsync();
+
+        Assert.Contains(
+            "Local startup mode: Ready",
+            first.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        using var firstClient =
+            new HttpClient();
+
+        using var firstResponse =
+            await firstClient.GetAsync(
+                new Uri(
+                    new Uri(firstUrl),
+                    "/api/households"));
 
         Assert.Equal(
-            (int)LocalDataFailureCategory.OwnershipBusy,
-            collisionExit);
+            HttpStatusCode.OK,
+            firstResponse.StatusCode);
+
+        /*
+         * The second process sees the first Ready host's
+         * process-lifetime ownership lease. It must remain alive
+         * in Blocked mode rather than exiting or exposing ledger
+         * endpoints.
+         */
+        await using var collision =
+            ApiProcess.Start(
+                _databasePath,
+                _backupDirectory);
+
+        var collisionUrl =
+            await collision.WaitForListeningUrlAsync();
+
         Assert.Contains(
-            "STARTUP OWNERSHIPBUSY",
-            collision.CombinedOutput);
+            "Local startup mode: Blocked",
+            collision.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            nameof(LocalDataFailureCategory.OwnershipBusy),
+            collision.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        using var collisionClient =
+            new HttpClient();
+
+        using var collisionResponse =
+            await collisionClient.GetAsync(
+                new Uri(
+                    new Uri(collisionUrl),
+                    "/api/households"));
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            collisionResponse.StatusCode);
 
         await first.StopAsync();
 
-        await using var restarted = ApiProcess.Start(_databasePath);
-        var restartedUrl = await restarted.WaitForListeningUrlAsync();
+        /*
+         * The Blocked collision process owns no lifetime lease,
+         * so a fresh process can become Ready after the original
+         * Ready owner exits.
+         */
+        await using var restarted =
+            ApiProcess.Start(
+                _databasePath,
+                _backupDirectory);
 
-        Assert.Contains("127.0.0.1", restartedUrl);
+        var restartedUrl =
+            await restarted.WaitForListeningUrlAsync();
+
+        Assert.Contains(
+            "Local startup mode: Ready",
+            restarted.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        using var restartedClient =
+            new HttpClient();
+
+        using var restartedResponse =
+            await restartedClient.GetAsync(
+                new Uri(
+                    new Uri(restartedUrl),
+                    "/api/households"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            restartedResponse.StatusCode);
     }
 
     [Fact]
-    public async Task LocalHosting_MissingDatabaseFailsWithoutCreatingIt()
+    public async Task
+        LocalHosting_MissingDatabaseStartsStorageUninitializedWithoutCreatingIt()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_databasePath)!);
-        await using var process = ApiProcess.Start(_databasePath);
+        Directory.CreateDirectory(
+            Path.GetDirectoryName(
+                _databasePath)!);
 
-        var exitCode = await process.WaitForExitAsync();
+        await using var process =
+            ApiProcess.Start(
+                _databasePath,
+                _backupDirectory);
 
-        Assert.Equal((int)LocalDataFailureCategory.NotFound, exitCode);
-        Assert.False(File.Exists(_databasePath));
-        Assert.Contains("database initialize", process.CombinedOutput);
-        Assert.DoesNotContain("SQLite Error", process.CombinedOutput);
-        Assert.DoesNotContain("Data Source", process.CombinedOutput);
+        var listeningUrl =
+            await process.WaitForListeningUrlAsync();
+
+        Assert.False(
+            File.Exists(_databasePath));
+
+        Assert.Contains(
+            "Local startup mode: StorageUninitialized",
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        using var client =
+            new HttpClient();
+
+        using var response =
+            await client.GetAsync(
+                new Uri(
+                    new Uri(listeningUrl),
+                    "/api/households"));
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+
+        Assert.DoesNotContain(
+            "SQLite Error",
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "Data Source",
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task LocalHosting_RetiredStartupSwitchCannotMigratePendingDatabase()
+    public async Task
+        LocalHosting_RetiredStartupSwitchCannotMigratePendingDatabase()
     {
         await InitializeDatabaseAsync(
             "20260827072019_002_CommandReceipt");
-        await using var process = ApiProcess.Start(
-            _databasePath,
-            "--Database:ApplyMigrationsOnStartup=true");
 
-        var exitCode = await process.WaitForExitAsync();
+        await using var process =
+            ApiProcess.Start(
+                _databasePath,
+                _backupDirectory,
+                "--Database:ApplyMigrationsOnStartup=true");
+
+        var listeningUrl =
+            await process.WaitForListeningUrlAsync();
+
+        Assert.Contains(
+            "Local startup mode: Blocked",
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            nameof(LocalDataFailureCategory.DatabaseNotReady),
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+
+        using var client =
+            new HttpClient();
+
+        using var response =
+            await client.GetAsync(
+                new Uri(
+                    new Uri(listeningUrl),
+                    "/api/households"));
 
         Assert.Equal(
-            (int)LocalDataFailureCategory.DatabaseNotReady,
-            exitCode);
-        Assert.Contains("database migrate", process.CombinedOutput);
+            HttpStatusCode.NotFound,
+            response.StatusCode);
 
-        await using var context = CreateContext();
-        var applied = await context.Database.GetAppliedMigrationsAsync();
+        await using var context =
+            CreateContext();
 
-        Assert.Equal(2, applied.Count());
+        var applied =
+            await context.Database
+                .GetAppliedMigrationsAsync();
+
+        Assert.Equal(
+            2,
+            applied.Count());
+
         Assert.DoesNotContain(
             applied,
-            migration => migration.EndsWith(
-                "_003_ReversalDependencySemantics",
-                StringComparison.Ordinal));
+            migration =>
+                migration.EndsWith(
+                    "_003_ReversalDependencySemantics",
+                    StringComparison.Ordinal));
+
         Assert.DoesNotContain(
             applied,
-            migration => migration.EndsWith(
-                "_004_LedgerNavigationQueries",
-                StringComparison.Ordinal));
+            migration =>
+                migration.EndsWith(
+                    "_004_LedgerNavigationQueries",
+                    StringComparison.Ordinal));
+
+        Assert.DoesNotContain(
+            applied,
+            migration =>
+                migration.EndsWith(
+                    "_005_WorkspaceIdentity",
+                    StringComparison.Ordinal));
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -192,6 +361,75 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         return new WealthLedgerDbContext(options);
     }
 
+    private async Task PrepareReadyWorkspaceAsync()
+    {
+        await InitializeDatabaseAsync();
+
+        var configuration =
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["Storage:DatabasePath"] =
+                            _databasePath,
+
+                        ["Backup:Directory"] =
+                            _backupDirectory,
+
+                        ["Backup:DestinationSeparationConfirmed"] =
+                            "true",
+
+                        ["Backup:DestinationEncryptionConfirmed"] =
+                            "true"
+                    })
+                .Build();
+
+        var services =
+            new ServiceCollection();
+
+        services.AddSingleton<TimeProvider>(
+            TimeProvider.System);
+
+        services.AddWealthLedgerInfrastructure(
+            configuration,
+            new LocalDataRuntimeContext(
+                "Testing",
+                _testRoot));
+
+        services.AddScoped<
+            InitializeCoreLedgerUseCase>();
+
+        services.AddScoped<
+            CreateLocalBackupUseCase>();
+
+        await using var serviceProvider =
+            services.BuildServiceProvider(
+                new ServiceProviderOptions
+                {
+                    ValidateScopes = true,
+                    ValidateOnBuild = true
+                });
+
+        await using var scope =
+            serviceProvider.CreateAsyncScope();
+
+        _ = await scope.ServiceProvider
+            .GetRequiredService<
+                InitializeCoreLedgerUseCase>()
+            .ExecuteAsync(
+                ApiTestData.CreateSetupCommand());
+
+        var backupResult =
+            await scope.ServiceProvider
+                .GetRequiredService<
+                    CreateLocalBackupUseCase>()
+                .ExecuteAsync();
+
+        Assert.True(
+            backupResult.Succeeded,
+            backupResult.Failure?.Message);
+    }
+
     private sealed class ApiProcess : IAsyncDisposable
     {
         private readonly Process _process;
@@ -220,6 +458,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
 
         internal static ApiProcess Start(
             string databasePath,
+            string backupDirectory,
             params string[] additionalArguments)
         {
             var apiAssemblyPath = typeof(Program).Assembly.Location;
@@ -234,6 +473,8 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             startInfo.ArgumentList.Add(apiAssemblyPath);
             startInfo.ArgumentList.Add(
                 $"--Storage:DatabasePath={Path.GetFullPath(databasePath)}");
+            startInfo.ArgumentList.Add(
+                $"--Backup:Directory={Path.GetFullPath(backupDirectory)}");
 
             foreach (var argument in additionalArguments)
             {
