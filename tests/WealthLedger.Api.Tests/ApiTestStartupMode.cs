@@ -2,7 +2,9 @@
 {
     internal enum ApiTestStartupMode
     {
+        Blocked,
         Ready,
+        InitialBackupRequired,
         WorkspaceUninitialized,
         StorageUninitialized
     }

@@ -9,7 +9,7 @@ by the workspace-binding gate recorded below and accepted as amended)
 
 Architecture record: [ADR-008](../decisions/ADR-008-local-ui-shell-architecture.md)
 
-Last reviewed: 2026-09-03
+Last reviewed: 2026-09-07
 
 M006 is now In Progress and is the only In Progress milestone.
 
@@ -22,10 +22,15 @@ process-lifetime database ownership and exposes normal ledger routes.
 Core setup uses a lease-scoped session, and setup-state inspection
 distinguishes empty, complete, and partial/conflicting master graphs.
 
-Guided browser initialization, required initial-backup workflow, Ready shell,
-transaction explanation, UI/privacy/accessibility hardening, Playwright
-browser verification, and final M006 documentation verification remain
-unimplemented.
+Guided browser initialization now exposes only the mode-appropriate Blocked,
+StorageUninitialized, and WorkspaceUninitialized Razor Pages. Storage creation
+and atomic workspace setup call the existing ownership-safe Application
+operations, require antiforgery, use PRG, derive retries from persisted reality,
+and leave the process in its startup mode with honest restart guidance.
+
+The required initial-backup workflow, Ready shell, transaction explanation,
+remaining UI/privacy/accessibility hardening, Playwright browser verification,
+and final M006 documentation verification remain unimplemented.
 
 ## User outcome
 

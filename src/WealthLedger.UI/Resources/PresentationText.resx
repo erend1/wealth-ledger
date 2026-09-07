@@ -327,4 +327,274 @@
   <data name="Code_CostBasisStatus_NOT_APPLICABLE" xml:space="preserve">
     <value>Uygulanamaz</value>
   </data>
+  <data name="Layout_SkipToContent" xml:space="preserve">
+    <value>Ana içeriğe geç</value>
+  </data>
+  <data name="Layout_LocalOnly" xml:space="preserve">
+    <value>Yalnızca bu bilgisayarda</value>
+  </data>
+  <data name="Layout_Footer" xml:space="preserve">
+    <value>WealthLedger yerel veri sınırı içinde çalışır.</value>
+  </data>
+  <data name="Validation_SummaryLabel" xml:space="preserve">
+    <value>Kontrol edilmesi gereken alanlar</value>
+  </data>
+  <data name="Setup_Eyebrow" xml:space="preserve">
+    <value>Güvenli ilk kurulum</value>
+  </data>
+  <data name="Blocked_Eyebrow" xml:space="preserve">
+    <value>Salt okunur durum</value>
+  </data>
+  <data name="Blocked_Title" xml:space="preserve">
+    <value>WealthLedger güvenli biçimde durduruldu</value>
+  </data>
+  <data name="Blocked_Introduction" xml:space="preserve">
+    <value>Yerel veri denetimi tamamlanamadığı için kayıt ve kurulum işlemleri kullanıma açılmadı.</value>
+  </data>
+  <data name="Blocked_FailureCategoryLabel" xml:space="preserve">
+    <value>Güvenli hata kategorisi</value>
+  </data>
+  <data name="Blocked_GuidanceTitle" xml:space="preserve">
+    <value>Ne yapabilirsiniz?</value>
+  </data>
+  <data name="Blocked_Guidance_MigrationRequired" xml:space="preserve">
+    <value>Uygulama kapalıyken kabul edilmiş Operations komutuyla veritabanını açıkça yükseltin, ardından WealthLedger'ı yeniden başlatın.</value>
+  </data>
+  <data name="Blocked_Guidance_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir WealthLedger süreci veya yerel veri işlemi çalışıyor. Diğer işlemi güvenle tamamlayıp kapattıktan sonra bu süreci yeniden başlatın.</value>
+  </data>
+  <data name="Blocked_Guidance_Configuration" xml:space="preserve">
+    <value>Tarayıcıdan yol veya yedekleme ayarı değiştirilemez. Uygulama yapılandırmasını Operations durum komutuyla denetleyin ve ardından yeniden başlatın.</value>
+  </data>
+  <data name="Blocked_Guidance_Database" xml:space="preserve">
+    <value>Veritabanını tarayıcıdan değiştirmeyin. Uygulamayı kapatın, Operations durum komutunu çalıştırın ve belgelenmiş kurtarma yönlendirmesini izleyin.</value>
+  </data>
+  <data name="Blocked_Guidance_General" xml:space="preserve">
+    <value>Uygulamayı kapatın ve güvenli kategoriyi Operations durum komutuyla inceleyin. Sorun giderildikten sonra temiz bir yeniden başlatma yapın.</value>
+  </data>
+  <data name="Blocked_CommandIntroduction" xml:space="preserve">
+    <value>Depo kökünde, uygulama kapalıyken desteklenen komut:</value>
+  </data>
+  <data name="Blocked_NoBrowserMutation" xml:space="preserve">
+    <value>Bu sayfa yalnızca bilgi verir; veritabanını, yedekleri veya dosyaları değiştiremez.</value>
+  </data>
+  <data name="Storage_Title" xml:space="preserve">
+    <value>Yerel veri deposunu oluşturun</value>
+  </data>
+  <data name="Storage_Introduction" xml:space="preserve">
+    <value>WealthLedger kayıtlarını bu bilgisayardaki güvenli ve önceden çözümlenmiş konumda tutar. Oluşturmadan önce hedefleri gözden geçirin.</value>
+  </data>
+  <data name="Storage_ReviewTitle" xml:space="preserve">
+    <value>Çözümlenmiş konumları gözden geçirin</value>
+  </data>
+  <data name="Storage_ReviewExplanation" xml:space="preserve">
+    <value>Bu değerler sunucu yapılandırmasından gelir. Tarayıcı bağlantı dizesi oluşturmaz ve başka bir konum seçemez.</value>
+  </data>
+  <data name="Storage_DatabasePathLabel" xml:space="preserve">
+    <value>Canlı veritabanı dosyası</value>
+  </data>
+  <data name="Storage_BackupDirectoryLabel" xml:space="preserve">
+    <value>Yapılandırılmış yedekleme dizini</value>
+  </data>
+  <data name="Storage_PathRestriction" xml:space="preserve">
+    <value>Bu kurulum yalnızca eksik canlı veritabanını oluşturabilir; var olan bir dosyayı yükseltemez, üzerine yazamaz, geri yükleyemez veya değiştiremez.</value>
+  </data>
+  <data name="Storage_ActionTitle" xml:space="preserve">
+    <value>Eksik veritabanını oluşturun</value>
+  </data>
+  <data name="Storage_ActionExplanation" xml:space="preserve">
+    <value>İşlem kabul edilmiş şema zincirini yeni bir geçici dosyada kurar, doğrular ve yalnızca hedef hâlâ boşsa yayımlar.</value>
+  </data>
+  <data name="Storage_ConfirmationLabel" xml:space="preserve">
+    <value>Gösterilen canlı veritabanı ve yedekleme konumlarını gözden geçirdim.</value>
+  </data>
+  <data name="Storage_Submit" xml:space="preserve">
+    <value>Yerel veri deposunu oluştur</value>
+  </data>
+  <data name="Storage_Validation_ConfirmationRequired" xml:space="preserve">
+    <value>Oluşturmadan önce gösterilen konumları gözden geçirdiğinizi onaylayın.</value>
+  </data>
+  <data name="Storage_CreatedStatus" xml:space="preserve">
+    <value>Depolama oluşturuldu</value>
+  </data>
+  <data name="Storage_CreatedTitle" xml:space="preserve">
+    <value>Yeni yerel veritabanı doğrulandı</value>
+  </data>
+  <data name="Storage_CreatedGuidance" xml:space="preserve">
+    <value>Bu süreç başlangıç kipini değiştirmez. WealthLedger'ı temiz biçimde yeniden başlatın; sonraki başlangıç çalışma alanı kurulumunu açacaktır.</value>
+  </data>
+  <data name="Storage_Error_ConfigurationUnavailable" xml:space="preserve">
+    <value>Güvenli depolama yapılandırması okunamadı. Tarayıcıdan yol girmeyin; Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Storage_Error_ExistingNotReady" xml:space="preserve">
+    <value>Hedefte güvenle yeniden kullanılamayan bir veritabanı yapısı var. Hiçbir dosyanın üzerine yazılmadı; Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Storage_Error_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir yerel veri işlemi devam ediyor. Hiçbir dosyanın üzerine yazılmadı; işlem tamamlandıktan sonra güvenle yeniden deneyin.</value>
+  </data>
+  <data name="Storage_Error_InitializationFailed" xml:space="preserve">
+    <value>Yerel veri deposu güvenle oluşturulamadı. Sonuç doğrulanmadı ve var olan hiçbir dosyanın üzerine yazılmadı.</value>
+  </data>
+  <data name="Workspace_Title" xml:space="preserve">
+    <value>Çalışma alanınızı hazırlayın</value>
+  </data>
+  <data name="Workspace_Introduction" xml:space="preserve">
+    <value>İlk para birimini, haneyi ve temel yatırım yapılarını tek ve atomik bir işlemle oluşturun. Bu adım bakiye veya işlem kaydı oluşturmaz.</value>
+  </data>
+  <data name="Workspace_CurrencyTitle" xml:space="preserve">
+    <value>Temel para birimi</value>
+  </data>
+  <data name="Workspace_BaseCurrencyNameLabel" xml:space="preserve">
+    <value>Para birimi adı</value>
+  </data>
+  <data name="Workspace_MinorUnitDigitsLabel" xml:space="preserve">
+    <value>Ondalık basamak sayısı</value>
+  </data>
+  <data name="Workspace_MinorUnitDigitsHelp" xml:space="preserve">
+    <value>Türk lirası için 2 kullanılır. İzin verilen aralık 0–8'dir.</value>
+  </data>
+  <data name="Workspace_HouseholdTitle" xml:space="preserve">
+    <value>Hane</value>
+  </data>
+  <data name="Workspace_HouseholdNameLabel" xml:space="preserve">
+    <value>Hane adı</value>
+  </data>
+  <data name="Workspace_MemberNameLabel" xml:space="preserve">
+    <value>İlk hane üyesinin görünen adı</value>
+  </data>
+  <data name="Workspace_OptionalHelp" xml:space="preserve">
+    <value>İsteğe bağlı</value>
+  </data>
+  <data name="Workspace_InstitutionTitle" xml:space="preserve">
+    <value>Kurum</value>
+  </data>
+  <data name="Workspace_InstitutionNameLabel" xml:space="preserve">
+    <value>Kurum adı</value>
+  </data>
+  <data name="Workspace_InstitutionTypeLabel" xml:space="preserve">
+    <value>Kurum türü</value>
+  </data>
+  <data name="Workspace_PortfolioAccountTitle" xml:space="preserve">
+    <value>Portföy ve hesap</value>
+  </data>
+  <data name="Workspace_PortfolioNameLabel" xml:space="preserve">
+    <value>Portföy adı</value>
+  </data>
+  <data name="Workspace_AccountNameLabel" xml:space="preserve">
+    <value>Hesap adı</value>
+  </data>
+  <data name="Workspace_AccountTypeLabel" xml:space="preserve">
+    <value>Hesap türü</value>
+  </data>
+  <data name="Workspace_AccountOpenedOnLabel" xml:space="preserve">
+    <value>Hesap açılış tarihi</value>
+  </data>
+  <data name="Workspace_AssetsTitle" xml:space="preserve">
+    <value>İlk varlıklar</value>
+  </data>
+  <data name="Workspace_AssetsExplanation" xml:space="preserve">
+    <value>Bir nakit varlığı ve parti takibi gereken bir fon tanımlayın. Miktarlar daha sonraki kayıt iş akışlarında girilecektir.</value>
+  </data>
+  <data name="Workspace_CashAssetNameLabel" xml:space="preserve">
+    <value>Nakit varlığının adı</value>
+  </data>
+  <data name="Workspace_FundAssetNameLabel" xml:space="preserve">
+    <value>İlk fonun adı</value>
+  </data>
+  <data name="Workspace_StableCodesTitle" xml:space="preserve">
+    <value>Kalıcı kodları gözden geçirin</value>
+  </data>
+  <data name="Workspace_StableCodesExplanation" xml:space="preserve">
+    <value>Bu önerilen kodlar kurulumdan sonra kalıcı tanımlayıcı olur. A–Z, 0–9, alt çizgi ve kısa çizgi kullanın.</value>
+  </data>
+  <data name="Workspace_BaseCurrencyCodeLabel" xml:space="preserve">
+    <value>Para birimi kodu</value>
+  </data>
+  <data name="Workspace_InstitutionCodeLabel" xml:space="preserve">
+    <value>Kurum kodu</value>
+  </data>
+  <data name="Workspace_PortfolioCodeLabel" xml:space="preserve">
+    <value>Portföy kodu</value>
+  </data>
+  <data name="Workspace_AccountCodeLabel" xml:space="preserve">
+    <value>Hesap kodu</value>
+  </data>
+  <data name="Workspace_CashAssetCodeLabel" xml:space="preserve">
+    <value>Nakit varlık kodu</value>
+  </data>
+  <data name="Workspace_FundAssetCodeLabel" xml:space="preserve">
+    <value>Fon varlığı kodu</value>
+  </data>
+  <data name="Workspace_ActionTitle" xml:space="preserve">
+    <value>Atomik kurulumu tamamlayın</value>
+  </data>
+  <data name="Workspace_ActionExplanation" xml:space="preserve">
+    <value>Tüm temel kayıtlar birlikte doğrulanır ve tek işlemde kaydedilir. Herhangi biri başarısız olursa hiçbir kısmi çalışma alanı kabul edilmez.</value>
+  </data>
+  <data name="Workspace_NoFinancialHistory" xml:space="preserve">
+    <value>Bu işlem bakiye, pozisyon, yatırım işlemi, lot veya maliyet kaydı oluşturmaz.</value>
+  </data>
+  <data name="Workspace_Submit" xml:space="preserve">
+    <value>Çalışma alanını oluştur</value>
+  </data>
+  <data name="Workspace_CreatedStatus" xml:space="preserve">
+    <value>Çalışma alanı oluşturuldu</value>
+  </data>
+  <data name="Workspace_CreatedTitle" xml:space="preserve">
+    <value>Temel kayıtlar atomik olarak kaydedildi</value>
+  </data>
+  <data name="Workspace_CreatedGuidance" xml:space="preserve">
+    <value>Bu süreç kurulum kipinde kalır ve normal kayıt rotalarını açmaz. Bir sonraki korumalı adıma geçmek için WealthLedger'ı temiz biçimde yeniden başlatın.</value>
+  </data>
+  <data name="Workspace_BackupDeferred" xml:space="preserve">
+    <value>İlk doğrulanmış yedek henüz oluşturulmadı. Bu sınırda otomatik yedek veya tamamlandı bildirimi yoktur.</value>
+  </data>
+  <data name="Workspace_Validation_Required" xml:space="preserve">
+    <value>Bu alan zorunludur.</value>
+  </data>
+  <data name="Workspace_Validation_TooLong" xml:space="preserve">
+    <value>Bu alan izin verilen uzunluğu aşıyor.</value>
+  </data>
+  <data name="Workspace_Validation_CurrencyCode" xml:space="preserve">
+    <value>Para birimi kodu tam olarak üç Latin harfi olmalıdır.</value>
+  </data>
+  <data name="Workspace_Validation_StableCode" xml:space="preserve">
+    <value>Kod en fazla 64 karakter olmalı ve yalnızca A–Z, 0–9, alt çizgi veya kısa çizgi içermelidir.</value>
+  </data>
+  <data name="Workspace_Validation_MinorUnitDigits" xml:space="preserve">
+    <value>Ondalık basamak sayısı 0 ile 8 arasında bir tam sayı olmalıdır.</value>
+  </data>
+  <data name="Workspace_Validation_InstitutionType" xml:space="preserve">
+    <value>Desteklenen bir kurum türü seçin.</value>
+  </data>
+  <data name="Workspace_Validation_AccountType" xml:space="preserve">
+    <value>Desteklenen bir hesap türü seçin.</value>
+  </data>
+  <data name="Workspace_Validation_Date" xml:space="preserve">
+    <value>Geçerli bir takvim tarihi girin.</value>
+  </data>
+  <data name="Workspace_Validation_AssetCodesDistinct" xml:space="preserve">
+    <value>Nakit ve fon varlıkları farklı kalıcı kodlar kullanmalıdır.</value>
+  </data>
+  <data name="Workspace_Error_StateUnavailable" xml:space="preserve">
+    <value>Çalışma alanı durumu güvenle okunamadı. Hiçbir kayıt oluşturulmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Workspace_Error_PartialState" xml:space="preserve">
+    <value>Veritabanında kısmi veya çelişkili temel kayıtlar bulundu. Tarayıcı bunları tahmin ederek tamamlamaz; Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Workspace_Error_AlreadyInitializedConflict" xml:space="preserve">
+    <value>Başka bir deneme temel kayıtları değiştirdi ancak tamamlanmış durum doğrulanamadı. Hiçbir ek kayıt oluşturulmadı; uygulamayı yeniden başlatın.</value>
+  </data>
+  <data name="Workspace_Error_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir yerel veri işlemi devam ediyor. Hiçbir kısmi çalışma alanı kabul edilmedi; işlem tamamlandıktan sonra güvenle yeniden deneyin.</value>
+  </data>
+  <data name="Workspace_Error_SetupUnavailable" xml:space="preserve">
+    <value>Çalışma alanı kurulumu şu anda güvenle kullanılamıyor. Hiçbir kısmi çalışma alanı kabul edilmedi.</value>
+  </data>
+  <data name="Workspace_Error_InvalidInput" xml:space="preserve">
+    <value>Girilen değerler temel kayıt kurallarını karşılamadı. Alanları gözden geçirin; hiçbir kayıt oluşturulmadı.</value>
+  </data>
+  <data name="Workspace_Error_PersistenceConflict" xml:space="preserve">
+    <value>Temel kayıtlar atomik olarak kaydedilemedi. İşlem tamamlanmadı; güvenli durumu yeniden okumak için uygulamayı yeniden başlatın.</value>
+  </data>
 </root>

@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using WealthLedger.Api.Contracts;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Setup;
@@ -48,17 +49,22 @@ internal sealed class WealthLedgerApiFactory
             dataDirectory,
             "wealthledger.db");
 
-        if (_startupMode
-            != ApiTestStartupMode.StorageUninitialized)
+        if (_startupMode is not (
+                ApiTestStartupMode.StorageUninitialized
+                or ApiTestStartupMode.Blocked))
         {
             MigrateCurrentDatabase();
         }
 
-        if (_startupMode
-            == ApiTestStartupMode.Ready)
+        if (_startupMode is
+            ApiTestStartupMode.InitialBackupRequired
+            or ApiTestStartupMode.Ready)
         {
             ReadySetup =
-                PrepareReadyWorkspace();
+                PrepareWorkspace(
+                    createVerifiedBackup:
+                        _startupMode
+                        == ApiTestStartupMode.Ready);
         }
     }
 
@@ -72,10 +78,15 @@ internal sealed class WealthLedgerApiFactory
         private set;
     } = null!;
 
+    internal TestLogCollector Logs { get; } = new();
+
     protected override void ConfigureWebHost(
         IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        builder.ConfigureLogging(
+            logging => logging.AddProvider(Logs));
 
         builder.ConfigureAppConfiguration(
             (_, configuration) =>
@@ -108,8 +119,41 @@ internal sealed class WealthLedgerApiFactory
         context.Database.Migrate();
     }
 
+    internal WealthLedgerDbContext CreateDbContext()
+    {
+        var connectionString =
+            new SqliteConnectionStringBuilder
+            {
+                DataSource = DatabasePath,
+                ForeignKeys = true,
+                Pooling = false
+            }.ToString();
+
+        var options =
+            new DbContextOptionsBuilder<WealthLedgerDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+
+        return new WealthLedgerDbContext(options);
+    }
+
+    internal FileStream AcquireDatabaseOwnership()
+    {
+        var lockPath = Path.ChangeExtension(
+            DatabasePath,
+            ".wloperation.lock");
+
+        return new FileStream(
+            lockPath,
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 1,
+            FileOptions.WriteThrough);
+    }
+
     private InitializeCoreLedgerResponse
-        PrepareReadyWorkspace()
+        PrepareWorkspace(bool createVerifiedBackup)
     {
         var configuration =
             new ConfigurationBuilder()
@@ -155,19 +199,22 @@ internal sealed class WealthLedgerApiFactory
                 .GetAwaiter()
                 .GetResult();
 
-        var backupResult =
-            scope.ServiceProvider
-                .GetRequiredService<
-                    CreateLocalBackupUseCase>()
-                .ExecuteAsync()
-                .GetAwaiter()
-                .GetResult();
-
-        if (!backupResult.Succeeded)
+        if (createVerifiedBackup)
         {
-            throw new InvalidOperationException(
-                $"Synthetic Ready backup creation failed: "
-                + $"{backupResult.Failure!.Category}.");
+            var backupResult =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        CreateLocalBackupUseCase>()
+                    .ExecuteAsync()
+                    .GetAwaiter()
+                    .GetResult();
+
+            if (!backupResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Synthetic Ready backup creation failed: "
+                    + $"{backupResult.Failure!.Category}.");
+            }
         }
 
         return new InitializeCoreLedgerResponse(
@@ -188,7 +235,9 @@ internal sealed class WealthLedgerApiFactory
                 DatabasePath,
 
             ["Backup:Directory"] =
-                BackupDirectory,
+                _startupMode == ApiTestStartupMode.Blocked
+                    ? null
+                    : BackupDirectory,
 
             ["Backup:DestinationSeparationConfirmed"] =
                 "true",

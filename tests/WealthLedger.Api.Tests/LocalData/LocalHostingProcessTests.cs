@@ -226,6 +226,40 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             HttpStatusCode.NotFound,
             response.StatusCode);
 
+        using var setupResponse =
+            await client.GetAsync(
+                new Uri(
+                    new Uri(listeningUrl),
+                    "/setup/storage"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            setupResponse.StatusCode);
+
+        var setupHtml =
+            await setupResponse.Content.ReadAsStringAsync();
+
+        Assert.Contains(
+            _databasePath,
+            setupHtml);
+
+        using var styleResponse =
+            await client.GetAsync(
+                new Uri(
+                    new Uri(listeningUrl),
+                    "/_content/WealthLedger.UI/css/setup.css"));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            styleResponse.StatusCode);
+
+        Assert.Contains(
+            ":root",
+            await styleResponse.Content.ReadAsStringAsync());
+
+        Assert.False(
+            File.Exists(_databasePath));
+
         Assert.DoesNotContain(
             "SQLite Error",
             process.CombinedOutput,

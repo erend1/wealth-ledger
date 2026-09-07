@@ -8,12 +8,16 @@ using WealthLedger.Application.Positions;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure;
 using WealthLedger.Infrastructure.LocalData;
+using WealthLedger.UI;
+using WealthLedger.UI.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.UseStaticWebAssets();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddWealthLedgerUi();
 builder.Services.AddWealthLedgerInfrastructure(
     builder.Configuration,
     new LocalDataRuntimeContext(
@@ -25,6 +29,8 @@ builder.Services.AddScoped<GetPositionUseCase>();
 builder.Services.AddScoped<InitializeCoreLedgerUseCase>();
 builder.Services.AddScoped<GetCoreLedgerSetupStateUseCase>();
 builder.Services.AddScoped<SelectLocalStartupModeUseCase>();
+builder.Services.AddScoped<GetLocalDataStatusUseCase>();
+builder.Services.AddScoped<InitializeLocalDatabaseUseCase>();
 builder.Services.AddScoped<GetLedgerTransactionUseCase>();
 builder.Services.AddScoped<PreviewPostedTransactionReversalUseCase>();
 builder.Services.AddScoped<ReversePostedTransactionUseCase>();
@@ -78,6 +84,10 @@ app.Logger.LogInformation(
     "Local startup mode: {StartupMode}",
     startupSelection.Mode);
 
+app.Services
+    .GetRequiredService<LocalUiStartupContext>()
+    .Initialize(startupSelection);
+
 if (startupSelection.Mode == LocalStartupMode.Blocked
     && startupSelection.Failure is not null)
 {
@@ -87,6 +97,9 @@ if (startupSelection.Mode == LocalStartupMode.Blocked
 }
 
 app.UseExceptionHandler();
+app.UseWealthLedgerUi();
+
+var mapRazorPages = false;
 
 switch (startupSelection.Mode)
 {
@@ -97,6 +110,8 @@ switch (startupSelection.Mode)
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:
+        mapRazorPages = true;
+
         if (app.Configuration.GetValue<bool>("Setup:Enabled"))
         {
             app.MapSetupEndpoints();
@@ -104,14 +119,25 @@ switch (startupSelection.Mode)
 
         break;
 
-    case LocalStartupMode.Blocked:
     case LocalStartupMode.StorageUninitialized:
+        mapRazorPages = true;
+        break;
+
+    case LocalStartupMode.Blocked:
+        mapRazorPages = true;
+        break;
+
     case LocalStartupMode.InitialBackupRequired:
         break;
 
     default:
         throw new InvalidOperationException(
             $"Unsupported local startup mode: {startupSelection.Mode}.");
+}
+
+if (mapRazorPages)
+{
+    app.MapRazorPages();
 }
 
 app.Run();

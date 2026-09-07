@@ -1,0 +1,31 @@
+@page "/blocked"
+@model WealthLedger.UI.Pages.BlockedModel
+@inject UiText Text
+@{
+    ViewData["Title"] = Text["Blocked_Title"];
+}
+
+<article class="flow panel panel--warning" aria-labelledby="blocked-heading">
+    <p class="eyebrow">@Text["Blocked_Eyebrow"]</p>
+    <h1 id="blocked-heading">@Text["Blocked_Title"]</h1>
+    <p class="lede">@Text["Blocked_Introduction"]</p>
+
+    <dl class="status-list">
+        <div>
+            <dt>@Text["Blocked_FailureCategoryLabel"]</dt>
+            <dd><code>@Model.FailureCategory</code></dd>
+        </div>
+    </dl>
+
+    <section class="callout" aria-labelledby="blocked-guidance-heading">
+        <h2 id="blocked-guidance-heading">@Text["Blocked_GuidanceTitle"]</h2>
+        <p>@Text[Model.GuidanceResourceKey]</p>
+        @if (Model.OperationsCommand is not null)
+        {
+            <p>@Text["Blocked_CommandIntroduction"]</p>
+            <pre class="command"><code>@Model.OperationsCommand</code></pre>
+        }
+    </section>
+
+    <p class="muted">@Text["Blocked_NoBrowserMutation"]</p>
+</article>
