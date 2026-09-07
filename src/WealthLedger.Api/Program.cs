@@ -31,6 +31,7 @@ builder.Services.AddScoped<GetCoreLedgerSetupStateUseCase>();
 builder.Services.AddScoped<SelectLocalStartupModeUseCase>();
 builder.Services.AddScoped<GetLocalDataStatusUseCase>();
 builder.Services.AddScoped<InitializeLocalDatabaseUseCase>();
+builder.Services.AddScoped<CreateLocalBackupUseCase>();
 builder.Services.AddScoped<GetLedgerTransactionUseCase>();
 builder.Services.AddScoped<PreviewPostedTransactionReversalUseCase>();
 builder.Services.AddScoped<ReversePostedTransactionUseCase>();
@@ -51,6 +52,15 @@ var hostingFailure = LocalHostingPolicy.Validate(app.Configuration);
 if (hostingFailure is not null)
 {
     WriteStartupFailure(hostingFailure);
+    return;
+}
+
+var presentationFailure =
+    LocalPresentationStartup.Validate(app.Services);
+
+if (presentationFailure is not null)
+{
+    WriteStartupFailure(presentationFailure);
     return;
 }
 
@@ -128,6 +138,7 @@ switch (startupSelection.Mode)
         break;
 
     case LocalStartupMode.InitialBackupRequired:
+        mapRazorPages = true;
         break;
 
     default:

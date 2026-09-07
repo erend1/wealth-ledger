@@ -1,0 +1,105 @@
+@page "/setup/backup"
+@model WealthLedger.UI.Pages.Setup.BackupModel
+@inject UiText Text
+@{
+    ViewData["Title"] = Text["Backup_Title"];
+}
+
+<article class="flow" aria-labelledby="backup-heading">
+    <p class="eyebrow">@Text["Setup_Eyebrow"]</p>
+    <h1 id="backup-heading">@Text["Backup_Title"]</h1>
+    <p class="lede">@Text["Backup_Introduction"]</p>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="validation-summary"
+             asp-validation-summary="All"
+             role="alert"
+             aria-label="@Text["Validation_SummaryLabel"]"></div>
+    }
+
+    @if (Model.ConfigurationAvailable)
+    {
+        <section class="panel flow" aria-labelledby="backup-destination-heading">
+            <h2 id="backup-destination-heading">@Text["Backup_DestinationTitle"]</h2>
+            <p>@Text["Backup_DestinationExplanation"]</p>
+
+            <dl class="path-review">
+                <div>
+                    <dt>@Text["Backup_DirectoryLabel"]</dt>
+                    <dd><code>@Model.BackupDirectory</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_DirectoryStateLabel"]</dt>
+                    <dd>
+                        @(Model.BackupDirectoryExists
+                            ? Text["Backup_State_Available"]
+                            : Text["Backup_State_WillBeCreated"])
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_EncryptionModeLabel"]</dt>
+                    <dd><code>@Model.EncryptionMode</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_SeparationAttestationLabel"]</dt>
+                    <dd>
+                        @(Model.DestinationSeparationConfirmed
+                            ? Text["Backup_State_Confirmed"]
+                            : Text["Backup_State_NotConfirmed"])
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_EncryptionAttestationLabel"]</dt>
+                    <dd>
+                        @(Model.DestinationEncryptionConfirmed
+                            ? Text["Backup_State_Confirmed"]
+                            : Text["Backup_State_NotConfirmed"])
+                    </dd>
+                </div>
+            </dl>
+
+            <p class="muted">@Text["Backup_AttestationExplanation"]</p>
+        </section>
+
+        <section class="panel flow" aria-labelledby="backup-protection-heading">
+            <h2 id="backup-protection-heading">@Text["Backup_ProtectionTitle"]</h2>
+            <p>@Text["Backup_ProtectionRequired"]</p>
+
+            @if (Model.UnrelatedVerifiedBackupCount > 0)
+            {
+                <div class="callout" role="status">
+                    <p>@Text["Backup_UnrelatedPackagesExplanation"]</p>
+                    <dl class="status-list">
+                        <div>
+                            <dt>@Text["Backup_UnrelatedPackagesCountLabel"]</dt>
+                            <dd>@Model.UnrelatedVerifiedBackupCount</dd>
+                        </div>
+                    </dl>
+                </div>
+            }
+        </section>
+
+        <form method="post" class="flow panel panel--action" novalidate>
+            <h2>@Text["Backup_ActionTitle"]</h2>
+            <p>@Text["Backup_ActionExplanation"]</p>
+
+            <div class="check-field">
+                <input id="ConfirmBackupCreation"
+                       name="ConfirmBackupCreation"
+                       type="checkbox"
+                       value="true"
+                       checked="@Model.ConfirmBackupCreation" />
+                <label for="ConfirmBackupCreation">
+                    @Text["Backup_ConfirmationLabel"]
+                </label>
+            </div>
+            <span class="field-error"
+                  asp-validation-for="ConfirmBackupCreation"></span>
+
+            <button class="button" type="submit">
+                @Text["Backup_Submit"]
+            </button>
+        </form>
+    }
+</article>

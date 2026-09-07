@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using WealthLedger.Api.Contracts;
 using WealthLedger.Application.LocalData;
@@ -18,16 +20,27 @@ internal sealed class WealthLedgerApiFactory
     : WebApplicationFactory<Program>
 {
     private readonly string _directoryPath;
+    private readonly LocalDataFailure? _backupCreationFailure;
+    private readonly bool _destinationEncryptionConfirmed;
+    private readonly bool _destinationSeparationConfirmed;
     private readonly bool _setupEnabled;
     private readonly ApiTestStartupMode _startupMode;
 
     internal WealthLedgerApiFactory(
         ApiTestStartupMode startupMode =
             ApiTestStartupMode.Ready,
-        bool setupEnabled = true)
+        bool setupEnabled = true,
+        LocalDataFailure? backupCreationFailure = null,
+        bool destinationSeparationConfirmed = true,
+        bool destinationEncryptionConfirmed = true)
     {
         _startupMode = startupMode;
         _setupEnabled = setupEnabled;
+        _backupCreationFailure = backupCreationFailure;
+        _destinationSeparationConfirmed =
+            destinationSeparationConfirmed;
+        _destinationEncryptionConfirmed =
+            destinationEncryptionConfirmed;
 
         _directoryPath = Path.Combine(
             Path.GetTempPath(),
@@ -53,18 +66,19 @@ internal sealed class WealthLedgerApiFactory
                 ApiTestStartupMode.StorageUninitialized
                 or ApiTestStartupMode.Blocked))
         {
-            MigrateCurrentDatabase();
+            MigrateDatabase(DatabasePath);
         }
 
         if (_startupMode is
             ApiTestStartupMode.InitialBackupRequired
             or ApiTestStartupMode.Ready)
         {
-            ReadySetup =
-                PrepareWorkspace(
+            ReadySetup = PrepareWorkspace(
+                    DatabasePath,
                     createVerifiedBackup:
                         _startupMode
-                        == ApiTestStartupMode.Ready);
+                        == ApiTestStartupMode.Ready)
+                .Setup;
         }
     }
 
@@ -92,16 +106,28 @@ internal sealed class WealthLedgerApiFactory
             (_, configuration) =>
             {
                 configuration.AddInMemoryCollection(
-                    CreateConfiguration());
+                    CreateHostConfiguration());
             });
+
+        if (_backupCreationFailure is not null)
+        {
+            builder.ConfigureTestServices(
+                services =>
+                {
+                    services.RemoveAll<ILocalBackupCreator>();
+                    services.AddSingleton<ILocalBackupCreator>(
+                        new FailingLocalBackupCreator(
+                            _backupCreationFailure));
+                });
+        }
     }
 
-    private void MigrateCurrentDatabase()
+    private static void MigrateDatabase(string databasePath)
     {
         var connectionString =
             new SqliteConnectionStringBuilder
             {
-                DataSource = DatabasePath,
+                DataSource = databasePath,
                 ForeignKeys = true,
                 Pooling = false
             }.ToString();
@@ -152,13 +178,59 @@ internal sealed class WealthLedgerApiFactory
             FileOptions.WriteThrough);
     }
 
-    private InitializeCoreLedgerResponse
-        PrepareWorkspace(bool createVerifiedBackup)
+    internal string CreateUnrelatedVerifiedBackup()
+    {
+        var unrelatedDataDirectory = Path.Combine(
+            _directoryPath,
+            "unrelated",
+            "data");
+        Directory.CreateDirectory(unrelatedDataDirectory);
+        var unrelatedDatabasePath = Path.Combine(
+            unrelatedDataDirectory,
+            "wealthledger.db");
+
+        MigrateDatabase(unrelatedDatabasePath);
+        var prepared = PrepareWorkspace(
+            unrelatedDatabasePath,
+            createVerifiedBackup: true);
+
+        return prepared.Backup!.FilePath;
+    }
+
+    internal string[] GetBackupPackagePaths()
+        => Directory.Exists(BackupDirectory)
+            ? Directory.GetFiles(
+                    BackupDirectory,
+                    "*.wlbackup",
+                    SearchOption.TopDirectoryOnly)
+                .Order(StringComparer.Ordinal)
+                .ToArray()
+            : [];
+
+    internal async Task<LocalDataStatus> ReadLocalDataStatusAsync()
+    {
+        using var scope = Services.CreateScope();
+        var result = await scope.ServiceProvider
+            .GetRequiredService<GetLocalDataStatusUseCase>()
+            .ExecuteAsync();
+
+        Assert.True(result.Succeeded, result.Failure?.Message);
+        return result.Value!;
+    }
+
+    private PreparedWorkspace PrepareWorkspace(
+        string databasePath,
+        bool createVerifiedBackup)
     {
         var configuration =
             new ConfigurationBuilder()
                 .AddInMemoryCollection(
-                    CreateConfiguration())
+                    CreateConfiguration(
+                        databasePath,
+                        BackupDirectory,
+                        _setupEnabled,
+                        _destinationSeparationConfirmed,
+                        _destinationEncryptionConfirmed))
                 .Build();
 
         var services =
@@ -199,6 +271,8 @@ internal sealed class WealthLedgerApiFactory
                 .GetAwaiter()
                 .GetResult();
 
+        LocalBackupCreation? backup = null;
+
         if (createVerifiedBackup)
         {
             var backupResult =
@@ -215,44 +289,49 @@ internal sealed class WealthLedgerApiFactory
                     $"Synthetic Ready backup creation failed: "
                     + $"{backupResult.Failure!.Category}.");
             }
+
+            backup = backupResult.Value;
         }
 
-        return new InitializeCoreLedgerResponse(
-            setupResult.HouseholdId,
-            setupResult.HouseholdMemberId,
-            setupResult.InstitutionId,
-            setupResult.PortfolioId,
-            setupResult.AccountId,
-            setupResult.CashAssetId,
-            setupResult.FundAssetId);
+        return new PreparedWorkspace(
+            new InitializeCoreLedgerResponse(
+                setupResult.HouseholdId,
+                setupResult.HouseholdMemberId,
+                setupResult.InstitutionId,
+                setupResult.PortfolioId,
+                setupResult.AccountId,
+                setupResult.CashAssetId,
+                setupResult.FundAssetId),
+            backup);
     }
 
-    private Dictionary<string, string?>
-        CreateConfiguration()
+    private Dictionary<string, string?> CreateHostConfiguration()
+        => CreateConfiguration(
+            DatabasePath,
+            _startupMode == ApiTestStartupMode.Blocked
+                ? null
+                : BackupDirectory,
+            _setupEnabled,
+            _destinationSeparationConfirmed,
+            _destinationEncryptionConfirmed);
+
+    private static Dictionary<string, string?> CreateConfiguration(
+        string databasePath,
+        string? backupDirectory,
+        bool setupEnabled,
+        bool destinationSeparationConfirmed,
+        bool destinationEncryptionConfirmed)
         => new()
         {
-            ["Storage:DatabasePath"] =
-                DatabasePath,
-
-            ["Backup:Directory"] =
-                _startupMode == ApiTestStartupMode.Blocked
-                    ? null
-                    : BackupDirectory,
-
+            ["Storage:DatabasePath"] = databasePath,
+            ["Backup:Directory"] = backupDirectory,
             ["Backup:DestinationSeparationConfirmed"] =
-                "true",
-
+                destinationSeparationConfirmed.ToString(),
             ["Backup:DestinationEncryptionConfirmed"] =
-                "true",
-
-            ["Setup:Enabled"] =
-                _setupEnabled.ToString(),
-
-            ["urls"] =
-                "http://127.0.0.1:0",
-
-            ["AllowedHosts"] =
-                "localhost;127.0.0.1;[::1]"
+                destinationEncryptionConfirmed.ToString(),
+            ["Setup:Enabled"] = setupEnabled.ToString(),
+            ["urls"] = "http://127.0.0.1:0",
+            ["AllowedHosts"] = "localhost;127.0.0.1;[::1]"
         };
 
     protected override void Dispose(
@@ -274,5 +353,28 @@ internal sealed class WealthLedgerApiFactory
                 _directoryPath,
                 recursive: true);
         }
+    }
+
+    private sealed record PreparedWorkspace(
+        InitializeCoreLedgerResponse Setup,
+        LocalBackupCreation? Backup);
+
+    private sealed class FailingLocalBackupCreator
+        : ILocalBackupCreator
+    {
+        private readonly LocalDataFailure _failure;
+
+        internal FailingLocalBackupCreator(
+            LocalDataFailure failure)
+        {
+            _failure = failure;
+        }
+
+        public Task<LocalDataOperationResult<LocalBackupCreation>> CreateAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(
+                new LocalDataOperationResult<LocalBackupCreation>(
+                    Value: null,
+                    _failure));
     }
 }

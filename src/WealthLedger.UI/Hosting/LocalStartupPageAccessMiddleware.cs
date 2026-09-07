@@ -4,10 +4,6 @@ namespace WealthLedger.UI.Hosting;
 
 internal sealed class LocalStartupPageAccessMiddleware
 {
-    private const string ContentSecurityPolicy =
-        "default-src 'self'; object-src 'none'; base-uri 'self'; "
-        + "form-action 'self'; frame-ancestors 'none'";
-
     private readonly RequestDelegate _next;
 
     public LocalStartupPageAccessMiddleware(RequestDelegate next)
@@ -31,7 +27,7 @@ internal sealed class LocalStartupPageAccessMiddleware
             return;
         }
 
-        AddSecurityHeaders(context.Response.Headers);
+        LocalUiSecurityHeaders.Apply(context.Response.Headers);
 
         if (!access.Allows(startupContext.Mode))
         {
@@ -57,12 +53,4 @@ internal sealed class LocalStartupPageAccessMiddleware
         => HttpMethods.IsGet(method)
            || HttpMethods.IsHead(method)
            || (supportsPost && HttpMethods.IsPost(method));
-
-    private static void AddSecurityHeaders(IHeaderDictionary headers)
-    {
-        headers.ContentSecurityPolicy = ContentSecurityPolicy;
-        headers.XContentTypeOptions = "nosniff";
-        headers.XFrameOptions = "DENY";
-        headers["Referrer-Policy"] = "no-referrer";
-    }
 }

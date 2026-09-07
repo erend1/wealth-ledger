@@ -23,14 +23,17 @@ Core setup uses a lease-scoped session, and setup-state inspection
 distinguishes empty, complete, and partial/conflicting master graphs.
 
 Guided browser initialization now exposes only the mode-appropriate Blocked,
-StorageUninitialized, and WorkspaceUninitialized Razor Pages. Storage creation
-and atomic workspace setup call the existing ownership-safe Application
-operations, require antiforgery, use PRG, derive retries from persisted reality,
-and leave the process in its startup mode with honest restart guidance.
+StorageUninitialized, WorkspaceUninitialized, and InitialBackupRequired Razor
+Pages. Storage creation, atomic workspace setup, and initial verified-backup
+creation call the existing ownership-safe Application operations, require
+antiforgery for mutations, use PRG, derive retries and completion from persisted
+reality, and leave the process in its startup mode with honest restart guidance.
+Backup completion requires a verified package whose workspace binding is
+`Matched`; it does not use the M004 acknowledgement flags as a readiness gate.
 
-The required initial-backup workflow, Ready shell, transaction explanation,
-remaining UI/privacy/accessibility hardening, Playwright browser verification,
-and final M006 documentation verification remain unimplemented.
+The Ready shell, transaction explanation, remaining UI/privacy/accessibility
+hardening, Playwright browser verification, and final M006 documentation
+verification remain unimplemented.
 
 ## User outcome
 

@@ -8,7 +8,8 @@ namespace WealthLedger.UI.Pages.Setup;
 [LocalStartupPage(
     supportsPost: false,
     LocalStartupMode.StorageUninitialized,
-    LocalStartupMode.WorkspaceUninitialized)]
+    LocalStartupMode.WorkspaceUninitialized,
+    LocalStartupMode.InitialBackupRequired)]
 public sealed class IndexModel : PageModel
 {
     private readonly LocalUiStartupContext _startupContext;
@@ -27,6 +28,9 @@ public sealed class IndexModel : PageModel
 
             LocalStartupMode.WorkspaceUninitialized =>
                 RedirectToPage("/Setup/Workspace"),
+
+            LocalStartupMode.InitialBackupRequired =>
+                RedirectToPage("/Setup/Backup"),
 
             _ => NotFound()
         };

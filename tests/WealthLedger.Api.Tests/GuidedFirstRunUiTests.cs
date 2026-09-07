@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using WealthLedger.Application.LocalData;
 
 namespace WealthLedger.Api.Tests;
 
@@ -26,8 +27,9 @@ public sealed partial class GuidedFirstRunUiTests
 
         await AssertRouteExposureAsync(
             ApiTestStartupMode.InitialBackupRequired,
-            expectedPage: null,
-            expectedSetupRedirect: null);
+            expectedPage: "/setup/backup",
+            expectedSetupRedirect: "/setup/backup",
+            completionRedirectExpected: true);
 
         await AssertRouteExposureAsync(
             ApiTestStartupMode.Ready,
@@ -109,6 +111,13 @@ public sealed partial class GuidedFirstRunUiTests
         Assert.Equal(
             "text/css",
             styleResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(
+            "nosniff",
+            styleResponse.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal(
+            "default-src 'self'; object-src 'none'; base-uri 'self'; "
+            + "form-action 'self'; frame-ancestors 'none'",
+            styleResponse.Headers.GetValues("Content-Security-Policy").Single());
         Assert.DoesNotContain("url(http", style, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -494,6 +503,257 @@ public sealed partial class GuidedFirstRunUiTests
     }
 
     [Fact]
+    public async Task BackupGet_ReviewsStatusWithoutCreatingDirectoryOrPackage()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+
+        Assert.False(Directory.Exists(factory.BackupDirectory));
+
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync("/setup/backup");
+        var html = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(factory.BackupDirectory, html);
+        Assert.Contains("__RequestVerificationToken", html);
+        Assert.Contains("İlk doğrulanmış yedeği", html);
+        Assert.DoesNotContain("name=\"BackupDirectory\"", html);
+        Assert.DoesNotContain("localStorage", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Data Source=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.False(Directory.Exists(factory.BackupDirectory));
+        Assert.Empty(factory.GetBackupPackagePaths());
+    }
+
+    [Fact]
+    public async Task BackupPost_WithoutAntiforgeryCreatesNothing()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+        using var client = CreateClient(factory);
+
+        using var response = await client.PostAsync(
+            "/setup/backup",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    ["ConfirmBackupCreation"] = "true"
+                }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(Directory.Exists(factory.BackupDirectory));
+        Assert.Empty(factory.GetBackupPackagePaths());
+    }
+
+    [Fact]
+    public async Task BackupPost_CreatesMatchedVerifiedGenerationAndUsesPrg()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+        using var client = CreateClient(factory);
+        var token = await GetAntiforgeryTokenAsync(
+            client,
+            "/setup/backup");
+
+        using var response = await PostBackupAsync(client, token);
+
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.Equal(
+            "/setup/complete",
+            response.Headers.Location?.OriginalString);
+
+        var packages = factory.GetBackupPackagePaths();
+        Assert.Single(packages);
+        Assert.True(File.Exists(packages[0]));
+
+        var status = await factory.ReadLocalDataStatusAsync();
+        Assert.NotNull(status.LatestVerifiedBackup);
+        Assert.Equal(
+            LocalBackupWorkspaceBinding.Matched,
+            status.LatestVerifiedBackup!.WorkspaceBinding);
+        Assert.Equal(12, status.LatestVerifiedBackup.DigestPrefix.Length);
+    }
+
+    [Fact]
+    public async Task BackupPost_AcknowledgementFlagsDoNotWithholdCompletion()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired,
+                destinationSeparationConfirmed: false,
+                destinationEncryptionConfirmed: false);
+        using var client = CreateClient(factory);
+        var token = await GetAntiforgeryTokenAsync(
+            client,
+            "/setup/backup");
+
+        using var response = await PostBackupAsync(client, token);
+
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.Equal(
+            "/setup/complete",
+            response.Headers.Location?.OriginalString);
+
+        var status = await factory.ReadLocalDataStatusAsync();
+        Assert.NotNull(status.LatestVerifiedBackup);
+        Assert.Equal(
+            LocalBackupWorkspaceBinding.Matched,
+            status.LatestVerifiedBackup!.WorkspaceBinding);
+        Assert.False(status.LocalProtectionReady);
+    }
+
+    [Fact]
+    public async Task BackupPost_RetryCreatesAnotherImmutableGeneration()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+        using var client = CreateClient(factory);
+        var token = await GetAntiforgeryTokenAsync(
+            client,
+            "/setup/backup");
+
+        using var first = await PostBackupAsync(client, token);
+        var firstPackages = factory.GetBackupPackagePaths();
+        var firstPath = Assert.Single(firstPackages);
+        var firstLength = new FileInfo(firstPath).Length;
+
+        using var retry = await PostBackupAsync(client, token);
+        var retryPackages = factory.GetBackupPackagePaths();
+
+        Assert.Equal(HttpStatusCode.Found, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Found, retry.StatusCode);
+        Assert.Equal(2, retryPackages.Length);
+        Assert.Contains(firstPath, retryPackages);
+        Assert.Equal(firstLength, new FileInfo(firstPath).Length);
+        Assert.All(retryPackages, path => Assert.True(File.Exists(path)));
+    }
+
+    [Fact]
+    public async Task BackupPost_WhenOwnershipIsBusyReturnsSanitizedGuidance()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+        using var client = CreateClient(factory);
+        var token = await GetAntiforgeryTokenAsync(
+            client,
+            "/setup/backup");
+        await using var ownership = factory.AcquireDatabaseOwnership();
+
+        using var response = await PostBackupAsync(client, token);
+        var html = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("Başka bir yerel veri işlemi", html);
+        Assert.DoesNotContain("SqliteException", html);
+        Assert.DoesNotContain("Data Source=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(" at WealthLedger", html);
+        Assert.Empty(factory.GetBackupPackagePaths());
+        AssertPrivateDiagnosticsAbsent(factory);
+    }
+
+    [Fact]
+    public async Task BackupPost_VerificationFailureIsSanitizedAndPublishesNothing()
+    {
+        const string privateFailure =
+            "PRIVATE_BACKUP_FAILURE Data Source=Synthetic";
+
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired,
+                backupCreationFailure: new LocalDataFailure(
+                    LocalDataFailureCategory.InvalidBackup,
+                    privateFailure));
+        using var client = CreateClient(factory);
+        var token = await GetAntiforgeryTokenAsync(
+            client,
+            "/setup/backup");
+
+        using var response = await PostBackupAsync(client, token);
+        var html = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("bağımsız doğrulamayı tamamlamadı", html);
+        Assert.DoesNotContain(privateFailure, html);
+        Assert.DoesNotContain("Data Source=", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            factory.Logs.Messages,
+            message => message.Contains(
+                privateFailure,
+                StringComparison.Ordinal));
+        Assert.Empty(factory.GetBackupPackagePaths());
+    }
+
+    [Fact]
+    public async Task UnrelatedVerifiedPackageDoesNotSatisfyCompletion()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+        var unrelatedPackage =
+            factory.CreateUnrelatedVerifiedBackup();
+        using var client = CreateClient(factory);
+
+        using var backupResponse =
+            await client.GetAsync("/setup/backup");
+        var backupHtml = WebUtility.HtmlDecode(
+            await backupResponse.Content.ReadAsStringAsync());
+        using var completeResponse =
+            await client.GetAsync("/setup/complete");
+
+        Assert.Equal(HttpStatusCode.OK, backupResponse.StatusCode);
+        Assert.Contains("Eşleşmeyen paket sayısı", backupHtml);
+        Assert.Contains(">1<", backupHtml);
+        Assert.Equal(HttpStatusCode.Found, completeResponse.StatusCode);
+        Assert.Equal(
+            "/setup/backup",
+            completeResponse.Headers.Location?.OriginalString);
+        Assert.Equal([unrelatedPackage], factory.GetBackupPackagePaths());
+
+        var status = await factory.ReadLocalDataStatusAsync();
+        Assert.Null(status.LatestVerifiedBackup);
+        Assert.Equal(1, status.UnrelatedVerifiedBackupCount);
+    }
+
+    [Fact]
+    public async Task CompletePageRequiresCleanRestartAndDoesNotPromoteCurrentHost()
+    {
+        using var factory =
+            new WealthLedgerApiFactory(
+                ApiTestStartupMode.InitialBackupRequired);
+        using var client = CreateClient(factory);
+        var token = await GetAntiforgeryTokenAsync(
+            client,
+            "/setup/backup");
+
+        using var postResponse = await PostBackupAsync(client, token);
+        using var completeResponse =
+            await client.GetAsync(postResponse.Headers.Location);
+        var html = WebUtility.HtmlDecode(
+            await completeResponse.Content.ReadAsStringAsync());
+        using var ledgerResponse =
+            await client.GetAsync("/api/households");
+        using var completePost = await client.PostAsync(
+            "/setup/complete",
+            new FormUrlEncodedContent([]));
+
+        Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
+        Assert.Contains("temiz biçimde yeniden başlatın", html);
+        Assert.Contains("InitialBackupRequired", html);
+        Assert.Contains("Çalışma alanı ilişkisi", html);
+        Assert.Contains("Eşleşti", html);
+        Assert.Equal(HttpStatusCode.NotFound, ledgerResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, completePost.StatusCode);
+    }
+
+    [Fact]
     public async Task ReadyAndBlockedHosts_CannotUseSetupMutationRoutesDirectly()
     {
         foreach (var mode in new[]
@@ -515,9 +775,17 @@ public sealed partial class GuidedFirstRunUiTests
             using var workspaceResponse = await client.PostAsync(
                 "/setup/workspace",
                 new FormUrlEncodedContent(CreateWorkspaceForm()));
+            using var backupResponse = await client.PostAsync(
+                "/setup/backup",
+                new FormUrlEncodedContent(
+                    new Dictionary<string, string>
+                    {
+                        ["ConfirmBackupCreation"] = "true"
+                    }));
 
             Assert.Equal(HttpStatusCode.NotFound, storageResponse.StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, workspaceResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, backupResponse.StatusCode);
         }
     }
 
@@ -577,6 +845,7 @@ public sealed partial class GuidedFirstRunUiTests
         ApiTestStartupMode mode,
         string? expectedPage,
         string? expectedSetupRedirect,
+        bool completionRedirectExpected = false,
         HttpStatusCode ledgerExpected = HttpStatusCode.NotFound)
     {
         using var factory = new WealthLedgerApiFactory(mode);
@@ -592,6 +861,20 @@ public sealed partial class GuidedFirstRunUiTests
                  })
         {
             using var response = await client.GetAsync(path);
+
+            if (completionRedirectExpected
+                && string.Equals(
+                    path,
+                    "/setup/complete",
+                    StringComparison.Ordinal))
+            {
+                Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+                Assert.Equal(
+                    "/setup/backup",
+                    response.Headers.Location?.OriginalString);
+                continue;
+            }
+
             var expected = string.Equals(
                 path,
                 expectedPage,
@@ -658,6 +941,18 @@ public sealed partial class GuidedFirstRunUiTests
                     ["__RequestVerificationToken"] = token
                 }));
 
+    private static Task<HttpResponseMessage> PostBackupAsync(
+        HttpClient client,
+        string token)
+        => client.PostAsync(
+            "/setup/backup",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    ["ConfirmBackupCreation"] = "true",
+                    ["__RequestVerificationToken"] = token
+                }));
+
     private static Dictionary<string, string> CreateWorkspaceForm(
         string? token = null)
     {
@@ -721,6 +1016,11 @@ public sealed partial class GuidedFirstRunUiTests
             factory.Logs.Messages,
             message => message.Contains(
                 factory.DatabasePath,
+                StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            factory.Logs.Messages,
+            message => message.Contains(
+                factory.BackupDirectory,
                 StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(
             factory.Logs.Messages,

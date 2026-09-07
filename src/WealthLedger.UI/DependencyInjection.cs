@@ -17,10 +17,8 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var presentationCulture =
-            PresentationCulture.CreateDefault();
-
-        services.AddSingleton(presentationCulture);
+        services.AddSingleton(
+            _ => PresentationCulture.CreateDefault());
         services.AddSingleton<ValuePresenter>();
         services.AddSingleton<UiText>();
         services.AddSingleton<LocalUiStartupContext>();
@@ -65,7 +63,13 @@ public static class DependencyInjection
             .Value;
 
         application.UseRequestLocalization(localization);
-        application.UseStaticFiles();
+        application.UseStaticFiles(
+            new StaticFileOptions
+            {
+                OnPrepareResponse = context =>
+                    LocalUiSecurityHeaders.Apply(
+                        context.Context.Response.Headers)
+            });
         application.UseRouting();
         application.UseMiddleware<LocalStartupPageAccessMiddleware>();
 

@@ -597,4 +597,136 @@
   <data name="Workspace_Error_PersistenceConflict" xml:space="preserve">
     <value>Temel kayıtlar atomik olarak kaydedilemedi. İşlem tamamlanmadı; güvenli durumu yeniden okumak için uygulamayı yeniden başlatın.</value>
   </data>
+  <data name="Backup_Title" xml:space="preserve">
+    <value>İlk doğrulanmış yedeği oluşturun</value>
+  </data>
+  <data name="Backup_Introduction" xml:space="preserve">
+    <value>Çalışma alanını normal kullanıma açmadan önce ona ait yeni ve bağımsız olarak doğrulanmış bir yedek kuşağı oluşturun.</value>
+  </data>
+  <data name="Backup_DestinationTitle" xml:space="preserve">
+    <value>Yedekleme hedefini gözden geçirin</value>
+  </data>
+  <data name="Backup_DestinationExplanation" xml:space="preserve">
+    <value>Bu hedef sunucu yapılandırmasından gelir. Tarayıcı başka bir dizin seçemez, dosya yükleyemez veya var olan bir yedeğin üzerine yazamaz.</value>
+  </data>
+  <data name="Backup_DirectoryLabel" xml:space="preserve">
+    <value>Yapılandırılmış yedekleme dizini</value>
+  </data>
+  <data name="Backup_DirectoryStateLabel" xml:space="preserve">
+    <value>Dizin durumu</value>
+  </data>
+  <data name="Backup_EncryptionModeLabel" xml:space="preserve">
+    <value>Uygulama düzeyi şifreleme kipi</value>
+  </data>
+  <data name="Backup_SeparationAttestationLabel" xml:space="preserve">
+    <value>Hedef ayrımı beyanı</value>
+  </data>
+  <data name="Backup_EncryptionAttestationLabel" xml:space="preserve">
+    <value>Cihaz şifreleme beyanı</value>
+  </data>
+  <data name="Backup_State_Available" xml:space="preserve">
+    <value>Mevcut</value>
+  </data>
+  <data name="Backup_State_WillBeCreated" xml:space="preserve">
+    <value>İlk başarılı yedekte oluşturulacak</value>
+  </data>
+  <data name="Backup_State_Confirmed" xml:space="preserve">
+    <value>Onaylandı</value>
+  </data>
+  <data name="Backup_State_NotConfirmed" xml:space="preserve">
+    <value>Onaylanmadı</value>
+  </data>
+  <data name="Backup_AttestationExplanation" xml:space="preserve">
+    <value>Bu iki beyan M004 veri güvenliği uyarılarıdır. Çalışma alanına ait doğrulanmış yedek zorunludur; beyanların kendisi normal yerel kabuğu açma koşulu değildir.</value>
+  </data>
+  <data name="Backup_ProtectionTitle" xml:space="preserve">
+    <value>Geçerli koruma durumu</value>
+  </data>
+  <data name="Backup_ProtectionRequired" xml:space="preserve">
+    <value>Bu çalışma alanıyla eşleşen doğrulanmış bir paket henüz yok. Başka bir çalışma alanının paketi bu adımı tamamlamaz.</value>
+  </data>
+  <data name="Backup_UnrelatedPackagesExplanation" xml:space="preserve">
+    <value>Dizinde doğrulanabilen ancak bu çalışma alanına ait olduğu kanıtlanamayan paketler var. Bunlar korunma veya tamamlanma sayılmaz ve değiştirilmeyecektir.</value>
+  </data>
+  <data name="Backup_UnrelatedPackagesCountLabel" xml:space="preserve">
+    <value>Eşleşmeyen paket sayısı</value>
+  </data>
+  <data name="Backup_ActionTitle" xml:space="preserve">
+    <value>Yeni değişmez kuşak oluşturun</value>
+  </data>
+  <data name="Backup_ActionExplanation" xml:space="preserve">
+    <value>WealthLedger canlı veritabanının tutarlı bir anlık görüntüsünü alır, paketi bağımsız olarak doğrular ve yalnızca doğrulama geçerse benzersiz bir .wlbackup dosyası yayımlar.</value>
+  </data>
+  <data name="Backup_ConfirmationLabel" xml:space="preserve">
+    <value>Gösterilen hedefi ve yeni bir yedek kuşağı oluşturulacağını gözden geçirdim.</value>
+  </data>
+  <data name="Backup_Submit" xml:space="preserve">
+    <value>Yedeği oluştur ve doğrula</value>
+  </data>
+  <data name="Backup_Validation_ConfirmationRequired" xml:space="preserve">
+    <value>Yedeği oluşturmadan önce gösterilen hedefi gözden geçirdiğinizi onaylayın.</value>
+  </data>
+  <data name="Backup_Error_StateUnavailable" xml:space="preserve">
+    <value>Yedekleme durumu güvenle okunamadı. Hiçbir paket oluşturulmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Backup_Error_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir yerel veri işlemi devam ediyor. Yeni paket yayımlanmadı; işlem tamamlandıktan sonra güvenle yeniden deneyin.</value>
+  </data>
+  <data name="Backup_Error_VerificationFailed" xml:space="preserve">
+    <value>Yeni yedek bağımsız doğrulamayı tamamlamadı. Son görünümlü bir paket yayımlanmadı; güvenle yeniden deneyebilirsiniz.</value>
+  </data>
+  <data name="Backup_Error_DatabaseNotReady" xml:space="preserve">
+    <value>Canlı veritabanı artık bu yedekleme adımı için hazır değil. Paket oluşturulmadı; uygulamayı temiz biçimde yeniden başlatın.</value>
+  </data>
+  <data name="Backup_Error_Cancelled" xml:space="preserve">
+    <value>Yedekleme yayımlanmadan iptal edildi. Güvenli durumu yeniden okuyup tekrar deneyebilirsiniz.</value>
+  </data>
+  <data name="Backup_Error_CreationFailed" xml:space="preserve">
+    <value>Yeni yedek güvenle oluşturulup doğrulanamadı. Var olan paketler değiştirilmedi; güvenle yeniden deneyebilirsiniz.</value>
+  </data>
+  <data name="Complete_Title" xml:space="preserve">
+    <value>İlk kurulum korumalı durumda</value>
+  </data>
+  <data name="Complete_Introduction" xml:space="preserve">
+    <value>Çalışma alanına ait ilk değişmez yedek oluşturuldu ve bağımsız olarak doğrulandı.</value>
+  </data>
+  <data name="Complete_Status" xml:space="preserve">
+    <value>Yedek doğrulandı</value>
+  </data>
+  <data name="Complete_BackupTitle" xml:space="preserve">
+    <value>Eşleşen yedek özeti</value>
+  </data>
+  <data name="Complete_BackupPathLabel" xml:space="preserve">
+    <value>Doğrulanmış paket</value>
+  </data>
+  <data name="Complete_CreatedAtLabel" xml:space="preserve">
+    <value>Oluşturulma zamanı</value>
+  </data>
+  <data name="Complete_VerifiedAtLabel" xml:space="preserve">
+    <value>Doğrulama zamanı</value>
+  </data>
+  <data name="Complete_DigestPrefixLabel" xml:space="preserve">
+    <value>Doğrulama özeti öneki</value>
+  </data>
+  <data name="Complete_WorkspaceBindingLabel" xml:space="preserve">
+    <value>Çalışma alanı ilişkisi</value>
+  </data>
+  <data name="Complete_WorkspaceBindingMatched" xml:space="preserve">
+    <value>Eşleşti</value>
+  </data>
+  <data name="Complete_RestartTitle" xml:space="preserve">
+    <value>WealthLedger'ı temiz biçimde yeniden başlatın</value>
+  </data>
+  <data name="Complete_RestartExplanation" xml:space="preserve">
+    <value>Bu süreci durdurun ve WealthLedger'ı yeniden başlatın. Yeni süreç depolama, çalışma alanı ve eşleşen yedeği baştan doğruladıktan sonra normal kullanıma geçecektir.</value>
+  </data>
+  <data name="Complete_ProcessStillSetup" xml:space="preserve">
+    <value>Çalışan süreç hâlâ InitialBackupRequired kurulum kipindedir; normal kayıt rotaları bu süreçte açılmaz.</value>
+  </data>
+  <data name="Complete_NoHoldings" xml:space="preserve">
+    <value>Kurulum bakiye, pozisyon veya yatırım işlemi oluşturmadı. Varlık geçmişi daha sonraki kabul edilmiş kayıt iş akışlarıyla başlayacaktır.</value>
+  </data>
+  <data name="Complete_Error_StateUnavailable" xml:space="preserve">
+    <value>Tamamlanma durumu güvenle doğrulanamadı. Normal kullanım açılmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
 </root>

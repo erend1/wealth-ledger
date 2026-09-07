@@ -65,20 +65,20 @@ found during pre-implementation reconciliation. ADR-008 records the accepted UI
 and hosting architecture and the two explicit refinements it makes to ADR-007.
 M006 is now In Progress and is the only In Progress milestone.
 
-Four commit boundaries are complete: workspace-bound protection readiness, the
+Five commit boundaries are complete: workspace-bound protection readiness, the
 `WealthLedger.UI` assembly with exact Turkish-first presentation, the
 fail-closed startup-mode boundary, and guided browser initialization for
-storage and workspace setup.
+storage, workspace setup, and the required initial backup.
 
-The remaining boundaries are not implemented: the required initial-backup
-workflow, the Ready shell with Today, Ledger and read-only Settings, the
-transaction explanation, remaining privacy and accessibility hardening,
-Playwright browser verification, and the final M006 documentation checkpoint.
-No browser test project exists yet.
+The remaining boundaries are not implemented: the Ready shell with Today,
+Ledger and read-only Settings, the transaction explanation, remaining privacy
+and accessibility hardening, Playwright browser verification, and the final
+M006 documentation checkpoint. No browser test project exists yet.
 
-`InitialBackupRequired` and `Ready` therefore currently map no presentation
-routes. A host that reaches either mode serves its JSON API, where mapped, but
-no page. A complete first run cannot yet be finished through the browser, and
+`InitialBackupRequired` now maps the initial-backup review/action and completion
+pages. The running setup process remains in that static mode after backup
+creation and clearly requires one clean restart. `Ready` still maps no
+presentation routes, so the normal application shell is not implemented and
 M006 is not Verified.
 
 ## Verified implementation
@@ -332,9 +332,23 @@ guidance. Setup pages use only the framework antiforgery cookie and hold no
 authoritative workflow state. The default-off JSON setup endpoint is mapped only
 in `WorkspaceUninitialized` and remains independent of the browser wizard.
 
-`InitialBackupRequired` and `Ready` currently map no presentation routes, so the
-guided first run cannot yet be completed in a browser and no Today, Ledger, or
-Settings page exists.
+`InitialBackupRequired` maps only `/setup`, `/setup/backup`, and
+`/setup/complete`. The backup GET reads current status without creating a
+directory or package. Its antiforgery-protected POST calls the existing M004
+backup Application operation, which owns the database only for that request,
+creates a new collision-safe immutable generation, independently verifies it,
+and publishes no final-looking package on failure. Completion is derived on
+each request only from a verified package whose workspace binding is `Matched`;
+the M004 separation and encryption acknowledgements are shown but do not gate
+completion. Successful and replayed POSTs use Post/Redirect/Get and never
+overwrite an earlier package. The completion page explains that the process is
+still in setup mode and requires a clean restart.
+
+Static RCL assets now receive the same CSP and `nosniff` policy as Razor Pages.
+Presentation culture/time-zone construction is deferred until after host build,
+where an unavailable configured culture or time zone is converted to the same
+sanitized fail-closed startup result as other startup failures. `Ready` still
+maps no presentation routes, so no Today, Ledger, or Settings page exists.
 
 ### Posted reversal and correction
 
@@ -388,9 +402,9 @@ Results:
 - Application tests: 118 passed, 0 failed.
 - Infrastructure tests against real SQLite files: 171 passed, 0 failed.
 - UI presentation/contract tests: 51 passed, 0 failed.
-- API tests against real SQLite files: 89 passed, 0 failed.
+- API tests against real SQLite files: 100 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 535 passed, 0 failed.
+- Total: 546 passed, 0 failed.
 - Formatting drift: none in the current worktree; see the SDK line-ending
   caveat below.
 - EF model drift: none. The migration chain is unchanged at five migrations;
@@ -448,14 +462,18 @@ apart from the migration-chain head moving to 005.
 
 M006 focused verification passed 51 UI presentation and stable-code contract
 tests, 23 Application startup-mode selection tests, real-SQLite setup-session
-and setup-state reader tests, and 18 guided first-run host tests. Those host
-tests prove mode-scoped route exposure, a read-only blocked page free of paths
-and storage internals, create-only storage initialization with Post/
-Redirect/Get, retry against already-created storage, sanitized ownership-busy
-guidance, atomic workspace setup with no partial graph on failure, rejection of
-both storage and workspace POSTs without a valid antiforgery token, absence of
-raw identifiers and submitted values from rendered pages and captured logs, and
-the setup pages using no authoritative client state beyond the framework
+and setup-state reader tests, 26 guided first-run UI tests, and two sanitized
+presentation-startup tests. The browser host tests prove mode-scoped route
+exposure, a read-only blocked page free of paths and storage internals,
+create-only storage initialization with Post/Redirect/Get, retry against
+already-created storage, sanitized ownership-busy guidance, atomic workspace
+setup with no partial graph on failure, and rejection of setup POSTs without a
+valid antiforgery token. They also prove that backup GET is side-effect free,
+each successful POST publishes a separate verified generation, failed and busy
+attempts expose no private diagnostics, unrelated-workspace packages cannot
+satisfy completion, M004 acknowledgement flags do not gate it, static assets
+receive security headers, and the current process never promotes itself to
+`Ready`. Setup pages use no authoritative client state beyond the framework
 antiforgery cookie.
 
 The M003 suite proves exact Domain reversal and reconstitution, normalized
@@ -478,10 +496,10 @@ caveat remains.
 
 M006 was accepted on 2026-09-03 and its eleven decisions, with Decision 4 as
 amended, are recorded by ADR-008. Its UI assembly, presentation formatters,
-startup-mode boundary and guided storage/workspace initialization are
-implemented and covered by the suites above. Its initial-backup workflow, Ready
-shell, transaction explanation, and browser verification are not, so M006
-remains In Progress rather than Verified.
+startup-mode boundary, guided storage/workspace initialization, and required
+initial-backup workflow are implemented and covered by the suites above. Its
+Ready shell, transaction explanation, and browser verification are not, so
+M006 remains In Progress rather than Verified.
 
 ## Next delivery candidate
 
@@ -490,11 +508,10 @@ accepted on 2026-09-03 and ADR-008 records the resulting architecture.
 
 Delivered so far: workspace-bound protection readiness, the UI assembly and
 presentation formatters, the fail-closed startup-mode boundary, and guided
-storage and workspace initialization. Still to deliver: the required
-initial-backup workflow, the Ready shell, the transaction explanation,
-remaining privacy and accessibility hardening, Playwright browser verification,
-and the final documentation checkpoint that would allow M006 to become
-Verified.
+storage, workspace, and required initial-backup initialization. Still to
+deliver: the Ready shell, the transaction explanation, remaining privacy and
+accessibility hardening, Playwright browser verification, and the final
+documentation checkpoint that would allow M006 to become Verified.
 
 M007 remains the next candidate after it.
 
