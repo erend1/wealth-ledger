@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-09-03
+As of: 2026-09-07
 
 Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
 
@@ -65,13 +65,21 @@ found during pre-implementation reconciliation. ADR-008 records the accepted UI
 and hosting architecture and the two explicit refinements it makes to ADR-007.
 M006 is now In Progress and is the only In Progress milestone.
 
-Its first commit boundary is complete and verified: local protection readiness
-now requires a verified backup proved to belong to the configured live
-database. The remaining boundaries — the UI assembly, exact value presentation,
-fail-closed startup modes, guided first run, the read-only shell, and browser
-verification — are not implemented. There is still no UI project, page,
-static-asset pipeline, or browser test, and no UI behavior is claimed as
-verified.
+Four commit boundaries are complete: workspace-bound protection readiness, the
+`WealthLedger.UI` assembly with exact Turkish-first presentation, the
+fail-closed startup-mode boundary, and guided browser initialization for
+storage and workspace setup.
+
+The remaining boundaries are not implemented: the required initial-backup
+workflow, the Ready shell with Today, Ledger and read-only Settings, the
+transaction explanation, remaining privacy and accessibility hardening,
+Playwright browser verification, and the final M006 documentation checkpoint.
+No browser test project exists yet.
+
+`InitialBackupRequired` and `Ready` therefore currently map no presentation
+routes. A host that reaches either mode serves its JSON API, where mapped, but
+no page. A complete first run cannot yet be finished through the browser, and
+M006 is not Verified.
 
 ## Verified implementation
 
@@ -271,6 +279,63 @@ direct query. A package predating the migration remains valid and restorable
 but cannot prove its origin and is not protection, so one new backup is
 required after upgrading. See the M006 Decision 4 amendment.
 
+### Local UI shell and startup modes
+
+`WealthLedger.UI` is a Razor Class Library referencing Application only. It has
+no reference to Infrastructure, EF Core, SQLite, or API contracts, and never
+calls the co-hosted JSON API over HTTP. `WealthLedger.Api` remains the single
+loopback host and composition root.
+
+Presentation formatters render persisted values exactly. Money, signed E8
+quantity, unit price, business date, UTC timestamp, and stable codes are
+decomposed with integer arithmetic and reassembled as text; no authoritative
+value passes through binary floating point, and both ends of the signed 64-bit
+range render without overflow. A value that cannot be rendered becomes an
+explicit unavailable state with a stable diagnostic category rather than zero.
+Unknown, Not applicable, and a recorded zero remain three distinct outputs, and
+the caller chooses between the first two from its own contract. Turkish is the
+shipping culture and lives in neutral UI resources; stable contract codes are
+never translated and are shown as technical detail beside a localized
+description. A test pins every UI stable code against the code the API mapper
+actually emits.
+
+The host derives exactly one startup mode before mapping routes, while holding
+no database lease: `Blocked`, `StorageUninitialized`, `WorkspaceUninitialized`,
+`InitialBackupRequired`, or `Ready`. Selection fails closed on an unsafe path,
+unconfigured backup directory, unavailable ownership, incompatible schema,
+pending migration, failed integrity, missing workspace identity, or a partial
+or conflicting core workspace. `Ready` additionally requires a verified backup
+proved to belong to the current workspace; it deliberately does not require the
+separation and encryption acknowledgements, which keep their M004
+operator-attestation meaning.
+
+Only `Ready` acquires the process-lifetime database lease, and a failed
+acquisition demotes the host to `Blocked`. Setup-mode operations acquire
+exclusive ownership for their own duration exactly as the operations console
+does, so a concurrent attempt produces one success and one sanitized busy
+result. Core setup runs through a lease-scoped session with its own
+`DbContext`, and the session releases the lease last.
+
+Razor page exposure is fail-closed by default: a page without an explicit
+startup-mode declaration is denied in every mode, a page requested outside its
+modes returns 404, and a non-GET request to a page that does not accept POST
+returns 405. The startup selection is written once at composition and cannot be
+changed by a request. UI responses carry a restrictive Content Security Policy,
+`nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
+
+Guided browser initialization covers the `Blocked`, `StorageUninitialized`, and
+`WorkspaceUninitialized` pages. Storage creation and atomic workspace setup call
+the existing ownership-safe Application operations, require antiforgery, use
+Post/Redirect/Get, derive retry outcomes from persisted reality rather than
+client state, and leave the process in its startup mode with explicit restart
+guidance. Setup pages use only the framework antiforgery cookie and hold no
+authoritative workflow state. The default-off JSON setup endpoint is mapped only
+in `WorkspaceUninitialized` and remains independent of the browser wizard.
+
+`InitialBackupRequired` and `Ready` currently map no presentation routes, so the
+guided first run cannot yet be completed in a browser and no Today, Ledger, or
+Settings page exists.
+
 ### Posted reversal and correction
 
 Application exposes a read-only eligibility preview and a retry-safe reversal
@@ -320,21 +385,26 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Results:
 
 - Domain tests: 83 passed, 0 failed.
-- Application tests: 95 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 156 passed, 0 failed.
-- API tests against real SQLite files: 71 passed, 0 failed.
+- Application tests: 118 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 171 passed, 0 failed.
+- UI presentation/contract tests: 51 passed, 0 failed.
+- API tests against real SQLite files: 89 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 428 passed, 0 failed.
-- Formatting drift: no committable content diff; see the SDK line-ending caveat
-  below.
-- EF model drift: none.
+- Total: 535 passed, 0 failed.
+- Formatting drift: none in the current worktree; see the SDK line-ending
+  caveat below.
+- EF model drift: none. The migration chain is unchanged at five migrations;
+  M006 has added no schema since `005_WorkspaceIdentity`.
 
-On the Windows .NET 10.0.400 SDK, a fresh LF checkout currently makes
+On the Windows .NET 10.0.400 SDK, a fresh LF checkout makes
 `dotnet format --verify-no-changes` report comment-adjacent whitespace at
 `LedgerTransaction.cs` lines 469, 471, and 472. Applying the formatter only
 rewrites that file's raw line endings to CRLF; Git normalizes it back to the
-same LF blob under the repository attributes. This tooling/configuration
-discrepancy remains open and is not introduced by M005.
+same LF blob under the repository attributes. The report therefore depends on
+the working copy's current line endings rather than on committed content, and
+the check passes in a worktree whose copy is already CRLF. This
+tooling/configuration discrepancy remains open and was not introduced by M005
+or M006.
 
 M004 focused verification passed 9 local-data Application tests, 42 backup-
 related Infrastructure tests, 20 restore-related Infrastructure tests, 28
@@ -376,6 +446,18 @@ active replacement rebinds the live database to the promoted lineage. The
 existing local-data, migration, restore, and operations suites pass unchanged
 apart from the migration-chain head moving to 005.
 
+M006 focused verification passed 51 UI presentation and stable-code contract
+tests, 23 Application startup-mode selection tests, real-SQLite setup-session
+and setup-state reader tests, and 18 guided first-run host tests. Those host
+tests prove mode-scoped route exposure, a read-only blocked page free of paths
+and storage internals, create-only storage initialization with Post/
+Redirect/Get, retry against already-created storage, sanitized ownership-busy
+guidance, atomic workspace setup with no partial graph on failure, rejection of
+both storage and workspace POSTs without a valid antiforgery token, absence of
+raw identifiers and submitted values from rendered pages and captured logs, and
+the setup pages using no authoritative client state beyond the framework
+antiforgery cookie.
+
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
 eligibility preview, same-lot inverse allocation, atomic SQLite persistence and
@@ -394,18 +476,25 @@ verified M003 baseline and merged M004/M005 planning documents, that planning
 checkpoint had 243 passing tests with no EF model drift; the same formatter
 caveat remains.
 
-There is still no UI project, page, static-asset pipeline, or browser test.
-M006 remains Proposed and claims no UI behavior as implemented; its M003-M005
-ordering prerequisites are now verified, but its decision gates and ADR remain
-unaccepted.
+M006 was accepted on 2026-09-03 and its eleven decisions, with Decision 4 as
+amended, are recorded by ADR-008. Its UI assembly, presentation formatters,
+startup-mode boundary and guided storage/workspace initialization are
+implemented and covered by the suites above. Its initial-backup workflow, Ready
+shell, transaction explanation, and browser verification are not, so M006
+remains In Progress rather than Verified.
 
 ## Next delivery candidate
 
 M006 is In Progress and is the active delivery. Its eleven decisions were
-accepted on 2026-09-03 and ADR-008 records the resulting architecture. The
-workspace-binding prerequisite is verified; the UI assembly, presentation
-formatters, startup modes, guided first run, read-only shell, and browser
-verification remain to be delivered under that accepted contract.
+accepted on 2026-09-03 and ADR-008 records the resulting architecture.
+
+Delivered so far: workspace-bound protection readiness, the UI assembly and
+presentation formatters, the fail-closed startup-mode boundary, and guided
+storage and workspace initialization. Still to deliver: the required
+initial-backup workflow, the Ready shell, the transaction explanation,
+remaining privacy and accessibility hardening, Playwright browser verification,
+and the final documentation checkpoint that would allow M006 to become
+Verified.
 
 M007 remains the next candidate after it.
 
