@@ -65,21 +65,21 @@ found during pre-implementation reconciliation. ADR-008 records the accepted UI
 and hosting architecture and the two explicit refinements it makes to ADR-007.
 M006 is now In Progress and is the only In Progress milestone.
 
-Five commit boundaries are complete: workspace-bound protection readiness, the
-`WealthLedger.UI` assembly with exact Turkish-first presentation, the
-fail-closed startup-mode boundary, and guided browser initialization for
-storage, workspace setup, and the required initial backup.
+The implemented M006 boundaries now include workspace-bound protection
+readiness, the `WealthLedger.UI` assembly with exact Turkish-first
+presentation, the fail-closed startup-mode boundary, guided browser
+initialization for storage, workspace setup and the required initial backup,
+and the Ready shell with its complete read-only transaction explanation.
 
-The remaining boundaries are not implemented: the Ready shell with Today,
-Ledger and read-only Settings, the transaction explanation, remaining privacy
-and accessibility hardening, Playwright browser verification, and the final
-M006 documentation checkpoint. No browser test project exists yet.
+The remaining boundaries are not implemented: remaining privacy and
+accessibility hardening, Playwright browser verification, and the final M006
+documentation checkpoint. No browser test project exists yet.
 
-`InitialBackupRequired` now maps the initial-backup review/action and completion
+`InitialBackupRequired` maps the initial-backup review/action and completion
 pages. The running setup process remains in that static mode after backup
-creation and clearly requires one clean restart. `Ready` still maps no
-presentation routes, so the normal application shell is not implemented and
-M006 is not Verified.
+creation and clearly requires one clean restart. `Ready` maps only Today,
+Ledger with direct transaction explanation, and read-only Settings pages. M006
+remains In Progress and is not Verified.
 
 ## Verified implementation
 
@@ -347,8 +347,26 @@ still in setup mode and requires a clean restart.
 Static RCL assets now receive the same CSP and `nosniff` policy as Razor Pages.
 Presentation culture/time-zone construction is deferred until after host build,
 where an unavailable configured culture or time zone is converted to the same
-sanitized fail-closed startup result as other startup failures. `Ready` still
-maps no presentation routes, so no Today, Ledger, or Settings page exists.
+sanitized fail-closed startup result as other startup failures.
+
+`Ready` exposes the read-only `/`, `/ledger`,
+`/ledger/{transactionId}`, `/settings`, `/settings/master-data`, and
+`/settings/data-safety` pages. Today shows only current local-safety facts,
+matched verified-backup age, and recent Posted activity; it invents no balance,
+market value, return, or other unavailable aggregate. Ledger passes the M005
+opaque cursor through unchanged and turns an invalid cursor into a sanitized
+page with a first-page link. Settings separates current master labels from the
+local storage, schema, integrity, attestation, and matched-backup review.
+
+A narrowly shaped Application query composes final M003 transaction detail
+with current M005 labels in bounded batches. Its Infrastructure adapter uses no
+per-entry or per-lot label lookup, retains inactive and archived current
+context, and is covered by a fixed query-count test. The UI renders transaction
+identity, dates, entries, costs, cash-flow classification, created lots,
+allocations, and both reversal directions without accounting arithmetic. Names
+are explicitly current context rather than source-time snapshots, while exact
+money, quantity, unit-price, date, timestamp, and stable-code presentation stays
+inside the existing UI presenter.
 
 ### Posted reversal and correction
 
@@ -399,12 +417,12 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Results:
 
 - Domain tests: 83 passed, 0 failed.
-- Application tests: 118 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 171 passed, 0 failed.
-- UI presentation/contract tests: 51 passed, 0 failed.
-- API tests against real SQLite files: 100 passed, 0 failed.
+- Application tests: 122 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 172 passed, 0 failed.
+- UI presentation/contract tests: 63 passed, 0 failed.
+- API tests against real SQLite files: 110 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 546 passed, 0 failed.
+- Total: 573 passed, 0 failed.
 - Formatting drift: none in the current worktree; see the SDK line-ending
   caveat below.
 - EF model drift: none. The migration chain is unchanged at five migrations;
@@ -460,9 +478,10 @@ active replacement rebinds the live database to the promoted lineage. The
 existing local-data, migration, restore, and operations suites pass unchanged
 apart from the migration-chain head moving to 005.
 
-M006 focused verification passed 51 UI presentation and stable-code contract
-tests, 23 Application startup-mode selection tests, real-SQLite setup-session
-and setup-state reader tests, 26 guided first-run UI tests, and two sanitized
+M006 verification at this checkpoint passes 63 UI presentation and stable-code
+contract tests. Focused coverage includes four Application transaction-
+explanation composition tests, the real-SQLite fixed query-count test, 27
+guided first-run UI tests, 10 Ready-shell UI tests, and two sanitized
 presentation-startup tests. The browser host tests prove mode-scoped route
 exposure, a read-only blocked page free of paths and storage internals,
 create-only storage initialization with Post/Redirect/Get, retry against
@@ -475,6 +494,14 @@ satisfy completion, M004 acknowledgement flags do not gate it, static assets
 receive security headers, and the current process never promotes itself to
 `Ready`. Setup pages use no authoritative client state beyond the framework
 antiforgery cookie.
+
+Ready-shell tests additionally prove GET-only page exposure, an honest empty
+Today view, local-only static assets, opaque cursor continuation, sanitized
+invalid cursors and transaction identities, read-only current master and data-
+safety views, exact transaction entries, costs, lots and allocations, both
+reversal directions, inactive current context, and omission of cursor payloads,
+request identities, SQL, connection strings, stack traces, notes, and
+references from captured logs.
 
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
@@ -497,9 +524,10 @@ caveat remains.
 M006 was accepted on 2026-09-03 and its eleven decisions, with Decision 4 as
 amended, are recorded by ADR-008. Its UI assembly, presentation formatters,
 startup-mode boundary, guided storage/workspace initialization, and required
-initial-backup workflow are implemented and covered by the suites above. Its
-Ready shell, transaction explanation, and browser verification are not, so
-M006 remains In Progress rather than Verified.
+initial-backup workflow, Ready shell, and transaction explanation are
+implemented and covered by the suites above. Browser verification and the
+remaining hardening/documentation boundaries are not, so M006 remains In
+Progress rather than Verified.
 
 ## Next delivery candidate
 
@@ -508,10 +536,10 @@ accepted on 2026-09-03 and ADR-008 records the resulting architecture.
 
 Delivered so far: workspace-bound protection readiness, the UI assembly and
 presentation formatters, the fail-closed startup-mode boundary, and guided
-storage, workspace, and required initial-backup initialization. Still to
-deliver: the Ready shell, the transaction explanation, remaining privacy and
-accessibility hardening, Playwright browser verification, and the final
-documentation checkpoint that would allow M006 to become Verified.
+storage, workspace, and required initial-backup initialization, plus the
+read-only Ready shell and transaction explanation. Still to deliver: remaining
+privacy and accessibility hardening, Playwright browser verification, and the
+final documentation checkpoint that would allow M006 to become Verified.
 
 M007 remains the next candidate after it.
 

@@ -1,0 +1,77 @@
+@page "/ledger"
+@model WealthLedger.UI.Pages.Ledger.IndexModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Ledger_Title"];
+    ViewData["ActiveNavigation"] = "Ledger";
+}
+
+<article class="flow" aria-labelledby="ledger-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Ledger_Eyebrow"]</p>
+        <h1 id="ledger-heading">@Text["Ledger_Title"]</h1>
+        <p class="lede">@Text["Ledger_Introduction"]</p>
+    </header>
+
+    @if (Model.NavigationError)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ledger_NavigationErrorTitle"]</h2>
+            <p>@Text["Ledger_NavigationErrorExplanation"]</p>
+            <a class="card-link" asp-page="/Ledger/Index">
+                @Text["Ledger_FirstPageLink"]
+            </a>
+        </section>
+    }
+    else if (Model.LoadUnavailable)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ledger_UnavailableTitle"]</h2>
+            <p>@Text["Ledger_UnavailableExplanation"]</p>
+            <a class="card-link" asp-page="/Ledger/Index">
+                @Text["Ledger_FirstPageLink"]
+            </a>
+        </section>
+    }
+    else if (!Model.HasHousehold)
+    {
+        <section class="summary-card summary-card--warning flow" role="status">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Ready_CurrentHouseholdLabel"]
+            <strong>@Model.HouseholdName</strong>
+        </p>
+        <p class="muted">@Text["Ledger_CurrentContextNotice"]</p>
+
+        @if (Model.Transactions.Count == 0)
+        {
+            <section class="summary-card flow" role="status">
+                <h2>@Text["Ledger_EmptyTitle"]</h2>
+                <p>@Text["Ledger_EmptyExplanation"]</p>
+            </section>
+        }
+        else
+        {
+            <partial name="_RecentLedgerTransactions"
+                     model="Model.Transactions" />
+        }
+
+        <nav class="pagination" aria-label="@Text["Ledger_PaginationLabel"]">
+            @if (Model.NextCursor is not null)
+            {
+                <a asp-page="/Ledger/Index"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-cursor="@Model.NextCursor">
+                    @Text["Ledger_NextPageLink"]
+                </a>
+            }
+            <a asp-page="/Ledger/Index">@Text["Ledger_FirstPageLink"]</a>
+        </nav>
+    }
+</article>

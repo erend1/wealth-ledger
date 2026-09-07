@@ -1,4 +1,5 @@
 using System.Globalization;
+using WealthLedger.Application.LocalData;
 using WealthLedger.Domain.Assets;
 
 namespace WealthLedger.UI.Presentation;
@@ -34,6 +35,8 @@ public static class PresentationDiagnostics
     public const string StableCodeUnknown = "STABLE_CODE_UNKNOWN";
     public const string TimestampNotUtc = "TIMESTAMP_NOT_UTC";
     public const string TimeZoneConversionFailed = "TIME_ZONE_CONVERSION_FAILED";
+    public const string TimestampInFuture = "TIMESTAMP_IN_FUTURE";
+    public const string IncompleteRecordedValue = "INCOMPLETE_RECORDED_VALUE";
 }
 
 /// <summary>
@@ -105,7 +108,7 @@ public sealed class ValuePresenter
     public DisplayValue Money(
         long amountMinorUnits,
         string? currencyCode,
-        int minorUnitDigits)
+        int? minorUnitDigits)
     {
         var currency = ValidateCurrency(currencyCode);
 
@@ -114,7 +117,14 @@ public sealed class ValuePresenter
             return currency.Failure;
         }
 
-        if (!FixedPointText.IsSupportedScale(minorUnitDigits))
+        if (minorUnitDigits is not int scale)
+        {
+            return Unavailable(
+                PresentationDiagnostics.CurrencyMetadataMissing,
+                currency.Code);
+        }
+
+        if (!FixedPointText.IsSupportedScale(scale))
         {
             return Unavailable(
                 PresentationDiagnostics.MinorUnitDigitsUnsupported);
@@ -124,7 +134,7 @@ public sealed class ValuePresenter
         // trailing zeros carry meaning and are kept.
         var number = FixedPointText.Format(
             amountMinorUnits,
-            minorUnitDigits,
+            scale,
             Culture,
             trimTrailingZeros: false,
             alwaysSigned: false);
@@ -274,6 +284,52 @@ public sealed class ValuePresenter
     }
 
     /// <summary>
+    /// Renders elapsed wall-clock age without changing the recorded instant.
+    /// </summary>
+    public DisplayValue ElapsedAge(
+        DateTimeOffset occurredAtUtc,
+        DateTimeOffset nowUtc)
+    {
+        if (occurredAtUtc.Offset != TimeSpan.Zero
+            || nowUtc.Offset != TimeSpan.Zero)
+        {
+            return Unavailable(PresentationDiagnostics.TimestampNotUtc);
+        }
+
+        if (occurredAtUtc > nowUtc)
+        {
+            return Unavailable(PresentationDiagnostics.TimestampInFuture);
+        }
+
+        var elapsedTicks = nowUtc.Ticks - occurredAtUtc.Ticks;
+        var elapsedMinutes = elapsedTicks / TimeSpan.TicksPerMinute;
+        string text;
+
+        if (elapsedMinutes < 1)
+        {
+            text = PresentationText.Require(
+                PresentationText.AgeLessThanMinute,
+                Culture);
+        }
+        else if (elapsedMinutes < 60)
+        {
+            text = FormatAge(PresentationText.AgeMinutes, elapsedMinutes);
+        }
+        else
+        {
+            var elapsedHours = elapsedTicks / TimeSpan.TicksPerHour;
+
+            text = elapsedHours < 24
+                ? FormatAge(PresentationText.AgeHours, elapsedHours)
+                : FormatAge(
+                    PresentationText.AgeDays,
+                    elapsedTicks / TimeSpan.TicksPerDay);
+        }
+
+        return new DisplayValue(text, text, DisplayState.Known);
+    }
+
+    /// <summary>
     /// Renders a stable enum-like code as human text, keeping the code itself
     /// available as technical detail.
     /// </summary>
@@ -358,7 +414,35 @@ public sealed class ValuePresenter
             StableCodeFamily.CostBasisStatus,
             StableCodes.ToCode(value));
 
-    private DisplayValue Unavailable(
+    public DisplayValue StableCode(LocalDatabaseCompatibility value)
+        => StableCode(
+            StableCodeFamily.LocalDatabaseCompatibility,
+            StableCodes.ToCode(value));
+
+    public DisplayValue StableCode(LocalDataIntegrityStatus value)
+        => StableCode(
+            StableCodeFamily.LocalDataIntegrityStatus,
+            StableCodes.ToCode(value));
+
+    public DisplayValue StableCode(LocalBackupWorkspaceBinding value)
+        => StableCode(
+            StableCodeFamily.LocalBackupWorkspaceBinding,
+            StableCodes.ToCode(value));
+
+    public DisplayValue BackupEncryptionMode(string code)
+        => StableCode(StableCodeFamily.BackupEncryptionMode, code);
+
+    private string FormatAge(string resourceKey, long value)
+        => string.Format(
+            Culture,
+            PresentationText.Require(resourceKey, Culture),
+            value);
+
+    /// <summary>
+    /// Renders a recorded fact that cannot safely be presented. The category
+    /// identifies the presentation defect without exposing the private value.
+    /// </summary>
+    public DisplayValue Unavailable(
         string diagnosticCategory,
         string? technicalDetail = null)
     {

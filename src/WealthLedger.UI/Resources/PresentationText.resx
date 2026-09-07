@@ -48,6 +48,18 @@
     <value>değişim yok</value>
     <comment>Direction of a zero signed quantity delta.</comment>
   </data>
+  <data name="Age_LessThanMinute" xml:space="preserve">
+    <value>Bir dakikadan kısa süre önce</value>
+  </data>
+  <data name="Age_Minutes" xml:space="preserve">
+    <value>{0} dakika önce</value>
+  </data>
+  <data name="Age_Hours" xml:space="preserve">
+    <value>{0} saat önce</value>
+  </data>
+  <data name="Age_Days" xml:space="preserve">
+    <value>{0} gün önce</value>
+  </data>
   <data name="Unit_CURRENCY_UNIT" xml:space="preserve">
     <value>para birimi</value>
   </data>
@@ -326,6 +338,39 @@
   </data>
   <data name="Code_CostBasisStatus_NOT_APPLICABLE" xml:space="preserve">
     <value>Uygulanamaz</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_UNINITIALIZED" xml:space="preserve">
+    <value>Başlatılmamış</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_COMPATIBLE" xml:space="preserve">
+    <value>Bu sürümle uyumlu</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_MIGRATION_REQUIRED" xml:space="preserve">
+    <value>Açık geçiş gerekli</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_INCOMPATIBLE" xml:space="preserve">
+    <value>Uyumsuz</value>
+  </data>
+  <data name="Code_LocalDataIntegrityStatus_NOT_CHECKED" xml:space="preserve">
+    <value>Denetlenmedi</value>
+  </data>
+  <data name="Code_LocalDataIntegrityStatus_PASSED" xml:space="preserve">
+    <value>Bütünlük denetimi geçti</value>
+  </data>
+  <data name="Code_LocalDataIntegrityStatus_FAILED" xml:space="preserve">
+    <value>Bütünlük denetimi başarısız</value>
+  </data>
+  <data name="Code_LocalBackupWorkspaceBinding_UNKNOWN" xml:space="preserve">
+    <value>Kökeni kanıtlanamıyor</value>
+  </data>
+  <data name="Code_LocalBackupWorkspaceBinding_MATCHED" xml:space="preserve">
+    <value>Çalışma alanıyla eşleşiyor</value>
+  </data>
+  <data name="Code_LocalBackupWorkspaceBinding_UNRELATED" xml:space="preserve">
+    <value>Başka çalışma alanına ait</value>
+  </data>
+  <data name="Code_BackupEncryptionMode_PLAINTEXT" xml:space="preserve">
+    <value>Uygulama katmanında şifrelenmemiş</value>
   </data>
   <data name="Layout_SkipToContent" xml:space="preserve">
     <value>Ana içeriğe geç</value>
@@ -728,5 +773,497 @@
   </data>
   <data name="Complete_Error_StateUnavailable" xml:space="preserve">
     <value>Tamamlanma durumu güvenle doğrulanamadı. Normal kullanım açılmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Shell_PrimaryNavigationLabel" xml:space="preserve">
+    <value>Ana gezinme</value>
+  </data>
+  <data name="Shell_Navigation_Today" xml:space="preserve">
+    <value>Bugün</value>
+  </data>
+  <data name="Shell_Navigation_Ledger" xml:space="preserve">
+    <value>Defter</value>
+  </data>
+  <data name="Shell_Navigation_Settings" xml:space="preserve">
+    <value>Ayarlar</value>
+  </data>
+  <data name="Common_TechnicalDetails" xml:space="preserve">
+    <value>Teknik ayrıntılar</value>
+  </data>
+  <data name="Common_NameLabel" xml:space="preserve">
+    <value>Ad</value>
+  </data>
+  <data name="Common_CodeLabel" xml:space="preserve">
+    <value>Kalıcı kod</value>
+  </data>
+  <data name="Common_TypeLabel" xml:space="preserve">
+    <value>Tür</value>
+  </data>
+  <data name="Common_StateLabel" xml:space="preserve">
+    <value>Durum</value>
+  </data>
+  <data name="Common_CreatedAtLabel" xml:space="preserve">
+    <value>Oluşturulma zamanı</value>
+  </data>
+  <data name="Common_ClosedAtLabel" xml:space="preserve">
+    <value>Kapanış</value>
+  </data>
+  <data name="Common_Active" xml:space="preserve">
+    <value>Etkin</value>
+  </data>
+  <data name="Common_Inactive" xml:space="preserve">
+    <value>Etkin değil</value>
+  </data>
+  <data name="Ready_CurrentHouseholdLabel" xml:space="preserve">
+    <value>Geçerli hane:</value>
+  </data>
+  <data name="Ready_Household_StateTitle" xml:space="preserve">
+    <value>Hane bağlamı seçilemedi</value>
+  </data>
+  <data name="Ready_Household_None" xml:space="preserve">
+    <value>Kullanılabilir bir hane bulunamadı. Bu süreç herhangi bir kimliği varsaymaz.</value>
+  </data>
+  <data name="Ready_Household_Multiple" xml:space="preserve">
+    <value>Birden fazla hane bulundu. Açık bir seçim olmadan hiçbir hane varsayılmadı.</value>
+  </data>
+  <data name="Ready_Household_Unavailable" xml:space="preserve">
+    <value>Hane ve kayıt bağlamı şu anda güvenle okunamıyor.</value>
+  </data>
+  <data name="Today_Title" xml:space="preserve">
+    <value>Bugün</value>
+  </data>
+  <data name="Today_Eyebrow" xml:space="preserve">
+    <value>Yerel çalışma alanı</value>
+  </data>
+  <data name="Today_Introduction" xml:space="preserve">
+    <value>Doğrulanmış yerel güvenlik durumunu ve en son kaydedilen defter hareketlerini gösterir.</value>
+  </data>
+  <data name="Today_SafetyTitle" xml:space="preserve">
+    <value>Yerel veri güvenliği</value>
+  </data>
+  <data name="Today_BackupBindingLabel" xml:space="preserve">
+    <value>Yedek çalışma alanı ilişkisi</value>
+  </data>
+  <data name="Today_BackupAgeLabel" xml:space="preserve">
+    <value>Son doğrulanmış yedeğin yaşı</value>
+  </data>
+  <data name="Today_BackupVerifiedAtLabel" xml:space="preserve">
+    <value>Son doğrulama zamanı</value>
+  </data>
+  <data name="Today_DataSafetyLink" xml:space="preserve">
+    <value>Veri güvenliği ayrıntılarını aç</value>
+  </data>
+  <data name="Today_SafetyUnavailable" xml:space="preserve">
+    <value>Yerel güvenlik durumu şu anda güvenle gösterilemiyor.</value>
+  </data>
+  <data name="Today_KnownFactsTitle" xml:space="preserve">
+    <value>Şu anda bilinenler</value>
+  </data>
+  <data name="Today_KnownFactsExplanation" xml:space="preserve">
+    <value>Bu görünüm yalnızca kaydedilmiş defter hareketlerini ve yerel veri koruma gerçeklerini açıklar. Henüz kabul edilmiş bir değerleme veya toplam sözleşmesi yoktur.</value>
+  </data>
+  <data name="Today_RecentTitle" xml:space="preserve">
+    <value>Son kaydedilen hareketler</value>
+  </data>
+  <data name="Today_AllLedgerLink" xml:space="preserve">
+    <value>Tüm son kayıtları göster</value>
+  </data>
+  <data name="Today_EmptyTitle" xml:space="preserve">
+    <value>Henüz kaydedilmiş işlem yok</value>
+  </data>
+  <data name="Today_EmptyExplanation" xml:space="preserve">
+    <value>Temel çalışma alanı hazırdır ancak defterde henüz kaydedilmiş ekonomik olay bulunmamaktadır.</value>
+  </data>
+  <data name="Today_NoFabricatedTotals" xml:space="preserve">
+    <value>Bakiye, piyasa değeri, getiri veya nakit mevcudu tahmin edilmez ve burada sıfırmış gibi gösterilmez.</value>
+  </data>
+  <data name="Ledger_Title" xml:space="preserve">
+    <value>Defter</value>
+  </data>
+  <data name="Ledger_Eyebrow" xml:space="preserve">
+    <value>Kaydedilmiş geçmiş</value>
+  </data>
+  <data name="Ledger_Introduction" xml:space="preserve">
+    <value>En yeni kaydedilmiş işlemleri, değişmez ekonomik etkileriyle birlikte gösterir.</value>
+  </data>
+  <data name="Ledger_CurrentContextNotice" xml:space="preserve">
+    <value>Adlar ve etkinlik durumları bugünkü ana veri bağlamıdır; işlem zamanındaki adların tarihsel görüntüsü değildir.</value>
+  </data>
+  <data name="Ledger_NavigationErrorTitle" xml:space="preserve">
+    <value>Bu defter sayfası açılamadı</value>
+  </data>
+  <data name="Ledger_NavigationErrorExplanation" xml:space="preserve">
+    <value>Sayfalama bağlantısı geçersiz, eski veya bu kapsamla ilişkili değil. İçeriği açıklanmadan reddedildi.</value>
+  </data>
+  <data name="Ledger_FirstPageLink" xml:space="preserve">
+    <value>İlk sayfaya dön</value>
+  </data>
+  <data name="Ledger_UnavailableTitle" xml:space="preserve">
+    <value>Defter şu anda kullanılamıyor</value>
+  </data>
+  <data name="Ledger_UnavailableExplanation" xml:space="preserve">
+    <value>Kaydedilmiş geçmiş güvenle okunamadı. Hiçbir özel tanı ayrıntısı gösterilmedi.</value>
+  </data>
+  <data name="Ledger_EmptyTitle" xml:space="preserve">
+    <value>Kaydedilmiş işlem bulunamadı</value>
+  </data>
+  <data name="Ledger_EmptyExplanation" xml:space="preserve">
+    <value>Bu hanenin son kaydedilmiş işlem akışı boş.</value>
+  </data>
+  <data name="Ledger_PaginationLabel" xml:space="preserve">
+    <value>Defter sayfaları</value>
+  </data>
+  <data name="Ledger_NextPageLink" xml:space="preserve">
+    <value>Daha eski kayıtlar</value>
+  </data>
+  <data name="Ledger_ExecutionDateLabel" xml:space="preserve">
+    <value>Gerçekleşme tarihi</value>
+  </data>
+  <data name="Ledger_ExternalReferenceLabel" xml:space="preserve">
+    <value>Dış referans</value>
+  </data>
+  <data name="Ledger_InactiveCurrentContext" xml:space="preserve">
+    <value>Bu kayıtta kullanılan güncel ana verilerden en az biri artık etkin değil veya arşivlenmiş.</value>
+  </data>
+  <data name="Ledger_TransactionIdLabel" xml:space="preserve">
+    <value>İşlem kimliği</value>
+  </data>
+  <data name="Ledger_TransactionTypeLabel" xml:space="preserve">
+    <value>İşlem türü kodu</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Ayarlar</value>
+  </data>
+  <data name="Settings_Eyebrow" xml:space="preserve">
+    <value>Salt okunur çalışma alanı bilgisi</value>
+  </data>
+  <data name="Settings_Introduction" xml:space="preserve">
+    <value>Geçerli ana veri bağlamını ve yerel veri güvenliği ayrıntılarını değiştirmeden inceleyin.</value>
+  </data>
+  <data name="Settings_HouseholdTitle" xml:space="preserve">
+    <value>Hane</value>
+  </data>
+  <data name="Settings_HouseholdNameLabel" xml:space="preserve">
+    <value>Hane adı</value>
+  </data>
+  <data name="Settings_BaseCurrencyLabel" xml:space="preserve">
+    <value>Temel para birimi</value>
+  </data>
+  <data name="Settings_HouseholdCreatedAtLabel" xml:space="preserve">
+    <value>Hane oluşturulma zamanı</value>
+  </data>
+  <data name="Settings_SectionsLabel" xml:space="preserve">
+    <value>Ayar bölümleri</value>
+  </data>
+  <data name="Settings_MasterDataLinkTitle" xml:space="preserve">
+    <value>Geçerli ana veriler</value>
+  </data>
+  <data name="Settings_MasterDataLinkExplanation" xml:space="preserve">
+    <value>Hane üyelerini, kurumları, portföyleri, hesapları, para birimlerini ve varlıkları salt okunur olarak inceleyin.</value>
+  </data>
+  <data name="Settings_DataSafetyLinkTitle" xml:space="preserve">
+    <value>Veri güvenliği ve teknik durum</value>
+  </data>
+  <data name="Settings_DataSafetyLinkExplanation" xml:space="preserve">
+    <value>Depolama konumlarını, şema uyumluluğunu, bütünlüğü ve doğrulanmış yedek durumunu inceleyin.</value>
+  </data>
+  <data name="Settings_ReadOnlyNotice" xml:space="preserve">
+    <value>Bu alan salt okunurdur. Gösterilen metni değiştirmek kalıcı kayıtları değiştirmez.</value>
+  </data>
+  <data name="Settings_BackLink" xml:space="preserve">
+    <value>Ayarlara dön</value>
+  </data>
+  <data name="MasterData_Title" xml:space="preserve">
+    <value>Geçerli ana veriler</value>
+  </data>
+  <data name="MasterData_Introduction" xml:space="preserve">
+    <value>Çalışma alanının şu anki adlarını, kodlarını ve durumlarını salt okunur olarak gösterir.</value>
+  </data>
+  <data name="MasterData_UnavailableTitle" xml:space="preserve">
+    <value>Ana veriler kullanılamıyor</value>
+  </data>
+  <data name="MasterData_UnavailableExplanation" xml:space="preserve">
+    <value>Geçerli ana veri bağlamı güvenle okunamadı.</value>
+  </data>
+  <data name="MasterData_CurrentStateNotice" xml:space="preserve">
+    <value>Bunlar güncel ana verilerdir; geçmiş işlemlerdeki kaynak-zamanı ad görüntüleri değildir.</value>
+  </data>
+  <data name="MasterData_BoundedNotice" xml:space="preserve">
+    <value>Bu salt okunur görünüm kabul edilen sınır içinde ilk 100 kaydı gösteriyor; tüm liste olduğu varsayılmadı.</value>
+  </data>
+  <data name="MasterData_MembersTitle" xml:space="preserve">
+    <value>Hane üyeleri</value>
+  </data>
+  <data name="MasterData_InstitutionsTitle" xml:space="preserve">
+    <value>Kurumlar</value>
+  </data>
+  <data name="MasterData_PortfoliosTitle" xml:space="preserve">
+    <value>Portföyler</value>
+  </data>
+  <data name="MasterData_AccountsTitle" xml:space="preserve">
+    <value>Hesaplar</value>
+  </data>
+  <data name="MasterData_CurrenciesTitle" xml:space="preserve">
+    <value>Para birimleri</value>
+  </data>
+  <data name="MasterData_AssetsTitle" xml:space="preserve">
+    <value>Varlıklar</value>
+  </data>
+  <data name="MasterData_InstitutionLabel" xml:space="preserve">
+    <value>Kurum</value>
+  </data>
+  <data name="MasterData_MinorDigitsLabel" xml:space="preserve">
+    <value>Ondalık basamak</value>
+  </data>
+  <data name="MasterData_UnitLabel" xml:space="preserve">
+    <value>Temel birim</value>
+  </data>
+  <data name="MasterData_OpenedOnLabel" xml:space="preserve">
+    <value>Açılış tarihi</value>
+  </data>
+  <data name="MasterData_BaseCurrencyLabel" xml:space="preserve">
+    <value>Temel para birimi</value>
+  </data>
+  <data name="MasterData_LotTrackingLabel" xml:space="preserve">
+    <value>Lot izleme</value>
+  </data>
+  <data name="DataSafety_Title" xml:space="preserve">
+    <value>Veri güvenliği ve teknik durum</value>
+  </data>
+  <data name="DataSafety_Introduction" xml:space="preserve">
+    <value>Bu yerel inceleme ekranı depolama, şema, bütünlük ve doğrulanmış yedek gerçeklerini gösterir.</value>
+  </data>
+  <data name="DataSafety_UnavailableTitle" xml:space="preserve">
+    <value>Veri güvenliği durumu kullanılamıyor</value>
+  </data>
+  <data name="DataSafety_UnavailableExplanation" xml:space="preserve">
+    <value>Yerel durum güvenle okunamadı; özel altyapı tanıları gösterilmedi.</value>
+  </data>
+  <data name="DataSafety_StorageTitle" xml:space="preserve">
+    <value>Yerel depolama</value>
+  </data>
+  <data name="DataSafety_DatabasePathLabel" xml:space="preserve">
+    <value>Çözümlenmiş veritabanı yolu</value>
+  </data>
+  <data name="DataSafety_BackupDirectoryLabel" xml:space="preserve">
+    <value>Çözümlenmiş yedekleme dizini</value>
+  </data>
+  <data name="DataSafety_ApplicationVersionLabel" xml:space="preserve">
+    <value>Uygulama sürümü</value>
+  </data>
+  <data name="DataSafety_WorkspacePrefixLabel" xml:space="preserve">
+    <value>Çalışma alanı kimliği öneki</value>
+  </data>
+  <data name="DataSafety_PathDisclosureNotice" xml:space="preserve">
+    <value>Tam yollar yalnızca bu yerel veri güvenliği inceleme ekranında gösterilir. Tarayıcı bunları değiştiremez veya dosya seçemez.</value>
+  </data>
+  <data name="DataSafety_SchemaTitle" xml:space="preserve">
+    <value>Şema ve bütünlük</value>
+  </data>
+  <data name="DataSafety_CompatibilityLabel" xml:space="preserve">
+    <value>Veritabanı uyumluluğu</value>
+  </data>
+  <data name="DataSafety_IntegrityLabel" xml:space="preserve">
+    <value>Bütünlük denetimi</value>
+  </data>
+  <data name="DataSafety_EncryptionModeLabel" xml:space="preserve">
+    <value>Yedek şifreleme kipi</value>
+  </data>
+  <data name="DataSafety_AppliedMigrationsTitle" xml:space="preserve">
+    <value>Uygulanan geçişler</value>
+  </data>
+  <data name="DataSafety_PendingMigrationsTitle" xml:space="preserve">
+    <value>Bekleyen geçişler</value>
+  </data>
+  <data name="DataSafety_AttestationsTitle" xml:space="preserve">
+    <value>Operatör beyanları</value>
+  </data>
+  <data name="DataSafety_LocalProtectionLabel" xml:space="preserve">
+    <value>M004 yerel koruma uyarısı</value>
+  </data>
+  <data name="DataSafety_ProtectionReady" xml:space="preserve">
+    <value>İki operatör beyanı da onaylandı</value>
+  </data>
+  <data name="DataSafety_ProtectionWarning" xml:space="preserve">
+    <value>Operatör beyanlarından en az biri onaylanmadı</value>
+  </data>
+  <data name="DataSafety_AttestationExplanation" xml:space="preserve">
+    <value>Bu beyanlar M004 veri güvenliği uyarılarıdır; Ready kabuğunun açılma koşulu değildir ve doğrulanmış yedeğin yerini tutmaz.</value>
+  </data>
+  <data name="DataSafety_LatestBackupTitle" xml:space="preserve">
+    <value>Son eşleşen doğrulanmış yedek</value>
+  </data>
+  <data name="DataSafety_NoMatchedBackup" xml:space="preserve">
+    <value>Bu çalışma alanıyla eşleşen doğrulanmış bir yedek gösterilemiyor.</value>
+  </data>
+  <data name="DataSafety_LatestMigrationLabel" xml:space="preserve">
+    <value>Paketin son geçişi</value>
+  </data>
+  <data name="Detail_Title" xml:space="preserve">
+    <value>İşlem açıklaması</value>
+  </data>
+  <data name="Detail_Eyebrow" xml:space="preserve">
+    <value>Değişmez kaydedilmiş gerçekler</value>
+  </data>
+  <data name="Detail_Introduction" xml:space="preserve">
+    <value>Kaydedilmiş işlemi, alt kayıtlarını ve bugünkü ana veri bağlamını salt okunur olarak açıklar.</value>
+  </data>
+  <data name="Detail_InvalidTitle" xml:space="preserve">
+    <value>İşlem adresi geçersiz</value>
+  </data>
+  <data name="Detail_InvalidExplanation" xml:space="preserve">
+    <value>İstenen işlem kimliği geçerli biçimde değil. İstek değeri açıklanmadan reddedildi.</value>
+  </data>
+  <data name="Detail_NotFoundTitle" xml:space="preserve">
+    <value>İşlem bulunamadı</value>
+  </data>
+  <data name="Detail_NotFoundExplanation" xml:space="preserve">
+    <value>Bu hane kapsamında açıklanabilir bir işlem bulunamadı.</value>
+  </data>
+  <data name="Detail_UnavailableTitle" xml:space="preserve">
+    <value>İşlem şu anda açıklanamıyor</value>
+  </data>
+  <data name="Detail_UnavailableExplanation" xml:space="preserve">
+    <value>İşlem ve güncel bağlamı birlikte güvenle okunamadı. Özel altyapı tanıları gösterilmedi.</value>
+  </data>
+  <data name="Detail_BackToLedger" xml:space="preserve">
+    <value>Deftere dön</value>
+  </data>
+  <data name="Detail_CurrentContextNotice" xml:space="preserve">
+    <value>İşlem etkileri ve kimlikleri kaydedilmiş gerçeklerdir. Gösterilen ana veri adları ve etkinlik durumları bugünkü bağlamdır; kaynak-zamanı görüntüsü değildir.</value>
+  </data>
+  <data name="Detail_IdentityTitle" xml:space="preserve">
+    <value>İşlem gerçekleri</value>
+  </data>
+  <data name="Detail_HouseholdLabel" xml:space="preserve">
+    <value>Geçerli hane bağlamı</value>
+  </data>
+  <data name="Detail_HouseholdIdLabel" xml:space="preserve">
+    <value>Hane kimliği</value>
+  </data>
+  <data name="Detail_OrderDateLabel" xml:space="preserve">
+    <value>Emir tarihi</value>
+  </data>
+  <data name="Detail_SettlementDateLabel" xml:space="preserve">
+    <value>Valör tarihi</value>
+  </data>
+  <data name="Detail_NoteLabel" xml:space="preserve">
+    <value>Not</value>
+  </data>
+  <data name="Detail_PostedAtLabel" xml:space="preserve">
+    <value>Kaydedilme zamanı</value>
+  </data>
+  <data name="Detail_EntriesTitle" xml:space="preserve">
+    <value>Sıralı işlem girişleri</value>
+  </data>
+  <data name="Detail_EntrySequenceLabel" xml:space="preserve">
+    <value>Sıra</value>
+  </data>
+  <data name="Detail_QuantityLabel" xml:space="preserve">
+    <value>Miktar etkisi</value>
+  </data>
+  <data name="Detail_RoleLabel" xml:space="preserve">
+    <value>Giriş rolü</value>
+  </data>
+  <data name="Detail_UnitPriceLabel" xml:space="preserve">
+    <value>Kaydedilmiş birim fiyat</value>
+  </data>
+  <data name="Detail_PortfolioLabel" xml:space="preserve">
+    <value>Geçerli portföy</value>
+  </data>
+  <data name="Detail_AccountLabel" xml:space="preserve">
+    <value>Geçerli hesap</value>
+  </data>
+  <data name="Detail_InstitutionLabel" xml:space="preserve">
+    <value>Geçerli kurum</value>
+  </data>
+  <data name="Detail_AssetLabel" xml:space="preserve">
+    <value>Geçerli varlık</value>
+  </data>
+  <data name="Detail_EntryIdLabel" xml:space="preserve">
+    <value>Giriş kimliği</value>
+  </data>
+  <data name="Detail_PortfolioIdLabel" xml:space="preserve">
+    <value>Portföy kimliği</value>
+  </data>
+  <data name="Detail_AccountIdLabel" xml:space="preserve">
+    <value>Hesap kimliği</value>
+  </data>
+  <data name="Detail_InstitutionIdLabel" xml:space="preserve">
+    <value>Kurum kimliği</value>
+  </data>
+  <data name="Detail_AssetIdLabel" xml:space="preserve">
+    <value>Varlık kimliği</value>
+  </data>
+  <data name="Detail_CashFlowTitle" xml:space="preserve">
+    <value>Nakit akışı sınıflandırması</value>
+  </data>
+  <data name="Detail_CategoryLabel" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="Detail_MemberLabel" xml:space="preserve">
+    <value>Geçerli hane üyesi</value>
+  </data>
+  <data name="Detail_MemberIdLabel" xml:space="preserve">
+    <value>Hane üyesi kimliği</value>
+  </data>
+  <data name="Detail_NoCashFlow" xml:space="preserve">
+    <value>Bu işlem için nakit akışı sınıflandırması uygulanmaz.</value>
+  </data>
+  <data name="Detail_CostsTitle" xml:space="preserve">
+    <value>İşlem maliyetleri</value>
+  </data>
+  <data name="Detail_NoCosts" xml:space="preserve">
+    <value>Kaydedilmiş ayrı maliyet bileşeni yok.</value>
+  </data>
+  <data name="Detail_CostTreatmentLabel" xml:space="preserve">
+    <value>Uygulama biçimi</value>
+  </data>
+  <data name="Detail_CostAmountLabel" xml:space="preserve">
+    <value>Kaydedilmiş tutar</value>
+  </data>
+  <data name="Detail_CostIdLabel" xml:space="preserve">
+    <value>Maliyet kimliği</value>
+  </data>
+  <data name="Detail_LotsTitle" xml:space="preserve">
+    <value>Bu işlemde oluşturulan lotlar</value>
+  </data>
+  <data name="Detail_NoLots" xml:space="preserve">
+    <value>Bu işlem yeni edinim lotu oluşturmadı.</value>
+  </data>
+  <data name="Detail_LotIdLabel" xml:space="preserve">
+    <value>Lot kimliği</value>
+  </data>
+  <data name="Detail_OpeningEntryLabel" xml:space="preserve">
+    <value>Açılış giriş kimliği</value>
+  </data>
+  <data name="Detail_AcquiredOnLabel" xml:space="preserve">
+    <value>Edinim tarihi</value>
+  </data>
+  <data name="Detail_CostBasisStatusLabel" xml:space="preserve">
+    <value>Maliyet esası durumu</value>
+  </data>
+  <data name="Detail_CostBasisAmountLabel" xml:space="preserve">
+    <value>Özgün maliyet esası</value>
+  </data>
+  <data name="Detail_AllocationsTitle" xml:space="preserve">
+    <value>Lot tahsisleri</value>
+  </data>
+  <data name="Detail_NoAllocations" xml:space="preserve">
+    <value>Bu işlemin girişlerinde lot tahsisi yok.</value>
+  </data>
+  <data name="Detail_AllocationIdLabel" xml:space="preserve">
+    <value>Tahsis kimliği</value>
+  </data>
+  <data name="Detail_ReversalTitle" xml:space="preserve">
+    <value>Ters kayıt ilişkisi</value>
+  </data>
+  <data name="Detail_OriginalTransactionLink" xml:space="preserve">
+    <value>Özgün işlemi aç</value>
+  </data>
+  <data name="Detail_ReversalTransactionLink" xml:space="preserve">
+    <value>Ters kayıt işlemini aç</value>
+  </data>
+  <data name="Detail_NoReversal" xml:space="preserve">
+    <value>Bu işlem için kaydedilmiş bir ters kayıt ilişkisi yok.</value>
   </data>
 </root>

@@ -33,6 +33,7 @@ builder.Services.AddScoped<GetLocalDataStatusUseCase>();
 builder.Services.AddScoped<InitializeLocalDatabaseUseCase>();
 builder.Services.AddScoped<CreateLocalBackupUseCase>();
 builder.Services.AddScoped<GetLedgerTransactionUseCase>();
+builder.Services.AddScoped<GetLedgerTransactionExplanationUseCase>();
 builder.Services.AddScoped<PreviewPostedTransactionReversalUseCase>();
 builder.Services.AddScoped<ReversePostedTransactionUseCase>();
 builder.Services.AddScoped<ListHouseholdsUseCase>();
@@ -114,6 +115,7 @@ var mapRazorPages = false;
 switch (startupSelection.Mode)
 {
     case LocalStartupMode.Ready:
+        mapRazorPages = true;
         app.MapLedgerEndpoints();
         app.MapNavigationEndpoints();
         app.MapPositionEndpoints();

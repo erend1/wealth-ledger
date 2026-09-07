@@ -10,6 +10,11 @@ using Microsoft.Extensions.Logging;
 using WealthLedger.Api.Contracts;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Setup;
+using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Ledger;
+using WealthLedger.Domain.Lots;
+using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.ValueObjects;
 using WealthLedger.Infrastructure;
 using WealthLedger.Infrastructure.LocalData;
 using WealthLedger.Infrastructure.Persistence;
@@ -218,6 +223,128 @@ internal sealed class WealthLedgerApiFactory
         return result.Value!;
     }
 
+    internal async Task<ReadyUiLedgerFixture> SeedReadyUiLedgerAsync()
+    {
+        var createdAt = new DateTimeOffset(
+            2026,
+            9,
+            7,
+            6,
+            0,
+            0,
+            TimeSpan.Zero);
+        var currency = CurrencyCode.TRY;
+        var fundAsset = Asset.Create(
+            ReadySetup.FundAssetId,
+            "SYNTHETIC_FUND",
+            "Synthetic Fund",
+            AssetType.Fund,
+            AssetUnit.FundUnit,
+            currency,
+            LotTrackingMode.Required);
+
+        var purchase = LedgerTransaction.CreateDraft(
+            Guid.NewGuid(),
+            ReadySetup.HouseholdId,
+            TransactionType.Buy,
+            createdAt,
+            orderDate: new DateOnly(2026, 9, 5),
+            executionDate: new DateOnly(2026, 9, 6),
+            settlementDate: new DateOnly(2026, 9, 7),
+            externalReference: "SHELL-PURCHASE-REFERENCE",
+            note: "Synthetic shell purchase note.");
+        var principal = purchase.AddEntry(
+            ReadySetup.PortfolioId,
+            ReadySetup.AccountId,
+            ReadySetup.FundAssetId,
+            QuantityDelta.FromRaw(125_000_000),
+            EntryRole.Principal,
+            UnitPrice.FromRaw(9_876_543_210, currency));
+        var consideration = purchase.AddEntry(
+            ReadySetup.PortfolioId,
+            ReadySetup.AccountId,
+            ReadySetup.CashAssetId,
+            QuantityDelta.FromRaw(-12_345_000_000),
+            EntryRole.Consideration);
+        var cost = purchase.AddCost(
+            CostType.Commission,
+            CostTreatment.AdditionalCashOutflow,
+            Money.FromMinorUnits(250, currency),
+            "Synthetic shell cost note.");
+        var lot = AssetLot.Create(
+            Guid.NewGuid(),
+            fundAsset,
+            principal,
+            Quantity.FromRaw(125_000_000),
+            new DateOnly(2026, 9, 6),
+            CostBasis.Known(
+                Money.FromMinorUnits(12_345, currency)),
+            createdAt.AddMinutes(1));
+        purchase.Post(createdAt.AddMinutes(5));
+
+        var contribution = LedgerTransaction.CreateDraft(
+            Guid.NewGuid(),
+            ReadySetup.HouseholdId,
+            TransactionType.Contribution,
+            createdAt.AddHours(1),
+            executionDate: new DateOnly(2026, 9, 7),
+            externalReference: "SHELL-CONTRIBUTION-REFERENCE",
+            note: "Synthetic shell contribution note.");
+        var contributionEntry = contribution.AddEntry(
+            ReadySetup.PortfolioId,
+            ReadySetup.AccountId,
+            ReadySetup.CashAssetId,
+            QuantityDelta.FromRaw(50_000_000_000),
+            EntryRole.Principal);
+        contribution.AttachCashFlowDetail(
+            CashFlowCategory.AcademicIncome,
+            ReadySetup.HouseholdMemberId);
+        contribution.Post(createdAt.AddHours(1).AddMinutes(5));
+
+        await using var context = CreateDbContext();
+        var store = new EfCoreLedgerPostingStore(context);
+        await store.SavePostedTransactionAsync(purchase, [lot]);
+        await store.SavePostedTransactionAsync(contribution, []);
+
+        return new ReadyUiLedgerFixture(
+            purchase.Id,
+            principal.Id,
+            consideration.Id,
+            cost.Id,
+            lot.Id,
+            lot.Allocations.Single().Id,
+            contribution.Id,
+            contributionEntry.Id);
+    }
+
+    internal async Task ArchiveReadyUiMastersAsync()
+    {
+        await using var context = CreateDbContext();
+        var portfolio = await context.Portfolios.SingleAsync(
+            row => row.Id == ReadySetup.PortfolioId);
+        var account = await context.Accounts.SingleAsync(
+            row => row.Id == ReadySetup.AccountId);
+        var institution = await context.Institutions.SingleAsync(
+            row => row.Id == ReadySetup.InstitutionId);
+        var fund = await context.Assets.SingleAsync(
+            row => row.Id == ReadySetup.FundAssetId);
+
+        portfolio.Status = PortfolioStatus.Archived;
+        portfolio.ClosedAtUtc = new DateTime(
+            2026,
+            9,
+            7,
+            8,
+            0,
+            0,
+            DateTimeKind.Utc);
+        account.IsActive = false;
+        institution.IsActive = false;
+        fund.IsActive = false;
+
+        await context.SaveChangesAsync();
+    }
+
     private PreparedWorkspace PrepareWorkspace(
         string databasePath,
         bool createVerifiedBackup)
@@ -378,3 +505,13 @@ internal sealed class WealthLedgerApiFactory
                     _failure));
     }
 }
+
+internal sealed record ReadyUiLedgerFixture(
+    Guid PurchaseTransactionId,
+    Guid PrincipalEntryId,
+    Guid ConsiderationEntryId,
+    Guid CostId,
+    Guid AssetLotId,
+    Guid OpeningAllocationId,
+    Guid ContributionTransactionId,
+    Guid ContributionEntryId);

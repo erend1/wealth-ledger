@@ -31,9 +31,14 @@ reality, and leave the process in its startup mode with honest restart guidance.
 Backup completion requires a verified package whose workspace binding is
 `Matched`; it does not use the M004 acknowledgement flags as a readiness gate.
 
-The Ready shell, transaction explanation, remaining UI/privacy/accessibility
-hardening, Playwright browser verification, and final M006 documentation
-verification remain unimplemented.
+The Ready host now exposes the accepted read-only Today, recent Ledger,
+transaction explanation, Settings master-data, and Settings data-safety pages.
+The transaction explanation composes final M003 facts with current M005 labels
+through one bounded Application query, and inactive or archived current context
+remains visible without being presented as a source-time snapshot.
+
+Remaining UI/privacy/accessibility hardening, Playwright browser verification,
+and final M006 documentation verification remain unimplemented.
 
 ## User outcome
 

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using WealthLedger.UI.Hosting;
+using WealthLedger.UI.Pages;
 using WealthLedger.UI.Presentation;
 
 namespace WealthLedger.UI;
@@ -22,6 +23,8 @@ public static class DependencyInjection
         services.AddSingleton<ValuePresenter>();
         services.AddSingleton<UiText>();
         services.AddSingleton<LocalUiStartupContext>();
+        services.AddScoped<ReadyHouseholdResolver>();
+        services.AddSingleton<RecentLedgerPresenter>();
 
         services.AddAntiforgery(
             options =>

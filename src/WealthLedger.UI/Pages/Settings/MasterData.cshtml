@@ -1,0 +1,292 @@
+@page "/settings/master-data"
+@model WealthLedger.UI.Pages.Settings.MasterDataModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["MasterData_Title"];
+    ViewData["ActiveNavigation"] = "Settings";
+}
+
+<article class="flow" aria-labelledby="master-data-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Settings_Eyebrow"]</p>
+        <h1 id="master-data-heading">@Text["MasterData_Title"]</h1>
+        <p class="lede">@Text["MasterData_Introduction"]</p>
+    </header>
+
+    @if (Model.LoadUnavailable)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["MasterData_UnavailableTitle"]</h2>
+            <p>@Text["MasterData_UnavailableExplanation"]</p>
+        </section>
+    }
+    else if (!Model.HasHousehold)
+    {
+        <section class="summary-card summary-card--warning flow" role="status">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Ready_CurrentHouseholdLabel"]
+            <strong>@Model.HouseholdName</strong>
+        </p>
+        <p class="muted">@Text["MasterData_CurrentStateNotice"]</p>
+
+        @if (Model.HasMoreData)
+        {
+            <div class="callout" role="status">
+                <p>@Text["MasterData_BoundedNotice"]</p>
+            </div>
+        }
+
+        <section class="summary-card flow" aria-labelledby="members-heading">
+            <h2 id="members-heading">@Text["MasterData_MembersTitle"]</h2>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Common_NameLabel"]</th>
+                            <th scope="col">@Text["Common_StateLabel"]</th>
+                            <th scope="col">@Text["Common_CreatedAtLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td data-label="@Text["Common_NameLabel"]">@member.DisplayName</td>
+                                <td data-label="@Text["Common_StateLabel"]">
+                                    @(member.IsActive
+                                        ? Text["Common_Active"]
+                                        : Text["Common_Inactive"])
+                                </td>
+                                <td data-label="@Text["Common_CreatedAtLabel"]"
+                                    aria-label="@member.CreatedAt.AssistiveText">
+                                    @member.CreatedAt.Text
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="institutions-heading">
+            <h2 id="institutions-heading">@Text["MasterData_InstitutionsTitle"]</h2>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Common_CodeLabel"]</th>
+                            <th scope="col">@Text["Common_NameLabel"]</th>
+                            <th scope="col">@Text["Common_TypeLabel"]</th>
+                            <th scope="col">@Text["Common_StateLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var institution in Model.Institutions)
+                        {
+                            <tr>
+                                <td data-label="@Text["Common_CodeLabel"]"><code>@institution.Code</code></td>
+                                <td data-label="@Text["Common_NameLabel"]">@institution.Name</td>
+                                <td data-label="@Text["Common_TypeLabel"]">
+                                    @institution.Type.Text <code>@institution.Type.TechnicalDetail</code>
+                                </td>
+                                <td data-label="@Text["Common_StateLabel"]">
+                                    @(institution.IsActive
+                                        ? Text["Common_Active"]
+                                        : Text["Common_Inactive"])
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="portfolios-heading">
+            <h2 id="portfolios-heading">@Text["MasterData_PortfoliosTitle"]</h2>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Common_CodeLabel"]</th>
+                            <th scope="col">@Text["Common_NameLabel"]</th>
+                            <th scope="col">@Text["Common_StateLabel"]</th>
+                            <th scope="col">@Text["Common_CreatedAtLabel"]</th>
+                            <th scope="col">@Text["Common_ClosedAtLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var portfolio in Model.Portfolios)
+                        {
+                            <tr>
+                                <td data-label="@Text["Common_CodeLabel"]"><code>@portfolio.Code</code></td>
+                                <td data-label="@Text["Common_NameLabel"]">@portfolio.Name</td>
+                                <td data-label="@Text["Common_StateLabel"]">
+                                    @portfolio.Status.Text <code>@portfolio.Status.TechnicalDetail</code>
+                                </td>
+                                <td data-label="@Text["Common_CreatedAtLabel"]"
+                                    aria-label="@portfolio.CreatedAt.AssistiveText">
+                                    @portfolio.CreatedAt.Text
+                                </td>
+                                <td data-label="@Text["Common_ClosedAtLabel"]"
+                                    aria-label="@portfolio.ClosedAt.AssistiveText">
+                                    @portfolio.ClosedAt.Text
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="accounts-heading">
+            <h2 id="accounts-heading">@Text["MasterData_AccountsTitle"]</h2>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Common_CodeLabel"]</th>
+                            <th scope="col">@Text["Common_NameLabel"]</th>
+                            <th scope="col">@Text["Common_TypeLabel"]</th>
+                            <th scope="col">@Text["MasterData_InstitutionLabel"]</th>
+                            <th scope="col">@Text["Common_StateLabel"]</th>
+                            <th scope="col">@Text["MasterData_OpenedOnLabel"]</th>
+                            <th scope="col">@Text["Common_ClosedAtLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            <tr>
+                                <td data-label="@Text["Common_CodeLabel"]"><code>@account.Code</code></td>
+                                <td data-label="@Text["Common_NameLabel"]">@account.Name</td>
+                                <td data-label="@Text["Common_TypeLabel"]">
+                                    @account.Type.Text <code>@account.Type.TechnicalDetail</code>
+                                </td>
+                                <td data-label="@Text["MasterData_InstitutionLabel"]">
+                                    @if (account.InstitutionName is null)
+                                    {
+                                        @Text["State_NotApplicable"]
+                                    }
+                                    else
+                                    {
+                                        @account.InstitutionName <code>@account.InstitutionCode</code>
+                                        @if (account.InstitutionIsActive == false)
+                                        {
+                                            <span class="state-text state-text--inactive">
+                                                @Text["Common_Inactive"]
+                                            </span>
+                                        }
+                                    }
+                                </td>
+                                <td data-label="@Text["Common_StateLabel"]">
+                                    @(account.IsActive
+                                        ? Text["Common_Active"]
+                                        : Text["Common_Inactive"])
+                                </td>
+                                <td data-label="@Text["MasterData_OpenedOnLabel"]"
+                                    aria-label="@account.OpenedOn.AssistiveText">
+                                    @account.OpenedOn.Text
+                                </td>
+                                <td data-label="@Text["Common_ClosedAtLabel"]"
+                                    aria-label="@account.ClosedOn.AssistiveText">
+                                    @account.ClosedOn.Text
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="currencies-heading">
+            <h2 id="currencies-heading">@Text["MasterData_CurrenciesTitle"]</h2>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Common_CodeLabel"]</th>
+                            <th scope="col">@Text["Common_NameLabel"]</th>
+                            <th scope="col">@Text["MasterData_MinorDigitsLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var currency in Model.Currencies)
+                        {
+                            <tr>
+                                <td data-label="@Text["Common_CodeLabel"]"><code>@currency.Code</code></td>
+                                <td data-label="@Text["Common_NameLabel"]">@currency.Name</td>
+                                <td data-label="@Text["MasterData_MinorDigitsLabel"]">@currency.MinorUnitDigits</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="assets-heading">
+            <h2 id="assets-heading">@Text["MasterData_AssetsTitle"]</h2>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Common_CodeLabel"]</th>
+                            <th scope="col">@Text["Common_NameLabel"]</th>
+                            <th scope="col">@Text["Common_TypeLabel"]</th>
+                            <th scope="col">@Text["MasterData_UnitLabel"]</th>
+                            <th scope="col">@Text["MasterData_BaseCurrencyLabel"]</th>
+                            <th scope="col">@Text["MasterData_LotTrackingLabel"]</th>
+                            <th scope="col">@Text["Common_StateLabel"]</th>
+                            <th scope="col">@Text["Common_CreatedAtLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var asset in Model.Assets)
+                        {
+                            <tr>
+                                <td data-label="@Text["Common_CodeLabel"]"><code>@asset.Code</code></td>
+                                <td data-label="@Text["Common_NameLabel"]">@asset.Name</td>
+                                <td data-label="@Text["Common_TypeLabel"]">
+                                    @asset.Type.Text <code>@asset.Type.TechnicalDetail</code>
+                                </td>
+                                <td data-label="@Text["MasterData_UnitLabel"]">
+                                    @asset.BaseUnit.Text <code>@asset.BaseUnit.TechnicalDetail</code>
+                                </td>
+                                <td data-label="@Text["MasterData_BaseCurrencyLabel"]">
+                                    @if (asset.BaseCurrencyCode is null)
+                                    {
+                                        @Text["State_NotApplicable"]
+                                    }
+                                    else
+                                    {
+                                        <code>@asset.BaseCurrencyCode</code>
+                                    }
+                                </td>
+                                <td data-label="@Text["MasterData_LotTrackingLabel"]">
+                                    @asset.LotTrackingMode.Text <code>@asset.LotTrackingMode.TechnicalDetail</code>
+                                </td>
+                                <td data-label="@Text["Common_StateLabel"]">
+                                    @(asset.IsActive
+                                        ? Text["Common_Active"]
+                                        : Text["Common_Inactive"])
+                                </td>
+                                <td data-label="@Text["Common_CreatedAtLabel"]"
+                                    aria-label="@asset.CreatedAt.AssistiveText">
+                                    @asset.CreatedAt.Text
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    <a class="card-link" asp-page="/Settings/Index">@Text["Settings_BackLink"]</a>
+</article>

@@ -2,6 +2,7 @@ using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
+using WealthLedger.Application.LocalData;
 
 namespace WealthLedger.UI.Presentation;
 
@@ -27,7 +28,11 @@ public enum StableCodeFamily
     CashFlowCategory,
     CostType,
     CostTreatment,
-    CostBasisStatus
+    CostBasisStatus,
+    LocalDatabaseCompatibility,
+    LocalDataIntegrityStatus,
+    LocalBackupWorkspaceBinding,
+    BackupEncryptionMode
 }
 
 /// <summary>
@@ -208,6 +213,35 @@ public static class StableCodes
             CostBasisStatus.Known => "KNOWN",
             CostBasisStatus.Unknown => "UNKNOWN",
             CostBasisStatus.NotApplicable => "NOT_APPLICABLE",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(LocalDatabaseCompatibility value)
+        => value switch
+        {
+            LocalDatabaseCompatibility.Uninitialized => "UNINITIALIZED",
+            LocalDatabaseCompatibility.Compatible => "COMPATIBLE",
+            LocalDatabaseCompatibility.MigrationRequired =>
+                "MIGRATION_REQUIRED",
+            LocalDatabaseCompatibility.Incompatible => "INCOMPATIBLE",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(LocalDataIntegrityStatus value)
+        => value switch
+        {
+            LocalDataIntegrityStatus.NotChecked => "NOT_CHECKED",
+            LocalDataIntegrityStatus.Passed => "PASSED",
+            LocalDataIntegrityStatus.Failed => "FAILED",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(LocalBackupWorkspaceBinding value)
+        => value switch
+        {
+            LocalBackupWorkspaceBinding.Unknown => "UNKNOWN",
+            LocalBackupWorkspaceBinding.Matched => "MATCHED",
+            LocalBackupWorkspaceBinding.Unrelated => "UNRELATED",
             _ => throw Unsupported(value)
         };
 

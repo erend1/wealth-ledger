@@ -147,6 +147,9 @@ public static class DependencyInjection
                 serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
 
         services.AddScoped<ILedgerTransactionReadStore, EfCoreLedgerTransactionReadStore>();
+        services.AddScoped<
+            ILedgerTransactionCurrentContextReadStore,
+            EfCoreLedgerTransactionCurrentContextReadStore>();
 
         services.AddScoped<ILedgerReversalStore, EfCoreLedgerReversalStore>();
 

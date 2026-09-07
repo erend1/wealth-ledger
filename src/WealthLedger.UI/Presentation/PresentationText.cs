@@ -23,6 +23,10 @@ internal static class PresentationText
     internal const string EffectIncrease = "Effect_Increase";
     internal const string EffectDecrease = "Effect_Decrease";
     internal const string EffectNoChange = "Effect_NoChange";
+    internal const string AgeLessThanMinute = "Age_LessThanMinute";
+    internal const string AgeMinutes = "Age_Minutes";
+    internal const string AgeHours = "Age_Hours";
+    internal const string AgeDays = "Age_Days";
 
     /// <summary>
     /// Reads a key that the resources are required to contain. A missing key

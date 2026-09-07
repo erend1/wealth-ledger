@@ -1,4 +1,5 @@
 using System.Globalization;
+using WealthLedger.Application.LocalData;
 using WealthLedger.Domain.Assets;
 using WealthLedger.UI.Presentation;
 
@@ -93,6 +94,18 @@ public sealed class ValuePresenterTests
         Assert.Equal(
             PresentationDiagnostics.MinorUnitDigitsUnsupported,
             rendered.DiagnosticCategory);
+    }
+
+    [Fact]
+    public void Money_WithoutCurrencyScaleMetadata_IsUnavailableNotZero()
+    {
+        var rendered = Presenter.Money(0, "TRY", minorUnitDigits: null);
+
+        Assert.Equal(DisplayState.Unavailable, rendered.State);
+        Assert.Equal(
+            PresentationDiagnostics.CurrencyMetadataMissing,
+            rendered.DiagnosticCategory);
+        Assert.DoesNotContain("0,00", rendered.Text, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -221,6 +234,64 @@ public sealed class ValuePresenterTests
         Assert.Equal(
             PresentationDiagnostics.TimestampNotUtc,
             rendered.DiagnosticCategory);
+    }
+
+    [Theory]
+    [InlineData(0, "Bir dakikadan kısa süre önce")]
+    [InlineData(17, "17 dakika önce")]
+    [InlineData(120, "2 saat önce")]
+    [InlineData(2_880, "2 gün önce")]
+    public void ElapsedAge_RendersBoundedWholeUnits(
+        int elapsedMinutes,
+        string expected)
+    {
+        var now = new DateTimeOffset(
+            2026,
+            9,
+            7,
+            12,
+            0,
+            0,
+            TimeSpan.Zero);
+
+        var rendered = Presenter.ElapsedAge(
+            now.AddMinutes(-elapsedMinutes),
+            now);
+
+        Assert.Equal(expected, rendered.Text);
+        Assert.Equal(DisplayState.Known, rendered.State);
+    }
+
+    [Fact]
+    public void ElapsedAge_FutureTimestampIsUnavailable()
+    {
+        var now = DateTimeOffset.UnixEpoch;
+        var rendered = Presenter.ElapsedAge(now.AddSeconds(1), now);
+
+        Assert.Equal(DisplayState.Unavailable, rendered.State);
+        Assert.Equal(
+            PresentationDiagnostics.TimestampInFuture,
+            rendered.DiagnosticCategory);
+    }
+
+    [Fact]
+    public void LocalSafetyCodes_KeepTheirStableTechnicalValues()
+    {
+        var compatibility = Presenter.StableCode(
+            LocalDatabaseCompatibility.Compatible);
+        var integrity = Presenter.StableCode(
+            LocalDataIntegrityStatus.Passed);
+        var binding = Presenter.StableCode(
+            LocalBackupWorkspaceBinding.Matched);
+        var encryption = Presenter.BackupEncryptionMode("PLAINTEXT");
+
+        Assert.Equal("COMPATIBLE", compatibility.TechnicalDetail);
+        Assert.Equal("PASSED", integrity.TechnicalDetail);
+        Assert.Equal("MATCHED", binding.TechnicalDetail);
+        Assert.Equal("PLAINTEXT", encryption.TechnicalDetail);
+        Assert.All(
+            new[] { compatibility, integrity, binding, encryption },
+            value => Assert.Equal(DisplayState.Known, value.State));
     }
 
     [Fact]

@@ -1,0 +1,111 @@
+@page "/"
+@model WealthLedger.UI.Pages.IndexModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Today_Title"];
+    ViewData["ActiveNavigation"] = "Today";
+}
+
+<article class="flow" aria-labelledby="today-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Today_Eyebrow"]</p>
+        <h1 id="today-heading">@Text["Today_Title"]</h1>
+        <p class="lede">@Text["Today_Introduction"]</p>
+    </header>
+
+    @if (!Model.HasHousehold)
+    {
+        <section class="summary-card summary-card--warning flow" role="status">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Ready_CurrentHouseholdLabel"]
+            <strong>@Model.HouseholdName</strong>
+        </p>
+
+        <div class="dashboard-grid">
+            <section class="summary-card flow" aria-labelledby="today-safety-heading">
+                <h2 id="today-safety-heading">@Text["Today_SafetyTitle"]</h2>
+                @if (Model.SafetyAvailable)
+                {
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["DataSafety_CompatibilityLabel"]</dt>
+                            <dd aria-label="@Model.Compatibility!.AssistiveText">
+                                @Model.Compatibility.Text
+                                <code>@Model.Compatibility.TechnicalDetail</code>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["DataSafety_IntegrityLabel"]</dt>
+                            <dd aria-label="@Model.Integrity!.AssistiveText">
+                                @Model.Integrity.Text
+                                <code>@Model.Integrity.TechnicalDetail</code>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Today_BackupBindingLabel"]</dt>
+                            <dd aria-label="@Model.BackupBinding!.AssistiveText">
+                                @Model.BackupBinding.Text
+                                <code>@Model.BackupBinding.TechnicalDetail</code>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Today_BackupAgeLabel"]</dt>
+                            <dd aria-label="@Model.BackupAge!.AssistiveText">
+                                @Model.BackupAge.Text
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Today_BackupVerifiedAtLabel"]</dt>
+                            <dd aria-label="@Model.BackupVerifiedAt!.AssistiveText">
+                                @Model.BackupVerifiedAt.Text
+                            </dd>
+                        </div>
+                    </dl>
+                    <a class="card-link" asp-page="/Settings/DataSafety">
+                        @Text["Today_DataSafetyLink"]
+                    </a>
+                }
+                else
+                {
+                    <p class="state-text state-text--unavailable">
+                        @Text["Today_SafetyUnavailable"]
+                    </p>
+                }
+            </section>
+
+            <section class="summary-card flow" aria-labelledby="today-known-heading">
+                <h2 id="today-known-heading">@Text["Today_KnownFactsTitle"]</h2>
+                <p>@Text["Today_KnownFactsExplanation"]</p>
+            </section>
+        </div>
+
+        <section class="flow" aria-labelledby="today-recent-heading">
+            <div class="section-heading">
+                <h2 id="today-recent-heading">@Text["Today_RecentTitle"]</h2>
+                <a asp-page="/Ledger/Index">@Text["Today_AllLedgerLink"]</a>
+            </div>
+
+            @if (Model.RecentTransactions.Count == 0)
+            {
+                <div class="summary-card flow" role="status">
+                    <h3>@Text["Today_EmptyTitle"]</h3>
+                    <p>@Text["Today_EmptyExplanation"]</p>
+                    <p class="muted">@Text["Today_NoFabricatedTotals"]</p>
+                </div>
+            }
+            else
+            {
+                <p class="muted">@Text["Ledger_CurrentContextNotice"]</p>
+                <partial name="_RecentLedgerTransactions"
+                         model="Model.RecentTransactions" />
+            }
+        </section>
+    }
+</article>

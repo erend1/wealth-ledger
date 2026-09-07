@@ -1,0 +1,51 @@
+@inject UiText Text
+@{
+    var activeNavigation = ViewData["ActiveNavigation"] as string;
+}
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] — WealthLedger</title>
+    <link rel="stylesheet"
+          href="~/_content/WealthLedger.UI/css/setup.css"
+          asp-append-version="true" />
+    <link rel="stylesheet"
+          href="~/_content/WealthLedger.UI/css/shell.css"
+          asp-append-version="true" />
+</head>
+<body>
+    <a class="skip-link" href="#main-content">
+        @Text["Layout_SkipToContent"]
+    </a>
+    <header class="app-header">
+        <div class="app-header__inner">
+            <a class="brand brand--link" asp-page="/Index">WealthLedger</a>
+            <span class="local-label">@Text["Layout_LocalOnly"]</span>
+        </div>
+        <nav class="primary-nav" aria-label="@Text["Shell_PrimaryNavigationLabel"]">
+            <div class="primary-nav__inner">
+                <a asp-page="/Index"
+                   aria-current="@(activeNavigation == "Today" ? "page" : null)">
+                    @Text["Shell_Navigation_Today"]
+                </a>
+                <a asp-page="/Ledger/Index"
+                   aria-current="@(activeNavigation == "Ledger" ? "page" : null)">
+                    @Text["Shell_Navigation_Ledger"]
+                </a>
+                <a asp-page="/Settings/Index"
+                   aria-current="@(activeNavigation == "Settings" ? "page" : null)">
+                    @Text["Shell_Navigation_Settings"]
+                </a>
+            </div>
+        </nav>
+    </header>
+    <main id="main-content" class="page-shell app-main" tabindex="-1">
+        @RenderBody()
+    </main>
+    <footer class="site-footer">
+        <p>@Text["Layout_Footer"]</p>
+    </footer>
+</body>
+</html>

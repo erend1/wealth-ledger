@@ -35,7 +35,8 @@ public sealed partial class GuidedFirstRunUiTests
             ApiTestStartupMode.Ready,
             expectedPage: null,
             expectedSetupRedirect: null,
-            ledgerExpected: HttpStatusCode.OK);
+            ledgerExpected: HttpStatusCode.OK,
+            readyPagesExpected: true);
     }
 
     [Fact]
@@ -846,7 +847,8 @@ public sealed partial class GuidedFirstRunUiTests
         string? expectedPage,
         string? expectedSetupRedirect,
         bool completionRedirectExpected = false,
-        HttpStatusCode ledgerExpected = HttpStatusCode.NotFound)
+        HttpStatusCode ledgerExpected = HttpStatusCode.NotFound,
+        bool readyPagesExpected = false)
     {
         using var factory = new WealthLedgerApiFactory(mode);
         using var client = CreateClient(factory);
@@ -900,6 +902,24 @@ public sealed partial class GuidedFirstRunUiTests
                     expectedSetupRedirect,
                     setupResponse.Headers.Location?.OriginalString);
             }
+        }
+
+        foreach (var (path, readyStatus) in new[]
+                 {
+                     ("/", HttpStatusCode.OK),
+                     ("/ledger", HttpStatusCode.OK),
+                     ("/ledger/not-a-guid", HttpStatusCode.BadRequest),
+                     ("/settings", HttpStatusCode.OK),
+                     ("/settings/master-data", HttpStatusCode.OK),
+                     ("/settings/data-safety", HttpStatusCode.OK)
+                 })
+        {
+            using var response = await client.GetAsync(path);
+            Assert.Equal(
+                readyPagesExpected
+                    ? readyStatus
+                    : HttpStatusCode.NotFound,
+                response.StatusCode);
         }
 
         using var ledgerResponse =
