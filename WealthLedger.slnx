@@ -11,4 +11,5 @@
   <Project Path="./tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj" />
   <Project Path="./tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.csproj" />
   <Project Path="./tests/WealthLedger.UI.Tests/WealthLedger.UI.Tests.csproj" />
+  <Project Path="./tests/WealthLedger.UI.BrowserTests/WealthLedger.UI.BrowserTests.csproj" />
 </Solution>

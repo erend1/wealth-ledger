@@ -74,7 +74,10 @@
             }
         </section>
 
-        <form method="post" class="flow panel panel--action" novalidate>
+        <form method="post"
+              asp-page="/Setup/Backup"
+              class="flow panel panel--action"
+              novalidate>
             <h2>@Text["Backup_ActionTitle"]</h2>
             <p>@Text["Backup_ActionExplanation"]</p>
 

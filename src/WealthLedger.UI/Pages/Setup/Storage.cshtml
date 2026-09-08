@@ -40,7 +40,10 @@
             <p class="muted">@Text["Storage_PathRestriction"]</p>
         </section>
 
-        <form method="post" class="flow panel" novalidate>
+        <form method="post"
+              asp-page="/Setup/Storage"
+              class="flow panel"
+              novalidate>
             <h2>@Text["Storage_ActionTitle"]</h2>
             <p>@Text["Storage_ActionExplanation"]</p>
 

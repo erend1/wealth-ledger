@@ -23,7 +23,10 @@
     }
     else if (!Model.WorkspaceUnavailable)
     {
-        <form method="post" class="flow" novalidate>
+        <form method="post"
+              asp-page="/Setup/Workspace"
+              class="flow"
+              novalidate>
             <section class="panel flow" aria-labelledby="currency-heading">
                 <h2 id="currency-heading">@Text["Workspace_CurrencyTitle"]</h2>
                 <div class="form-grid">
