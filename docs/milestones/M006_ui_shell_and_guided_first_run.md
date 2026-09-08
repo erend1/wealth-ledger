@@ -1,17 +1,19 @@
 # M006: Local UI Shell and Guided First Run
 
-Status: In Progress
+Status: Verified
 
 Owner: Human and agent
 
 Accepted: 2026-09-03 (all eleven Recommended decisions, with Decision 4 amended
 by the workspace-binding gate recorded below and accepted as amended)
 
+Verified: 2026-09-08
+
 Architecture record: [ADR-008](../decisions/ADR-008-local-ui-shell-architecture.md)
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
-M006 is now In Progress and is the only In Progress milestone.
+M006 is Verified. No milestone is currently In Progress.
 
 The workspace-binding prerequisite, accepted ADR-008 architecture,
 WealthLedger.UI assembly with exact Turkish-first presentation primitives,
@@ -37,8 +39,16 @@ The transaction explanation composes final M003 facts with current M005 labels
 through one bounded Application query, and inactive or archived current context
 remains visible without being presented as a source-time snapshot.
 
-Remaining UI/privacy/accessibility hardening, Playwright browser verification,
-and final M006 documentation verification remain unimplemented.
+Accessibility and privacy hardening now cover landmarks, labels, linked and
+focused validation, skip navigation, visible focus, target sizing, reduced
+motion, forced colors, responsive reflow, and Ready-page log inspection. This
+focused review does not claim general WCAG conformance.
+
+The pinned Playwright suite now exercises the restart-delimited first run and
+Ready navigation in real Chromium, including JavaScript-disabled and keyboard-
+only journeys, narrow and desktop viewports, non-loopback request rejection, and
+process/browser/file cleanup. The full repository gates and disposable M004
+recovery smoke passed on 2026-09-08.
 
 ## User outcome
 
@@ -59,6 +69,29 @@ reverse, or correct investment activity. Those write outcomes remain in their
 ordered milestones.
 
 ## Current evidence
+
+The verified M006 checkpoint on 2026-09-08 has 580 passing tests:
+
+- Domain: 83;
+- Application: 122;
+- Infrastructure: 172;
+- UI: 63;
+- API/UI host: 114;
+- Operations: 23;
+- Playwright browser: 3.
+
+Playwright for .NET is pinned at `1.62.0`. Its generated install script at
+`tests/WealthLedger.UI.BrowserTests/bin/Debug/net10.0/playwright.ps1` installed
+Chromium revision `1234` (Chrome for Testing `151.0.7922.34`). The browser suite
+starts the real loopback host on an ephemeral port, uses a unique synthetic data
+and backup root per test, rejects every non-loopback request, and proves cleanup.
+No screenshot or trace artifact was generated.
+
+The solution test, formatting, and EF model-drift gates pass with no new
+migration after `005_WorkspaceIdentity`. The final disposable M004 process smoke
+passed status, initialization, backup creation and independent verification,
+isolated restore staging, loopback binding, and restart. The documented
+`LedgerTransaction.cs` SDK/line-ending caveat remains unchanged.
 
 This proposal was originally prepared on the stacked planning branch at commit
 `f58ebe6` on 2026-08-31, when M003 was Accepted but absent from that branch and

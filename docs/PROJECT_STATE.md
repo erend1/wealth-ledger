@@ -1,8 +1,10 @@
 # WealthLedger Project State
 
-As of: 2026-09-07
+As of: 2026-09-08
 
-Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
+Status source: verified against the repository, the generated EF model, local
+.NET/SQLite test runs, real-process lifecycle smoke tests, and local Chromium
+journeys over synthetic isolated data.
 
 ## Current checkpoint
 
@@ -12,7 +14,9 @@ posted reversal and correction workflow are implemented and verified. M004 now
 adds the verified fail-closed local database, ownership, backup, restore,
 migration, and loopback-hosting operating boundary. M005 adds verified bounded
 master/reference navigation, a recent Posted ledger feed, and valid-versus-
-unknown position-scope behavior.
+unknown position-scope behavior. M006 adds the verified local Razor Pages shell,
+fail-closed guided first run, exact Turkish-first presentation, and critical
+real-browser coverage.
 
 Starting without a database, the explicit operations CLI can initialize the
 accepted migration chain and verify the resulting file. The default-off setup
@@ -63,23 +67,26 @@ was accepted on 2026-09-03 after the human owner approved all eleven
 Recommended decisions, with Decision 4 amended by the workspace-binding gate
 found during pre-implementation reconciliation. ADR-008 records the accepted UI
 and hosting architecture and the two explicit refinements it makes to ADR-007.
-M006 is now In Progress and is the only In Progress milestone.
+M006 was verified on 2026-09-08 after its accessibility/privacy checks, real-
+browser critical journeys, complete repository verification, and disposable
+M004 recovery smoke passed. No milestone is currently In Progress.
 
-The implemented M006 boundaries now include workspace-bound protection
-readiness, the `WealthLedger.UI` assembly with exact Turkish-first
-presentation, the fail-closed startup-mode boundary, guided browser
-initialization for storage, workspace setup and the required initial backup,
-and the Ready shell with its complete read-only transaction explanation.
-
-The remaining boundaries are not implemented: remaining privacy and
-accessibility hardening, Playwright browser verification, and the final M006
-documentation checkpoint. No browser test project exists yet.
+The verified M006 delivery includes workspace-bound protection readiness, the
+`WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
+fail-closed startup-mode boundary, guided browser initialization for storage,
+workspace setup and the required initial backup, and the Ready shell with its
+complete read-only transaction explanation. Semantic landmarks, labels,
+validation focus, keyboard focus, skip navigation, reduced-motion handling,
+forced-color support, and responsive reflow have focused automated coverage;
+this is not a claim of general WCAG conformance.
 
 `InitialBackupRequired` maps the initial-backup review/action and completion
 pages. The running setup process remains in that static mode after backup
 creation and clearly requires one clean restart. `Ready` maps only Today,
-Ledger with direct transaction explanation, and read-only Settings pages. M006
-remains In Progress and is not Verified.
+Ledger with direct transaction explanation, and read-only Settings pages. The
+real-browser suite covers the complete restart-delimited first run, Ready
+navigation, JavaScript-disabled operation, keyboard-only paths, narrow and
+desktop viewports, external-request rejection, and process/file cleanup.
 
 ## Verified implementation
 
@@ -324,13 +331,15 @@ changed by a request. UI responses carry a restrictive Content Security Policy,
 `nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
 
 Guided browser initialization covers the `Blocked`, `StorageUninitialized`, and
-`WorkspaceUninitialized` pages. Storage creation and atomic workspace setup call
-the existing ownership-safe Application operations, require antiforgery, use
-Post/Redirect/Get, derive retry outcomes from persisted reality rather than
-client state, and leave the process in its startup mode with explicit restart
-guidance. Setup pages use only the framework antiforgery cookie and hold no
-authoritative workflow state. The default-off JSON setup endpoint is mapped only
-in `WorkspaceUninitialized` and remains independent of the browser wizard.
+`WorkspaceUninitialized` pages, followed by the `InitialBackupRequired` review,
+create, and completion pages described below. Storage creation and atomic
+workspace setup call the existing ownership-safe Application operations,
+require antiforgery, use Post/Redirect/Get, derive retry outcomes from persisted
+reality rather than client state, and leave the process in its startup mode with
+explicit restart guidance. Setup pages use only the framework antiforgery cookie
+and hold no authoritative workflow state. The default-off JSON setup endpoint is
+mapped only in `WorkspaceUninitialized` and remains independent of the browser
+wizard.
 
 `InitialBackupRequired` maps only `/setup`, `/setup/backup`, and
 `/setup/complete`. The backup GET reads current status without creating a
@@ -367,6 +376,16 @@ allocations, and both reversal directions without accounting arithmetic. Names
 are explicitly current context rather than source-time snapshots, while exact
 money, quantity, unit-price, date, timestamp, and stable-code presentation stays
 inside the existing UI presenter.
+
+Both setup and shell layouts place a working skip link before other focusable
+content and expose semantic header, navigation, main, and footer landmarks.
+Every setup control has a programmatic label and associated help or validation
+text. Invalid POSTs render a linked, focusable validation summary; a small local
+progressive-enhancement script moves focus on load, while the same critical
+flows remain usable when JavaScript is disabled. Visible focus, minimum control
+targets, reduced-motion preference, forced colors, and narrow/200%-equivalent
+reflow are covered mechanically and in real Chromium. These checks establish
+the accepted M006 behavior but do not establish broad WCAG conformance.
 
 ### Posted reversal and correction
 
@@ -420,9 +439,10 @@ Results:
 - Application tests: 122 passed, 0 failed.
 - Infrastructure tests against real SQLite files: 172 passed, 0 failed.
 - UI presentation/contract tests: 63 passed, 0 failed.
-- API tests against real SQLite files: 110 passed, 0 failed.
+- API/UI host tests against real SQLite files: 114 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 573 passed, 0 failed.
+- Playwright Chromium browser tests: 3 passed, 0 failed.
+- Total: 580 passed, 0 failed.
 - Formatting drift: none in the current worktree; see the SDK line-ending
   caveat below.
 - EF model drift: none. The migration chain is unchanged at five migrations;
@@ -503,6 +523,32 @@ reversal directions, inactive current context, and omission of cursor payloads,
 request identities, SQL, connection strings, stack traces, notes, and
 references from captured logs.
 
+Four focused accessibility host tests prove one clear page heading, semantic
+landmarks, a first-focusable skip link, programmatic input labels and help/error
+relationships, focusable linked validation summaries, visible focus rules,
+minimum setup-control targets, reduced-motion behavior, and forced-color cues.
+The privacy log inspection visits all six Ready pages and malformed request
+paths and forbids private labels, notes, references, exact-value markers,
+resolved paths outside the accepted data-safety surface, SQL, connection
+strings, stack traces, cursors, and raw request values.
+
+Three Playwright 1.62.0 tests run against real loopback processes with Chromium
+revision 1234. They cover the complete restart-delimited
+`StorageUninitialized` -> `WorkspaceUninitialized` ->
+`InitialBackupRequired` -> `Ready` journey, click-through Ledger transaction
+detail and Settings navigation, JavaScript-disabled operation, keyboard-only
+validation and navigation, approximately 390-pixel and desktop viewports,
+100%/200%-equivalent reflow, reduced-motion and forced-color preferences, and
+rejection of every non-loopback request. Each test proves browser disconnection,
+host-process exit, and deletion of its unique synthetic data and backup root;
+no screenshots or traces were generated.
+
+The final M004 disposable real-process smoke passed on 2026-09-08: status,
+database initialization, backup creation and independent verification, isolated
+restore staging and status, loopback-only host startup, and fresh-process restart
+all completed against synthetic paths. No real household database or backup
+directory was used.
+
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
 eligibility preview, same-lot inverse allocation, atomic SQLite persistence and
@@ -523,25 +569,17 @@ caveat remains.
 
 M006 was accepted on 2026-09-03 and its eleven decisions, with Decision 4 as
 amended, are recorded by ADR-008. Its UI assembly, presentation formatters,
-startup-mode boundary, guided storage/workspace initialization, and required
-initial-backup workflow, Ready shell, and transaction explanation are
-implemented and covered by the suites above. Browser verification and the
-remaining hardening/documentation boundaries are not, so M006 remains In
-Progress rather than Verified.
+startup-mode boundary, guided storage/workspace/initial-backup initialization,
+Ready shell, transaction explanation, accessibility/privacy hardening, and
+critical browser journeys are implemented and covered by the suites above.
+M006 was verified on 2026-09-08.
 
 ## Next delivery candidate
 
-M006 is In Progress and is the active delivery. Its eleven decisions were
-accepted on 2026-09-03 and ADR-008 records the resulting architecture.
-
-Delivered so far: workspace-bound protection readiness, the UI assembly and
-presentation formatters, the fail-closed startup-mode boundary, and guided
-storage, workspace, and required initial-backup initialization, plus the
-read-only Ready shell and transaction explanation. Still to deliver: remaining
-privacy and accessibility hardening, Playwright browser verification, and the
-final documentation checkpoint that would allow M006 to become Verified.
-
-M007 remains the next candidate after it.
+M006 is Verified. M007 is the next delivery candidate, but remains Planned until
+its bounded milestone contract and unresolved decisions receive explicit human
+acceptance. Do not begin M007 from this checkpoint merely because it is next in
+the roadmap.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 

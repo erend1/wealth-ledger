@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-09-03
+Last reviewed: 2026-09-08
 
 ## How to read this roadmap
 
@@ -44,7 +44,7 @@ Statuses used here:
 | M003 | Verified | [Posted reversal and correction workflow](milestones/M003_posted_reversal_and_correction.md) through Application, SQLite, and HTTP | Accepted 2026-08-28; verified 2026-08-31 |
 | M004 | Verified | [Safe local data operations](milestones/M004_safe_local_data_operations.md): explicit data location, source-control exclusions, backup, restore verification, migration safety, and local exposure policy | Ten decision gates accepted 2026-09-01 and recorded by ADR-007; verified 2026-09-02 |
 | M005 | Verified | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Ten decision gates accepted and implementation verified 2026-09-02 |
-| M006 | Accepted | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; In Progress |
+| M006 | Verified | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; verified 2026-09-08 |
 | M007 | Planned | Opening-balance cutover for cash, funds, equities, and physical-gold lots | M003 correction; M005 navigation; M006 shell |
 | M008 | Planned | Complete investment-fund lifecycle, including fees, taxes, sale, FIFO allocation, and realized cost | Opening lots and correction path |
 | M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
@@ -87,7 +87,7 @@ time navigation index. Broad transaction search, position/lot inventory, and
 reconciliation remain in M010.
 
 [`M006_ui_shell_and_guided_first_run.md`](milestones/M006_ui_shell_and_guided_first_run.md)
-is the active delivery. It provides a Turkish-first, server-rendered Razor
+was verified on 2026-09-08. It provides a Turkish-first, server-rendered Razor
 Pages UI in the existing single loopback host, a fail-closed
 blocked/setup/ready startup model, a bounded first-run wizard, exact
 fixed-point presentation, and a small Today/Ledger/Settings shell. It
@@ -102,9 +102,12 @@ workspace-binding correction ahead of the UI; migration 005 and the bound
 readiness contract are implemented and verified.
 
 All eleven decisions were accepted on 2026-09-03 and ADR-008 records the
-resulting architecture. M006 is now In Progress. The UI assembly, presentation
-formatters, fail-closed startup modes, guided first run, read-only shell, and
-browser verification remain to be delivered.
+resulting architecture. Verification includes focused accessibility/privacy
+coverage, three real-Chromium critical journeys, the complete 580-test suite,
+no formatting or EF model drift, and the disposable M004 recovery smoke.
+
+M007 is the next delivery candidate. It remains Planned and requires its own
+bounded contract and explicit human acceptance before implementation.
 
 No later roadmap item should be implemented merely because it appears in this
 file.

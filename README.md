@@ -9,9 +9,13 @@ The ledger is the source of truth. Posted transactions are immutable, correction
 - `src/WealthLedger.Domain` contains the financial model and invariants.
 - `src/WealthLedger.Application` contains focused use cases and persistence ports.
 - `src/WealthLedger.Infrastructure` contains the EF Core SQLite implementation.
-- `src/WealthLedger.Api` contains the ASP.NET Core Minimal API boundary.
+- `src/WealthLedger.UI` contains the Razor Class Library, PageModels, resources,
+  and local presentation assets; it references Application only.
+- `src/WealthLedger.Api` contains the ASP.NET Core Minimal API boundary and the
+  single loopback Razor Pages host/composition root.
 - `src/WealthLedger.Operations` contains the explicit local data lifecycle CLI.
-- `tests` contains the unit and real-SQLite integration suites.
+- `tests` contains the unit, real-SQLite integration, process, UI host, and
+  Playwright browser suites.
 - `docs` contains product, delivery, architecture, domain, database, project-state, operations, milestone, and ADR material at each document's stated status.
 
 See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint and next coherent slice.
@@ -24,9 +28,9 @@ See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint a
 | [docs/PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md) | Durable product outcomes and boundaries |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Intended delivery order, never proof of implementation |
 | [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Concise verified repository checkpoint |
-| [docs/UX_MVP.md](docs/UX_MVP.md) | Framework-independent proposed interaction model |
+| [docs/UX_MVP.md](docs/UX_MVP.md) | Proposed broader interaction model and verified M006 subset |
 | [docs/DATA_CAPTURE.md](docs/DATA_CAPTURE.md) | Source facts each financial workflow should preserve |
-| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted security/operations requirements and implemented M004 boundary |
+| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements and implemented M004/M006 operating boundaries |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Canonical database, backup, restore, migration, and recovery guide |
 | [docs/milestones/README.md](docs/milestones/README.md) | Milestone statuses, template, agent prompts, and definition of done |
 | [docs/decisions/README.md](docs/decisions/README.md) | Accepted architectural decisions |
@@ -39,6 +43,7 @@ reference material and are not required reading for routine development.
 ## Prerequisites
 
 - .NET SDK 10
+- PowerShell 7 (`pwsh`) for the generated Playwright installer
 
 Restore the pinned local tools and dependencies:
 
@@ -47,10 +52,24 @@ dotnet tool restore
 dotnet restore WealthLedger.slnx
 ```
 
+The browser tests pin `Microsoft.Playwright` at `1.62.0`, which pins Chromium
+revision `1234` (Chrome for Testing `151.0.7922.34`) through the package tooling.
+Build the project, then install that browser explicitly with the generated
+script:
+
+```powershell
+dotnet build tests/WealthLedger.UI.BrowserTests/WealthLedger.UI.BrowserTests.csproj --no-restore
+pwsh tests/WealthLedger.UI.BrowserTests/bin/Debug/net10.0/playwright.ps1 install chromium
+```
+
+Browser installation is a separate prerequisite. `dotnet test` never downloads
+a browser or silently skips the suite when it is absent.
+
 ## Local database operations
 
-Normal API startup never creates or migrates a database. Configure an absolute,
-separated backup directory, then use the explicit operations project:
+Host startup never creates or migrates a database as a side effect. Configure
+an absolute, separated backup directory before either the browser first run or
+the explicit operations project:
 
 ```powershell
 $wlBackupDirectory = 'E:\Encrypted WealthLedger Backups'
@@ -71,9 +90,59 @@ are plaintext. See [docs/OPERATIONS.md](docs/OPERATIONS.md) before using real
 data; it covers verification, restore drills, migration, active replacement,
 failure recovery, and stable exit categories.
 
-After database initialization, one-time master-data setup remains an explicit,
-default-off API action. Start the loopback API with `Setup:Enabled=true`, call
-`POST /api/setup/core-ledger` once, then restart without that flag.
+Migration, restore, active replacement, backup-file selection, and detailed
+recovery stay exclusively in the Operations CLI. The legacy one-time JSON core-
+setup endpoint remains default-off and is separate from the browser flow; it is
+available only in `WorkspaceUninitialized` when `Setup:Enabled=true`.
+
+## Local UI and guided first run
+
+Start the single host on an explicit loopback URL using the protection settings
+above:
+
+```powershell
+$wlHostArgs = $wlProtectionArgs + @('--Urls=http://127.0.0.1:54876')
+dotnet run --project src/WealthLedger.Api/WealthLedger.Api.csproj -- @wlHostArgs
+```
+
+Open `http://127.0.0.1:54876/setup` in a local browser for first run (or
+`/blocked` if startup reported a blocked mode). The process selects one mode at
+startup and never promotes itself dynamically:
+
+1. `StorageUninitialized` reviews the server-resolved safe storage location and
+   can create only the missing database. It offers no browser path control.
+2. Stop the process with Ctrl+C and run the same command. In
+   `WorkspaceUninitialized`, enter human-readable core master values and review
+   stable codes; no GUID, E8 value, minor-unit integer, SQL, or connection string
+   is required.
+3. Restart again. In `InitialBackupRequired`, review the configured destination
+   and create one new immutable generation through the verified M004 backup
+   operation.
+4. After the completion page, restart once more and open
+   `http://127.0.0.1:54876/`. `Ready` exposes Today, recent Ledger and
+   transaction explanations, and read-only Settings. Setup routes now return
+   404.
+
+An unsafe path, incompatible or migration-required database, failed integrity
+check, partial workspace, or other non-recoverable startup classification shows
+only the sanitized `/blocked` guidance. Use the
+[M004 operations guide](docs/OPERATIONS.md) for status, explicit migration,
+backup verification, isolated restore, and recovery; none of those privileged
+actions is reachable through the browser.
+
+The UI uses only local CSS and a tiny optional local focus helper. First run and
+core navigation remain functional with JavaScript disabled and without Internet
+access. The host rejects wildcard, LAN, and public binding; loopback is not a
+remote-access security design.
+
+### Synthetic screenshots and traces
+
+M006 adds no screenshot/export feature and its automated browser suite creates
+no screenshot or trace baseline. If capturing an image or trace for a review,
+use only an isolated synthetic database and backup directory. Inspect the
+artifact before sharing or committing it, and do not include household/master
+names, notes, references, exact financial values, resolved real paths, cookies,
+request bodies, cursor payloads, SQL, connection strings, or stack traces.
 
 ## Read-only navigation API
 
@@ -139,6 +208,15 @@ Run the full test suite:
 
 ```powershell
 dotnet test WealthLedger.slnx --no-restore
+```
+
+The verified M006 checkpoint contains 580 passing tests: Domain 83,
+Application 122, Infrastructure 172, UI 63, API/UI host 114, Operations 23, and
+Playwright browser 3. Run the browser project directly when iterating on UI
+journeys:
+
+```powershell
+dotnet test tests/WealthLedger.UI.BrowserTests/WealthLedger.UI.BrowserTests.csproj --no-restore --verbosity minimal
 ```
 
 Check formatting and migration-model alignment:

@@ -2,7 +2,7 @@
 
 Status: Canonical architecture
 
-Last distilled: 2026-09-01
+Last distilled: 2026-09-08
 
 ## Dependency direction
 
@@ -17,8 +17,8 @@ Last distilled: 2026-09-01
 
 Domain has no outward dependency. Application depends on Domain. Infrastructure
 implements Application ports and depends on both as needed. API, Operations,
-and the later UI are delivery/composition mechanisms; they do not create
-alternate financial-rule paths.
+and UI are delivery mechanisms; they do not create alternate financial-rule
+paths. `WealthLedger.Api` is also the single local runtime composition root.
 
 ## Project responsibilities
 
@@ -87,6 +87,8 @@ Persistence needs do not dictate public Domain mutation APIs. Use explicit EF co
 Owns:
 
 - Minimal API endpoints and route grouping;
+- the single ASP.NET Core loopback host and startup-mode composition;
+- Razor Pages registration and fail-closed page mapping for the UI assembly;
 - authentication/authorization wiring when introduced;
 - request validation at the transport boundary;
 - mapping between API contracts and Application requests/results;
@@ -94,11 +96,13 @@ Owns:
 
 The API does not expose EF entities and does not contain portfolio mathematics.
 
-Normal API hosting is loopback-only. Startup acquires the same authoritative
-database ownership used by lifecycle operations, validates the current schema,
-and fails closed when initialization or explicit migration is required. It does
-not invoke EF migration APIs and exposes no backup, restore, file-browser,
-migration, or SQL endpoint.
+Normal API/UI hosting is loopback-only. Before mapping routes, startup derives
+exactly one of `Blocked`, `StorageUninitialized`, `WorkspaceUninitialized`,
+`InitialBackupRequired`, or `Ready` without holding database ownership. Only a
+`Ready` host then acquires the same authoritative ownership used by lifecycle
+operations and retains it for the process lifetime. A failed acquisition becomes
+`Blocked`. Startup never invokes EF migration APIs and exposes no browser backup
+selection, restore, file-browser, migration, path override, or SQL endpoint.
 
 ### WealthLedger.Operations
 
@@ -116,7 +120,24 @@ passes through Application orchestration and Infrastructure safety checks.
 
 ### WealthLedger.UI
 
-Owns presentation and interaction only. Its framework has not been accepted yet. The first end-to-end slice may be completed through the API before UI work.
+`WealthLedger.UI` is the server-rendered Razor Class Library accepted by ADR-008.
+It owns PageModels, Razor views, layouts, neutral Turkish-first resources, local
+CSS and progressive enhancement, and exact presentation of Application results.
+It references Application only: it does not reference Infrastructure, EF Core,
+SQLite, Minimal API transport contracts, or endpoint implementations, and it
+does not call the co-hosted JSON API over HTTP.
+
+PageModels map human input and Application results but do not perform accounting
+arithmetic or persistence. Exact money, E8 quantity, unit price, dates,
+timestamps, and stable codes pass through the shared UI value presenter. Unknown,
+Not applicable, recorded Zero, and unavailable values remain distinct.
+
+Every Razor Page declares its accepted startup mode and whether it supports
+POST. A centralized convention and middleware deny undeclared or mode-
+inappropriate pages. Setup mutations are antiforgery-protected and use
+Post/Redirect/Get; Ready pages are read-only GETs. All required assets are local,
+and the UI emits the restrictive CSP and related security headers recorded by
+ADR-008. See ADR-008 for the accepted topology and rejected alternatives.
 
 ### Future agent integration
 
@@ -164,7 +185,7 @@ Transaction posting and its associated lot changes must be committed atomically.
 
 ## Write flow
 
-    API/UI request
+    API request or accepted setup-page POST
         ↓
     transport validation and explicit mapping
         ↓
@@ -179,6 +200,13 @@ Transaction posting and its associated lot changes must be committed atomically.
     return stable Application result
 
 Database constraints form a second safety layer. They do not replace Domain and Application validation, and exceptions from raw SQLite should be translated at the Infrastructure/Application boundary.
+
+M006 adds no Ready-mode UI write path. The only browser writes are bounded
+first-run storage creation, atomic core setup, and creation of one new immutable
+verified backup generation. Each calls the existing Application operation
+directly through dependency injection and acquires lifecycle ownership only for
+that request. Migration, restore, active replacement, arbitrary path selection,
+and ordinary ledger posting are not browser surfaces.
 
 ## Read flow
 
@@ -207,6 +235,26 @@ Household predicates remain in SQLite. Cursor content selects only a frozen
 keyset shape; it never supplies a column name, SQL fragment, or free-form
 predicate. The recent ledger projection batches effects for the bounded page
 rather than resolving each transaction or master row separately.
+
+The verified M006 UI read flow is:
+
+    Razor PageModel
+        ↓
+    focused Application use case/query
+        ↓
+    narrow Application read port
+        ↓
+    bounded Infrastructure projection
+        ↓
+    Application result
+        ↓
+    exact UI presenter and encoded Razor view
+
+Today, Ledger, transaction explanation, and Settings derive their state on each
+request. They create no UI cache, session authority, browser storage, or
+materialized balance. Transaction explanation composes M003 facts with current
+M005 display labels in bounded queries; those labels are visibly current context,
+not source-time history.
 
 A later materialized read model is allowed only when:
 
@@ -266,7 +314,20 @@ Integration tests use real SQLite to verify mappings, constraints, triggers, tra
 
 API tests cover transport mapping and status/error behavior after the first slice exists.
 
+UI tests cover exact formatting, stable-code/resource completeness, dependency
+direction, semantic markup, input labeling, validation focus, local assets,
+responsive/focus CSS, and reduced-motion/forced-color rules. API-host tests cover
+startup-mode route exposure, first-run mutation safety, Ready rendering, security
+headers, and privacy-safe responses and logs against isolated SQLite files.
+
 Operations tests use unique temporary directories and real processes to verify
 path independence, ownership collisions, stable CLI parsing/exits, WAL and
 rollback-journal backups, hostile archives, isolated restore, active rollback,
 pre-migration protection, restart/readback, and privacy-safe diagnostics.
+
+The Playwright xUnit suite starts real loopback host processes on ephemeral
+ports and verifies the restart-delimited first run and Ready read navigation in
+Chromium. It includes JavaScript-disabled and keyboard-only journeys, narrow and
+desktop reflow, rejects all non-loopback requests, and proves browser, process,
+and synthetic-file cleanup. Browser installation is an explicit prerequisite,
+not a side effect of the test run.

@@ -2,13 +2,15 @@
 
 Status: Proposed product interaction model
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-09-08
 
 ## Scope and constraint
 
-This document describes user interaction independently of a UI framework. It
-does not accept Blazor, desktop, SPA, mobile, or another delivery technology.
-That choice belongs to the UI milestone and an ADR.
+This document describes the broader MVP interaction model, much of which remains
+proposed independently of a delivery framework. The implemented M006 subset uses
+server-rendered Razor Pages in a dedicated UI assembly and the existing local API
+host, as accepted by ADR-008. That decision does not accept Blazor, a SPA,
+desktop, or mobile delivery for later workflows.
 
 The MVP is a private household tool used periodically, especially before and
 after a monthly allocation decision. It should optimize for correctness,
@@ -37,7 +39,17 @@ clarity, and low entry friction rather than trading-terminal density.
 
 ### Today
 
-The landing workspace answers:
+The M006 landing workspace shows only facts supported by current read contracts:
+
+- current local data-safety state;
+- age and workspace binding of the latest applicable verified backup;
+- an honest empty state when no Posted activity exists;
+- a small recent-Posted preview with links to complete explanations.
+
+It does not call a recorded contribution cash on hand, sum unlike quantities,
+or fabricate balances, market values, returns, reserve, goal progress, price
+freshness, or reconciliation status. Later accepted analytical milestones may
+extend Today to answer:
 
 - total recorded assets by major asset family;
 - available liquid reserve;
@@ -52,7 +64,8 @@ cash-flow treatment, and source data.
 
 ### Record
 
-A task-oriented entry point with explicit choices:
+Record is not implemented by M006. It remains a later task-oriented entry point
+with explicit choices:
 
 - Contribution
 - Withdrawal
@@ -70,36 +83,47 @@ editor.
 
 ### Assets
 
-Shows positions grouped by portfolio, account, institution, and asset family.
-Fund positions show units and lots. Physical-gold inventory shows pieces, gross
-and fine weight, fineness, acquisition lineage, and custody.
+Assets is not implemented by M006. A later accepted workflow may show positions
+grouped by portfolio, account, institution, and asset family. Fund positions may
+show units and lots; physical-gold inventory may show pieces, gross and fine
+weight, fineness, acquisition lineage, and custody.
 
 ### Ledger
 
-Lists transactions with filters for date, type, asset, institution, account,
-portfolio, external reference, status, and reversal relationship. Selecting a
-row opens a complete read-only transaction explanation.
+M006 implements the bounded recent Posted feed using M005's opaque cursor
+unchanged. Selecting a row opens a complete read-only explanation of final M003
+facts, exact effects, costs, lots, allocations, and both reversal directions.
+Current master labels are visibly current context and inactive or archived
+masters remain explainable.
+
+Broad filters for date, type, asset, institution, account, portfolio, external
+reference, status, and reversal relationship remain part of M010 rather than
+M006.
 
 ### Plan
 
-Shows reserve policy, home-purchase goal, target allocation ranges, current
-deviation, planned monthly contribution, and documented decisions. Suggestions
-are clearly separated from recorded facts.
+Plan is not implemented by M006. A later accepted workflow may show reserve
+policy, goals, target allocation ranges, deviation, planned contributions, and
+documented decisions, with suggestions clearly separated from recorded facts.
 
 ### Settings
 
-Manages household master data, assets, institutions, accounts, portfolios,
-backup and restore, exports, data-source settings, privacy, and diagnostics.
+M006 implements a read-only Settings index, current household/master-data review,
+and data-safety review. Data safety shows resolved paths, schema and integrity
+state, encryption mode, workspace identity prefix, latest verified backup and
+its workspace binding, unrelated verified-package count, and the two M004
+operator attestations. It offers no disabled Save/Delete controls and does not
+imply that rendered facts are editable.
 
-The later Settings UI must wrap the verified M004 Application operations for
-status, backup creation and verification, isolated restore, migration, and
-confirmed active replacement. It must display the sanitized operation result
-and any required confirmation; it must not manipulate SQLite, archives, locks,
-or filesystem paths directly. M004 provides these contracts and its operations
-CLI, but does not add a UI.
+The browser deliberately does not expose migration, restore, active database
+replacement, backup-file selection, path override, filesystem browsing, or SQL.
+Those M004 lifecycle operations remain in the explicit Operations CLI. Any
+future browser administration requires a separately accepted security and
+operations decision; it must not manipulate SQLite, archives, locks, or paths
+directly.
 
-M005 now provides the verified read-only API foundation for later selectors
-and navigation, but still adds no UI:
+M005 provides the verified read-only query foundation that M006 now consumes
+directly through Application use cases:
 
 - Today may consume the bounded recent Posted feed for its recent-activity
   region without treating execution date as posting recency;
@@ -113,28 +137,34 @@ and navigation, but still adds no UI:
 - a valid empty position is distinct from the sanitized unknown/cross-household
   scope error.
 
-Master-data editing, local operation UI, selector caching, and presentation
-formatting remain responsibilities of later accepted milestones.
+Master-data editing, broad local administration, selector caching, and the later
+Record/Assets/Plan workflows remain responsibilities of later accepted
+milestones. M006 presentation formatting is implemented in `WealthLedger.UI`.
 
 ## First-run experience
 
-The first-run flow should:
+M006 implements this restart-delimited first-run flow:
 
 1. Explain that the application is a ledger and that posted history is not
    edited.
-2. Ask the user to choose or confirm the local data location.
-3. Confirm that the location is not inside the source repository.
+2. Review the already resolved, server-validated local data location without
+   offering arbitrary path selection or filesystem browsing.
+3. Create only a missing configured-safe database through the existing M004
+   ownership-protected operation; never migrate or replace one.
 4. Create base currency, household, portfolio, institution, account, cash
-   asset, and initial investment assets through human-readable fields.
-5. Configure and verify a backup destination.
-6. Offer an opening-balance import or a synthetic practice transaction.
-7. Disable the setup path after successful initialization.
+   asset, and one fund asset atomically through human-readable fields and
+   reviewed stable codes.
+5. Review the configured backup destination and create and verify one new,
+   immutable, workspace-matched backup generation.
+6. Explain that the process remains in its startup mode and require one clean
+   restart before entering Ready.
+7. Make every setup route unavailable in Ready.
 
-The implementation may split this flow across milestones. The user must never
-need to construct GUIDs or raw transport values manually. Database location,
-initialization, and backup-destination readiness use the M004 operations
-contracts; a later UI may guide those actions without introducing a second
-lifecycle path.
+The user never constructs GUIDs, E8 or minor-unit integers, connection strings,
+SQL, or migration identities. Readiness is reconstructed from Application/M004
+state on every request, not session, cookies, TempData, local storage, or a UI
+cache. Opening-balance import and practice transaction entry are not M006
+features and remain later work.
 
 ## Monthly review flow
 
@@ -269,17 +299,30 @@ result must be retrieved by its retry identity.
 
 ## Accessibility and privacy
 
-- All workflows must be keyboard-operable and must not encode status by color
-  alone.
-- Confirmation text and errors use plain language.
+- The implemented setup and shell have semantic landmarks, one clear heading,
+  a first-focusable skip link, programmatic labels/help, linked validation
+  summaries, visible keyboard focus, logical navigation, and text-based status.
+- Layouts reflow at narrow and desktop widths and at a 200%-equivalent effective
+  viewport. CSS respects reduced-motion and forced-color preferences.
+- Critical first-run and Ledger navigation pass in real Chromium with JavaScript
+  disabled and with keyboard-only operation. These focused checks do not claim
+  general WCAG conformance or replace assistive-technology review.
+- Confirmation text and errors use plain, sanitized language.
 - Screenshots and diagnostic exports default to hiding household names,
   references, notes, and exact values unless explicitly included.
 - The UI must not expose connection strings, raw SQL, stack traces, or internal
   row representations during routine use.
+- M006 adds no screenshot or diagnostic-export feature. Tests and any manually
+  captured artifacts use synthetic isolated data only.
 
 ## MVP UX acceptance
 
-The interaction model is usable when a non-developer can initialize synthetic
-data, create an opening position, record a contribution and acquisition, find
-the resulting transaction and position, correct an error, and verify a backup
-without issuing an HTTP request or editing SQLite directly.
+The M006 subset is verified when a non-developer can initialize synthetic local
+storage and core masters, create and verify the first backup, restart into Ready,
+and browse Today, recent Ledger explanations, and read-only Settings without
+issuing an HTTP request or editing SQLite directly. That outcome is implemented
+and covered by real-browser journeys.
+
+The broader MVP interaction model is not yet complete. Opening positions,
+ordinary contribution/acquisition entry, position navigation, and correction
+from the UI remain in M007 and later accepted milestones.
