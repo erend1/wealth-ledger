@@ -314,19 +314,45 @@ public sealed partial class ReadyShellUiTests
         var fixture = await factory.SeedReadyUiLedgerAsync();
         using var client = CreateClient(factory);
 
-        using var detail = await client.GetAsync(
-            $"/ledger/{fixture.PurchaseTransactionId:D}");
-        using var settings = await client.GetAsync(
-            "/settings/data-safety");
+        foreach (var path in new[]
+                 {
+                     "/",
+                     "/ledger",
+                     $"/ledger/{fixture.PurchaseTransactionId:D}",
+                     "/settings",
+                     "/settings/master-data",
+                     "/settings/data-safety"
+                 })
+        {
+            using var response = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
 
-        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, settings.StatusCode);
+        const string privateCursor = "PRIVATE-READY-CURSOR-PAYLOAD";
+        const string privateRequestValue = "PRIVATE-READY-REQUEST-VALUE";
+        using var invalidCursor = await client.GetAsync(
+            "/ledger?pageSize=1&cursor=" + privateCursor);
+        using var invalidIdentity = await client.GetAsync(
+            "/ledger/" + privateRequestValue);
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalidCursor.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, invalidIdentity.StatusCode);
 
         var logs = string.Join(Environment.NewLine, factory.Logs.Messages);
         Assert.DoesNotContain("SHELL-PURCHASE-REFERENCE", logs);
         Assert.DoesNotContain("Synthetic shell purchase note.", logs);
         Assert.DoesNotContain("Synthetic shell cost note.", logs);
+        Assert.DoesNotContain("Synthetic Household", logs);
+        Assert.DoesNotContain("Synthetic Member", logs);
+        Assert.DoesNotContain("Synthetic Institution", logs);
+        Assert.DoesNotContain("Core Portfolio", logs);
+        Assert.DoesNotContain("Primary Account", logs);
+        Assert.DoesNotContain("Synthetic Fund", logs);
+        Assert.DoesNotContain("98,7654321", logs);
+        Assert.DoesNotContain(privateCursor, logs);
+        Assert.DoesNotContain(privateRequestValue, logs);
         Assert.DoesNotContain(factory.DatabasePath, logs, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(factory.BackupDirectory, logs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Data Source=", logs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("SELECT ", logs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("SqliteException", logs, StringComparison.OrdinalIgnoreCase);

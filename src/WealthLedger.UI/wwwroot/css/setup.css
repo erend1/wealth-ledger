@@ -28,7 +28,6 @@ html {
 }
 
 body {
-    min-width: 20rem;
     margin: 0;
 }
 
@@ -237,15 +236,21 @@ select {
 
 .check-field {
     display: grid;
-    grid-template-columns: 1.3rem 1fr;
-    align-items: start;
+    grid-template-columns: 1.75rem 1fr;
+    align-items: center;
     gap: 0.7rem;
 }
 
 .check-field input {
-    width: 1.2rem;
-    height: 1.2rem;
-    margin-top: 0.15rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+}
+
+.check-field label {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
 }
 
 .button {
@@ -288,6 +293,16 @@ select {
     color: #651913;
 }
 
+.validation-summary:focus {
+    outline: 0.2rem solid var(--focus);
+    outline-offset: 0.2rem;
+}
+
+.validation-summary a {
+    color: inherit;
+    font-weight: 700;
+}
+
 .validation-summary ul {
     margin-block: 0;
     padding-inline-start: 1.25rem;
@@ -306,6 +321,18 @@ select {
     .skip-link,
     .button {
         transition: transform 120ms ease, background-color 120ms ease;
+    }
+}
+
+@media (forced-colors: active) {
+    :focus-visible,
+    .validation-summary:focus {
+        outline-color: Highlight;
+    }
+
+    .panel,
+    .callout {
+        box-shadow: none;
     }
 }
 

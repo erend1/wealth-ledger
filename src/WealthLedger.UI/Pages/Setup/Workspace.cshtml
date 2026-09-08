@@ -10,13 +10,7 @@
     <h1 id="workspace-heading">@Text["Workspace_Title"]</h1>
     <p class="lede">@Text["Workspace_Introduction"]</p>
 
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="validation-summary"
-             asp-validation-summary="All"
-             role="alert"
-             aria-label="@Text["Validation_SummaryLabel"]"></div>
-    }
+    <partial name="_ValidationSummary" />
 
     @if (Model.WorkspaceComplete)
     {
@@ -37,8 +31,11 @@
                         <label asp-for="Input.BaseCurrencyName">
                             @Text["Workspace_BaseCurrencyNameLabel"]
                         </label>
-                        <input asp-for="Input.BaseCurrencyName" maxlength="128" />
-                        <span class="field-error"
+                        <input asp-for="Input.BaseCurrencyName"
+                               maxlength="128"
+                               aria-describedby="Input_BaseCurrencyName-error" />
+                        <span id="Input_BaseCurrencyName-error"
+                              class="field-error"
                               asp-validation-for="Input.BaseCurrencyName"></span>
                     </div>
                     <div class="field field--short">
@@ -50,11 +47,12 @@
                                min="0"
                                max="8"
                                inputmode="numeric"
-                               aria-describedby="minor-unit-help" />
+                               aria-describedby="minor-unit-help Input_MinorUnitDigits-error" />
                         <p id="minor-unit-help" class="help">
                             @Text["Workspace_MinorUnitDigitsHelp"]
                         </p>
-                        <span class="field-error"
+                        <span id="Input_MinorUnitDigits-error"
+                              class="field-error"
                               asp-validation-for="Input.MinorUnitDigits"></span>
                     </div>
                 </div>
@@ -67,8 +65,11 @@
                         <label asp-for="Input.HouseholdName">
                             @Text["Workspace_HouseholdNameLabel"]
                         </label>
-                        <input asp-for="Input.HouseholdName" maxlength="256" />
-                        <span class="field-error"
+                        <input asp-for="Input.HouseholdName"
+                               maxlength="256"
+                               aria-describedby="Input_HouseholdName-error" />
+                        <span id="Input_HouseholdName-error"
+                              class="field-error"
                               asp-validation-for="Input.HouseholdName"></span>
                     </div>
                     <div class="field">
@@ -77,11 +78,12 @@
                         </label>
                         <input asp-for="Input.HouseholdMemberDisplayName"
                                maxlength="128"
-                               aria-describedby="member-help" />
+                               aria-describedby="member-help Input_HouseholdMemberDisplayName-error" />
                         <p id="member-help" class="help">
                             @Text["Workspace_OptionalHelp"]
                         </p>
-                        <span class="field-error"
+                        <span id="Input_HouseholdMemberDisplayName-error"
+                              class="field-error"
                               asp-validation-for="Input.HouseholdMemberDisplayName"></span>
                     </div>
                 </div>
@@ -94,21 +96,26 @@
                         <label asp-for="Input.InstitutionName">
                             @Text["Workspace_InstitutionNameLabel"]
                         </label>
-                        <input asp-for="Input.InstitutionName" maxlength="256" />
-                        <span class="field-error"
+                        <input asp-for="Input.InstitutionName"
+                               maxlength="256"
+                               aria-describedby="Input_InstitutionName-error" />
+                        <span id="Input_InstitutionName-error"
+                              class="field-error"
                               asp-validation-for="Input.InstitutionName"></span>
                     </div>
                     <div class="field">
                         <label asp-for="Input.InstitutionTypeCode">
                             @Text["Workspace_InstitutionTypeLabel"]
                         </label>
-                        <select asp-for="Input.InstitutionTypeCode">
+                        <select asp-for="Input.InstitutionTypeCode"
+                                aria-describedby="Input_InstitutionTypeCode-error">
                             @foreach (var option in Model.InstitutionTypes)
                             {
                                 <option value="@option.Code">@option.Text (@option.Code)</option>
                             }
                         </select>
-                        <span class="field-error"
+                        <span id="Input_InstitutionTypeCode-error"
+                              class="field-error"
                               asp-validation-for="Input.InstitutionTypeCode"></span>
                     </div>
                 </div>
@@ -121,38 +128,51 @@
                         <label asp-for="Input.PortfolioName">
                             @Text["Workspace_PortfolioNameLabel"]
                         </label>
-                        <input asp-for="Input.PortfolioName" maxlength="256" />
-                        <span class="field-error"
+                        <input asp-for="Input.PortfolioName"
+                               maxlength="256"
+                               aria-describedby="Input_PortfolioName-error" />
+                        <span id="Input_PortfolioName-error"
+                              class="field-error"
                               asp-validation-for="Input.PortfolioName"></span>
                     </div>
                     <div class="field">
                         <label asp-for="Input.AccountName">
                             @Text["Workspace_AccountNameLabel"]
                         </label>
-                        <input asp-for="Input.AccountName" maxlength="256" />
-                        <span class="field-error"
+                        <input asp-for="Input.AccountName"
+                               maxlength="256"
+                               aria-describedby="Input_AccountName-error" />
+                        <span id="Input_AccountName-error"
+                              class="field-error"
                               asp-validation-for="Input.AccountName"></span>
                     </div>
                     <div class="field">
                         <label asp-for="Input.AccountTypeCode">
                             @Text["Workspace_AccountTypeLabel"]
                         </label>
-                        <select asp-for="Input.AccountTypeCode">
+                        <select asp-for="Input.AccountTypeCode"
+                                aria-describedby="Input_AccountTypeCode-error">
                             @foreach (var option in Model.AccountTypes)
                             {
                                 <option value="@option.Code">@option.Text (@option.Code)</option>
                             }
                         </select>
-                        <span class="field-error"
+                        <span id="Input_AccountTypeCode-error"
+                              class="field-error"
                               asp-validation-for="Input.AccountTypeCode"></span>
                     </div>
                     <div class="field">
                         <label asp-for="Input.AccountOpenedOn">
                             @Text["Workspace_AccountOpenedOnLabel"]
                         </label>
-                        <input asp-for="Input.AccountOpenedOn" type="date" />
-                        <p class="help">@Text["Workspace_OptionalHelp"]</p>
-                        <span class="field-error"
+                        <input asp-for="Input.AccountOpenedOn"
+                               type="date"
+                               aria-describedby="account-opened-help Input_AccountOpenedOn-error" />
+                        <p id="account-opened-help" class="help">
+                            @Text["Workspace_OptionalHelp"]
+                        </p>
+                        <span id="Input_AccountOpenedOn-error"
+                              class="field-error"
                               asp-validation-for="Input.AccountOpenedOn"></span>
                     </div>
                 </div>
@@ -166,22 +186,29 @@
                         <label asp-for="Input.CashAssetName">
                             @Text["Workspace_CashAssetNameLabel"]
                         </label>
-                        <input asp-for="Input.CashAssetName" maxlength="256" />
-                        <span class="field-error"
+                        <input asp-for="Input.CashAssetName"
+                               maxlength="256"
+                               aria-describedby="Input_CashAssetName-error" />
+                        <span id="Input_CashAssetName-error"
+                              class="field-error"
                               asp-validation-for="Input.CashAssetName"></span>
                     </div>
                     <div class="field">
                         <label asp-for="Input.FundAssetName">
                             @Text["Workspace_FundAssetNameLabel"]
                         </label>
-                        <input asp-for="Input.FundAssetName" maxlength="256" />
-                        <span class="field-error"
+                        <input asp-for="Input.FundAssetName"
+                               maxlength="256"
+                               aria-describedby="Input_FundAssetName-error" />
+                        <span id="Input_FundAssetName-error"
+                              class="field-error"
                               asp-validation-for="Input.FundAssetName"></span>
                     </div>
                 </div>
             </section>
 
-            <details class="panel technical-details">
+            <details class="panel technical-details"
+                     open="@(!ViewData.ModelState.IsValid)">
                 <summary>@Text["Workspace_StableCodesTitle"]</summary>
                 <p>@Text["Workspace_StableCodesExplanation"]</p>
                 <div class="form-grid">
@@ -191,8 +218,10 @@
                         </label>
                         <input asp-for="Input.BaseCurrencyCode"
                                maxlength="3"
-                               pattern="[A-Za-z]{3}" />
-                        <span class="field-error"
+                               pattern="[A-Za-z]{3}"
+                               aria-describedby="Input_BaseCurrencyCode-error" />
+                        <span id="Input_BaseCurrencyCode-error"
+                              class="field-error"
                               asp-validation-for="Input.BaseCurrencyCode"></span>
                     </div>
                     <div class="field">
@@ -201,8 +230,10 @@
                         </label>
                         <input asp-for="Input.InstitutionCode"
                                maxlength="64"
-                               pattern="[A-Za-z0-9_-]+" />
-                        <span class="field-error"
+                               pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="Input_InstitutionCode-error" />
+                        <span id="Input_InstitutionCode-error"
+                              class="field-error"
                               asp-validation-for="Input.InstitutionCode"></span>
                     </div>
                     <div class="field">
@@ -211,8 +242,10 @@
                         </label>
                         <input asp-for="Input.PortfolioCode"
                                maxlength="64"
-                               pattern="[A-Za-z0-9_-]+" />
-                        <span class="field-error"
+                               pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="Input_PortfolioCode-error" />
+                        <span id="Input_PortfolioCode-error"
+                              class="field-error"
                               asp-validation-for="Input.PortfolioCode"></span>
                     </div>
                     <div class="field">
@@ -221,8 +254,10 @@
                         </label>
                         <input asp-for="Input.AccountCode"
                                maxlength="64"
-                               pattern="[A-Za-z0-9_-]+" />
-                        <span class="field-error"
+                               pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="Input_AccountCode-error" />
+                        <span id="Input_AccountCode-error"
+                              class="field-error"
                               asp-validation-for="Input.AccountCode"></span>
                     </div>
                     <div class="field">
@@ -231,8 +266,10 @@
                         </label>
                         <input asp-for="Input.CashAssetCode"
                                maxlength="64"
-                               pattern="[A-Za-z0-9_-]+" />
-                        <span class="field-error"
+                               pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="Input_CashAssetCode-error" />
+                        <span id="Input_CashAssetCode-error"
+                              class="field-error"
                               asp-validation-for="Input.CashAssetCode"></span>
                     </div>
                     <div class="field">
@@ -241,8 +278,10 @@
                         </label>
                         <input asp-for="Input.FundAssetCode"
                                maxlength="64"
-                               pattern="[A-Za-z0-9_-]+" />
-                        <span class="field-error"
+                               pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="Input_FundAssetCode-error" />
+                        <span id="Input_FundAssetCode-error"
+                              class="field-error"
                               asp-validation-for="Input.FundAssetCode"></span>
                     </div>
                 </div>

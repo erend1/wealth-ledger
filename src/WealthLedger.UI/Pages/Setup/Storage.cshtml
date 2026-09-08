@@ -10,13 +10,7 @@
     <h1 id="storage-heading">@Text["Storage_Title"]</h1>
     <p class="lede">@Text["Storage_Introduction"]</p>
 
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="validation-summary"
-             asp-validation-summary="All"
-             role="alert"
-             aria-label="@Text["Validation_SummaryLabel"]"></div>
-    }
+    <partial name="_ValidationSummary" />
 
     @if (Model.StorageCreated)
     {
@@ -55,12 +49,14 @@
                        name="ConfirmInitialization"
                        type="checkbox"
                        value="true"
+                       aria-describedby="ConfirmInitialization-error"
                        checked="@Model.ConfirmInitialization" />
                 <label for="ConfirmInitialization">
                     @Text["Storage_ConfirmationLabel"]
                 </label>
             </div>
-            <span class="field-error"
+            <span id="ConfirmInitialization-error"
+                  class="field-error"
                   asp-validation-for="ConfirmInitialization"></span>
 
             <button class="button" type="submit">

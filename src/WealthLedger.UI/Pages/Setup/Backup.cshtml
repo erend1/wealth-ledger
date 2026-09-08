@@ -10,13 +10,7 @@
     <h1 id="backup-heading">@Text["Backup_Title"]</h1>
     <p class="lede">@Text["Backup_Introduction"]</p>
 
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="validation-summary"
-             asp-validation-summary="All"
-             role="alert"
-             aria-label="@Text["Validation_SummaryLabel"]"></div>
-    }
+    <partial name="_ValidationSummary" />
 
     @if (Model.ConfigurationAvailable)
     {
@@ -89,12 +83,14 @@
                        name="ConfirmBackupCreation"
                        type="checkbox"
                        value="true"
+                       aria-describedby="ConfirmBackupCreation-error"
                        checked="@Model.ConfirmBackupCreation" />
                 <label for="ConfirmBackupCreation">
                     @Text["Backup_ConfirmationLabel"]
                 </label>
             </div>
-            <span class="field-error"
+            <span id="ConfirmBackupCreation-error"
+                  class="field-error"
                   asp-validation-for="ConfirmBackupCreation"></span>
 
             <button class="button" type="submit">

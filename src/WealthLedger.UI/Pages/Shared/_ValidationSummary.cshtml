@@ -1,0 +1,33 @@
+@inject UiText Text
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="validation-summary"
+         role="alert"
+         aria-label="@Text["Validation_SummaryLabel"]"
+         tabindex="-1"
+         autofocus>
+        <ul>
+            @foreach (var entry in ViewData.ModelState)
+            {
+                var targetId = string.IsNullOrWhiteSpace(entry.Key)
+                    ? null
+                    : Microsoft.AspNetCore.Mvc.Rendering.TagBuilder
+                        .CreateSanitizedId(entry.Key, "_");
+
+                @foreach (var error in entry.Value.Errors)
+                {
+                    <li>
+                        @if (targetId is null)
+                        {
+                            @error.ErrorMessage
+                        }
+                        else
+                        {
+                            <a href="#@targetId">@error.ErrorMessage</a>
+                        }
+                    </li>
+                }
+            }
+        </ul>
+    </div>
+}

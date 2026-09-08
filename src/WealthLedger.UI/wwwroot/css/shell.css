@@ -263,3 +263,16 @@
         font-weight: 700;
     }
 }
+
+@media (forced-colors: active) {
+    .summary-card,
+    .transaction-card,
+    .entry-card,
+    .fact-card {
+        box-shadow: none;
+    }
+
+    .primary-nav a[aria-current="page"] {
+        border-bottom-color: Highlight;
+    }
+}

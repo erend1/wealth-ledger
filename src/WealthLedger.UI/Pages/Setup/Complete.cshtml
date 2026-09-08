@@ -10,14 +10,8 @@
     <h1 id="complete-heading">@Text["Complete_Title"]</h1>
     <p class="lede">@Text["Complete_Introduction"]</p>
 
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="validation-summary"
-             asp-validation-summary="All"
-             role="alert"
-             aria-label="@Text["Validation_SummaryLabel"]"></div>
-    }
-    else
+    <partial name="_ValidationSummary" />
+    @if (ViewData.ModelState.IsValid)
     {
         <section class="panel panel--success flow" aria-labelledby="complete-backup-heading">
             <p class="status-mark">@Text["Complete_Status"]</p>
