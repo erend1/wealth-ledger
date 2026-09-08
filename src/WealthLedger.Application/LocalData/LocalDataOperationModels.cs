@@ -62,14 +62,61 @@ public sealed record LocalDataOperationResult<T>(
                     : message));
 }
 
+/// <summary>
+/// Describes whether a verified backup package belongs to the workspace it is
+/// being considered as protection for.
+/// </summary>
+public enum LocalBackupWorkspaceBinding
+{
+    /// <summary>
+    /// The package predates durable workspace lineage, so its origin cannot be
+    /// proved. It is never protection for a live database.
+    /// </summary>
+    Unknown,
+
+    /// <summary>
+    /// The package carries the same durable workspace lineage as the live
+    /// database.
+    /// </summary>
+    Matched,
+
+    /// <summary>
+    /// The package is internally valid but belongs to a different workspace.
+    /// </summary>
+    Unrelated
+}
+
 public sealed record LocalBackupSummary(
     string FilePath,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset VerifiedAtUtc,
     string DigestPrefix,
     string LatestMigration,
-    string EncryptionMode);
+    string EncryptionMode,
+    LocalBackupWorkspaceBinding WorkspaceBinding);
 
+/// <summary>
+/// Local data readiness for one configured live database.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <c>LatestVerifiedBackup</c> is the newest verified package proved to belong
+/// to this live database. A package from another workspace never appears here,
+/// however recent it is, and it is the readiness signal a guided first run must
+/// consume.
+/// </para>
+/// <para>
+/// <c>UnrelatedVerifiedBackupCount</c> counts verified packages in the
+/// configured directory that belong to a different workspace or whose lineage
+/// cannot be proved. It is reported so an operator with a populated backup
+/// directory and no protection is told why rather than being shown an
+/// unexplained empty result.
+/// </para>
+/// <para>
+/// <c>LiveWorkspaceId</c> is the durable lineage identity of the live database,
+/// absent only for a database that predates the introducing migration.
+/// </para>
+/// </remarks>
 public sealed record LocalDataStatus(
     string DatabasePath,
     string? BackupDirectory,
@@ -84,6 +131,8 @@ public sealed record LocalDataStatus(
     LocalDatabaseCompatibility Compatibility,
     LocalDataIntegrityStatus IntegrityStatus,
     LocalBackupSummary? LatestVerifiedBackup,
+    int UnrelatedVerifiedBackupCount,
+    string? LiveWorkspaceId,
     bool DestinationSeparationConfirmed,
     bool DestinationEncryptionConfirmed,
     bool LocalProtectionReady,

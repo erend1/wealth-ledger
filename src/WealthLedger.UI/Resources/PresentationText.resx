@@ -1,0 +1,1269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    User-visible presentation text.
+
+    Keys are English so code, tests and documentation stay in English. Values
+    are Turkish because Turkish is the shipping user-facing culture, so the
+    neutral resource is the product language and needs no satellite assembly.
+    Adding a second language later means adding PresentationText.<culture>.resx
+    beside this file; lookups already pass an explicit culture.
+
+    Stable contract codes are never translated. These values are the human
+    description shown beside the code, not a replacement for it.
+  -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="State_Unknown" xml:space="preserve">
+    <value>Bilinmiyor</value>
+    <comment>A fact that exists as a concept but was never recorded.</comment>
+  </data>
+  <data name="State_NotApplicable" xml:space="preserve">
+    <value>Uygulanamaz</value>
+    <comment>A fact that does not apply to this record.</comment>
+  </data>
+  <data name="State_Unavailable" xml:space="preserve">
+    <value>Görüntülenemiyor</value>
+    <comment>A recorded value that could not be rendered.</comment>
+  </data>
+  <data name="Effect_Increase" xml:space="preserve">
+    <value>artış</value>
+    <comment>Direction of a positive signed quantity delta.</comment>
+  </data>
+  <data name="Effect_Decrease" xml:space="preserve">
+    <value>azalış</value>
+    <comment>Direction of a negative signed quantity delta.</comment>
+  </data>
+  <data name="Effect_NoChange" xml:space="preserve">
+    <value>değişim yok</value>
+    <comment>Direction of a zero signed quantity delta.</comment>
+  </data>
+  <data name="Age_LessThanMinute" xml:space="preserve">
+    <value>Bir dakikadan kısa süre önce</value>
+  </data>
+  <data name="Age_Minutes" xml:space="preserve">
+    <value>{0} dakika önce</value>
+  </data>
+  <data name="Age_Hours" xml:space="preserve">
+    <value>{0} saat önce</value>
+  </data>
+  <data name="Age_Days" xml:space="preserve">
+    <value>{0} gün önce</value>
+  </data>
+  <data name="Unit_CURRENCY_UNIT" xml:space="preserve">
+    <value>para birimi</value>
+  </data>
+  <data name="Unit_FUND_UNIT" xml:space="preserve">
+    <value>fon birimi</value>
+  </data>
+  <data name="Unit_SHARE" xml:space="preserve">
+    <value>pay</value>
+  </data>
+  <data name="Unit_GROSS_GRAM" xml:space="preserve">
+    <value>gram</value>
+  </data>
+  <data name="Unit_PIECE" xml:space="preserve">
+    <value>adet</value>
+  </data>
+  <data name="Unit_PROPERTY" xml:space="preserve">
+    <value>taşınmaz</value>
+  </data>
+  <data name="Unit_LAND_PARCEL" xml:space="preserve">
+    <value>parsel</value>
+  </data>
+  <data name="Unit_VEHICLE" xml:space="preserve">
+    <value>araç</value>
+  </data>
+  <data name="Unit_OTHER" xml:space="preserve">
+    <value>birim</value>
+  </data>
+  <data name="Code_AssetType_CASH" xml:space="preserve">
+    <value>Nakit</value>
+  </data>
+  <data name="Code_AssetType_CURRENCY" xml:space="preserve">
+    <value>Döviz</value>
+  </data>
+  <data name="Code_AssetType_FUND" xml:space="preserve">
+    <value>Fon</value>
+  </data>
+  <data name="Code_AssetType_EQUITY" xml:space="preserve">
+    <value>Hisse senedi</value>
+  </data>
+  <data name="Code_AssetType_PHYSICAL_GOLD" xml:space="preserve">
+    <value>Fiziki altın</value>
+  </data>
+  <data name="Code_AssetType_REAL_ESTATE" xml:space="preserve">
+    <value>Gayrimenkul</value>
+  </data>
+  <data name="Code_AssetType_LAND" xml:space="preserve">
+    <value>Arsa</value>
+  </data>
+  <data name="Code_AssetType_VEHICLE" xml:space="preserve">
+    <value>Araç</value>
+  </data>
+  <data name="Code_AssetType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_AssetUnit_CURRENCY_UNIT" xml:space="preserve">
+    <value>Para birimi</value>
+  </data>
+  <data name="Code_AssetUnit_FUND_UNIT" xml:space="preserve">
+    <value>Fon birimi</value>
+  </data>
+  <data name="Code_AssetUnit_SHARE" xml:space="preserve">
+    <value>Pay</value>
+  </data>
+  <data name="Code_AssetUnit_GROSS_GRAM" xml:space="preserve">
+    <value>Brüt gram</value>
+  </data>
+  <data name="Code_AssetUnit_PIECE" xml:space="preserve">
+    <value>Adet</value>
+  </data>
+  <data name="Code_AssetUnit_PROPERTY" xml:space="preserve">
+    <value>Taşınmaz</value>
+  </data>
+  <data name="Code_AssetUnit_LAND_PARCEL" xml:space="preserve">
+    <value>Parsel</value>
+  </data>
+  <data name="Code_AssetUnit_VEHICLE" xml:space="preserve">
+    <value>Araç</value>
+  </data>
+  <data name="Code_AssetUnit_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_LotTrackingMode_NONE" xml:space="preserve">
+    <value>Parti takibi yok</value>
+  </data>
+  <data name="Code_LotTrackingMode_OPTIONAL" xml:space="preserve">
+    <value>Parti takibi isteğe bağlı</value>
+  </data>
+  <data name="Code_LotTrackingMode_REQUIRED" xml:space="preserve">
+    <value>Parti takibi zorunlu</value>
+  </data>
+  <data name="Code_InstitutionType_BANK" xml:space="preserve">
+    <value>Banka</value>
+  </data>
+  <data name="Code_InstitutionType_BROKER" xml:space="preserve">
+    <value>Aracı kurum</value>
+  </data>
+  <data name="Code_InstitutionType_ASSET_MANAGER" xml:space="preserve">
+    <value>Portföy yönetim şirketi</value>
+  </data>
+  <data name="Code_InstitutionType_JEWELER" xml:space="preserve">
+    <value>Kuyumcu</value>
+  </data>
+  <data name="Code_InstitutionType_PENSION" xml:space="preserve">
+    <value>Emeklilik şirketi</value>
+  </data>
+  <data name="Code_InstitutionType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_AccountType_CASH" xml:space="preserve">
+    <value>Nakit hesabı</value>
+  </data>
+  <data name="Code_AccountType_INVESTMENT" xml:space="preserve">
+    <value>Yatırım hesabı</value>
+  </data>
+  <data name="Code_AccountType_PHYSICAL_VAULT" xml:space="preserve">
+    <value>Fiziki kasa</value>
+  </data>
+  <data name="Code_AccountType_PENSION" xml:space="preserve">
+    <value>Emeklilik hesabı</value>
+  </data>
+  <data name="Code_AccountType_PROPERTY_REGISTRY" xml:space="preserve">
+    <value>Tapu kaydı</value>
+  </data>
+  <data name="Code_AccountType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_PortfolioStatus_ACTIVE" xml:space="preserve">
+    <value>Etkin</value>
+  </data>
+  <data name="Code_PortfolioStatus_CLOSED" xml:space="preserve">
+    <value>Kapalı</value>
+  </data>
+  <data name="Code_PortfolioStatus_ARCHIVED" xml:space="preserve">
+    <value>Arşivlenmiş</value>
+  </data>
+  <data name="Code_TransactionType_CONTRIBUTION" xml:space="preserve">
+    <value>Katkı</value>
+  </data>
+  <data name="Code_TransactionType_WITHDRAWAL" xml:space="preserve">
+    <value>Çekim</value>
+  </data>
+  <data name="Code_TransactionType_BUY" xml:space="preserve">
+    <value>Alış</value>
+  </data>
+  <data name="Code_TransactionType_SELL" xml:space="preserve">
+    <value>Satış</value>
+  </data>
+  <data name="Code_TransactionType_TRANSFER" xml:space="preserve">
+    <value>Transfer</value>
+  </data>
+  <data name="Code_TransactionType_DIVIDEND" xml:space="preserve">
+    <value>Temettü</value>
+  </data>
+  <data name="Code_TransactionType_INCOME" xml:space="preserve">
+    <value>Gelir</value>
+  </data>
+  <data name="Code_TransactionType_EXPENSE" xml:space="preserve">
+    <value>Gider</value>
+  </data>
+  <data name="Code_TransactionType_FEE" xml:space="preserve">
+    <value>Ücret</value>
+  </data>
+  <data name="Code_TransactionType_TAX" xml:space="preserve">
+    <value>Vergi</value>
+  </data>
+  <data name="Code_TransactionType_CORPORATE_ACTION" xml:space="preserve">
+    <value>Şirket işlemi</value>
+  </data>
+  <data name="Code_TransactionType_OPENING_BALANCE" xml:space="preserve">
+    <value>Açılış bakiyesi</value>
+  </data>
+  <data name="Code_TransactionType_ADJUSTMENT" xml:space="preserve">
+    <value>Düzeltme</value>
+  </data>
+  <data name="Code_TransactionType_REVERSAL" xml:space="preserve">
+    <value>Ters kayıt</value>
+  </data>
+  <data name="Code_TransactionStatus_DRAFT" xml:space="preserve">
+    <value>Taslak</value>
+  </data>
+  <data name="Code_TransactionStatus_ORDERED" xml:space="preserve">
+    <value>Emir verildi</value>
+  </data>
+  <data name="Code_TransactionStatus_POSTED" xml:space="preserve">
+    <value>Kaydedildi</value>
+  </data>
+  <data name="Code_TransactionStatus_CANCELLED" xml:space="preserve">
+    <value>İptal edildi</value>
+  </data>
+  <data name="Code_EntryRole_PRINCIPAL" xml:space="preserve">
+    <value>Ana kalem</value>
+  </data>
+  <data name="Code_EntryRole_CONSIDERATION" xml:space="preserve">
+    <value>Karşılık</value>
+  </data>
+  <data name="Code_EntryRole_TRANSFER" xml:space="preserve">
+    <value>Transfer</value>
+  </data>
+  <data name="Code_EntryRole_INCOME" xml:space="preserve">
+    <value>Gelir</value>
+  </data>
+  <data name="Code_EntryRole_FEE" xml:space="preserve">
+    <value>Ücret</value>
+  </data>
+  <data name="Code_EntryRole_TAX" xml:space="preserve">
+    <value>Vergi</value>
+  </data>
+  <data name="Code_EntryRole_ADJUSTMENT" xml:space="preserve">
+    <value>Düzeltme</value>
+  </data>
+  <data name="Code_CashFlowCategory_SALARY" xml:space="preserve">
+    <value>Maaş</value>
+  </data>
+  <data name="Code_CashFlowCategory_BONUS" xml:space="preserve">
+    <value>Prim</value>
+  </data>
+  <data name="Code_CashFlowCategory_ACADEMIC_INCOME" xml:space="preserve">
+    <value>Akademik gelir</value>
+  </data>
+  <data name="Code_CashFlowCategory_GIFT" xml:space="preserve">
+    <value>Hediye</value>
+  </data>
+  <data name="Code_CashFlowCategory_EXTERNAL_SALE" xml:space="preserve">
+    <value>Dış satış</value>
+  </data>
+  <data name="Code_CashFlowCategory_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_CostType_COMMISSION" xml:space="preserve">
+    <value>Komisyon</value>
+  </data>
+  <data name="Code_CostType_WITHHOLDING_TAX" xml:space="preserve">
+    <value>Stopaj</value>
+  </data>
+  <data name="Code_CostType_OTHER_TAX" xml:space="preserve">
+    <value>Diğer vergi</value>
+  </data>
+  <data name="Code_CostType_MAKING_CHARGE" xml:space="preserve">
+    <value>İşçilik</value>
+  </data>
+  <data name="Code_CostType_BROKERAGE" xml:space="preserve">
+    <value>Aracılık ücreti</value>
+  </data>
+  <data name="Code_CostType_TITLE_DEED" xml:space="preserve">
+    <value>Tapu harcı</value>
+  </data>
+  <data name="Code_CostType_EXPERTISE" xml:space="preserve">
+    <value>Ekspertiz</value>
+  </data>
+  <data name="Code_CostType_NOTARY" xml:space="preserve">
+    <value>Noter</value>
+  </data>
+  <data name="Code_CostType_INSURANCE" xml:space="preserve">
+    <value>Sigorta</value>
+  </data>
+  <data name="Code_CostType_OTHER" xml:space="preserve">
+    <value>Diğer</value>
+  </data>
+  <data name="Code_CostTreatment_ADDITIONAL_CASH_OUTFLOW" xml:space="preserve">
+    <value>Ek nakit çıkışı</value>
+  </data>
+  <data name="Code_CostTreatment_WITHHELD_FROM_PROCEEDS" xml:space="preserve">
+    <value>Hasılattan kesildi</value>
+  </data>
+  <data name="Code_CostTreatment_INCLUDED_IN_CONSIDERATION" xml:space="preserve">
+    <value>Karşılığa dahil</value>
+  </data>
+  <data name="Code_CostTreatment_INFORMATIONAL_ONLY" xml:space="preserve">
+    <value>Yalnızca bilgi</value>
+  </data>
+  <data name="Code_CostBasisStatus_KNOWN" xml:space="preserve">
+    <value>Biliniyor</value>
+  </data>
+  <data name="Code_CostBasisStatus_UNKNOWN" xml:space="preserve">
+    <value>Bilinmiyor</value>
+  </data>
+  <data name="Code_CostBasisStatus_NOT_APPLICABLE" xml:space="preserve">
+    <value>Uygulanamaz</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_UNINITIALIZED" xml:space="preserve">
+    <value>Başlatılmamış</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_COMPATIBLE" xml:space="preserve">
+    <value>Bu sürümle uyumlu</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_MIGRATION_REQUIRED" xml:space="preserve">
+    <value>Açık geçiş gerekli</value>
+  </data>
+  <data name="Code_LocalDatabaseCompatibility_INCOMPATIBLE" xml:space="preserve">
+    <value>Uyumsuz</value>
+  </data>
+  <data name="Code_LocalDataIntegrityStatus_NOT_CHECKED" xml:space="preserve">
+    <value>Denetlenmedi</value>
+  </data>
+  <data name="Code_LocalDataIntegrityStatus_PASSED" xml:space="preserve">
+    <value>Bütünlük denetimi geçti</value>
+  </data>
+  <data name="Code_LocalDataIntegrityStatus_FAILED" xml:space="preserve">
+    <value>Bütünlük denetimi başarısız</value>
+  </data>
+  <data name="Code_LocalBackupWorkspaceBinding_UNKNOWN" xml:space="preserve">
+    <value>Kökeni kanıtlanamıyor</value>
+  </data>
+  <data name="Code_LocalBackupWorkspaceBinding_MATCHED" xml:space="preserve">
+    <value>Çalışma alanıyla eşleşiyor</value>
+  </data>
+  <data name="Code_LocalBackupWorkspaceBinding_UNRELATED" xml:space="preserve">
+    <value>Başka çalışma alanına ait</value>
+  </data>
+  <data name="Code_BackupEncryptionMode_PLAINTEXT" xml:space="preserve">
+    <value>Uygulama katmanında şifrelenmemiş</value>
+  </data>
+  <data name="Layout_SkipToContent" xml:space="preserve">
+    <value>Ana içeriğe geç</value>
+  </data>
+  <data name="Layout_LocalOnly" xml:space="preserve">
+    <value>Yalnızca bu bilgisayarda</value>
+  </data>
+  <data name="Layout_Footer" xml:space="preserve">
+    <value>WealthLedger yerel veri sınırı içinde çalışır.</value>
+  </data>
+  <data name="Validation_SummaryLabel" xml:space="preserve">
+    <value>Kontrol edilmesi gereken alanlar</value>
+  </data>
+  <data name="Setup_Eyebrow" xml:space="preserve">
+    <value>Güvenli ilk kurulum</value>
+  </data>
+  <data name="Blocked_Eyebrow" xml:space="preserve">
+    <value>Salt okunur durum</value>
+  </data>
+  <data name="Blocked_Title" xml:space="preserve">
+    <value>WealthLedger güvenli biçimde durduruldu</value>
+  </data>
+  <data name="Blocked_Introduction" xml:space="preserve">
+    <value>Yerel veri denetimi tamamlanamadığı için kayıt ve kurulum işlemleri kullanıma açılmadı.</value>
+  </data>
+  <data name="Blocked_FailureCategoryLabel" xml:space="preserve">
+    <value>Güvenli hata kategorisi</value>
+  </data>
+  <data name="Blocked_GuidanceTitle" xml:space="preserve">
+    <value>Ne yapabilirsiniz?</value>
+  </data>
+  <data name="Blocked_Guidance_MigrationRequired" xml:space="preserve">
+    <value>Uygulama kapalıyken kabul edilmiş Operations komutuyla veritabanını açıkça yükseltin, ardından WealthLedger'ı yeniden başlatın.</value>
+  </data>
+  <data name="Blocked_Guidance_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir WealthLedger süreci veya yerel veri işlemi çalışıyor. Diğer işlemi güvenle tamamlayıp kapattıktan sonra bu süreci yeniden başlatın.</value>
+  </data>
+  <data name="Blocked_Guidance_Configuration" xml:space="preserve">
+    <value>Tarayıcıdan yol veya yedekleme ayarı değiştirilemez. Uygulama yapılandırmasını Operations durum komutuyla denetleyin ve ardından yeniden başlatın.</value>
+  </data>
+  <data name="Blocked_Guidance_Database" xml:space="preserve">
+    <value>Veritabanını tarayıcıdan değiştirmeyin. Uygulamayı kapatın, Operations durum komutunu çalıştırın ve belgelenmiş kurtarma yönlendirmesini izleyin.</value>
+  </data>
+  <data name="Blocked_Guidance_General" xml:space="preserve">
+    <value>Uygulamayı kapatın ve güvenli kategoriyi Operations durum komutuyla inceleyin. Sorun giderildikten sonra temiz bir yeniden başlatma yapın.</value>
+  </data>
+  <data name="Blocked_CommandIntroduction" xml:space="preserve">
+    <value>Depo kökünde, uygulama kapalıyken desteklenen komut:</value>
+  </data>
+  <data name="Blocked_NoBrowserMutation" xml:space="preserve">
+    <value>Bu sayfa yalnızca bilgi verir; veritabanını, yedekleri veya dosyaları değiştiremez.</value>
+  </data>
+  <data name="Storage_Title" xml:space="preserve">
+    <value>Yerel veri deposunu oluşturun</value>
+  </data>
+  <data name="Storage_Introduction" xml:space="preserve">
+    <value>WealthLedger kayıtlarını bu bilgisayardaki güvenli ve önceden çözümlenmiş konumda tutar. Oluşturmadan önce hedefleri gözden geçirin.</value>
+  </data>
+  <data name="Storage_ReviewTitle" xml:space="preserve">
+    <value>Çözümlenmiş konumları gözden geçirin</value>
+  </data>
+  <data name="Storage_ReviewExplanation" xml:space="preserve">
+    <value>Bu değerler sunucu yapılandırmasından gelir. Tarayıcı bağlantı dizesi oluşturmaz ve başka bir konum seçemez.</value>
+  </data>
+  <data name="Storage_DatabasePathLabel" xml:space="preserve">
+    <value>Canlı veritabanı dosyası</value>
+  </data>
+  <data name="Storage_BackupDirectoryLabel" xml:space="preserve">
+    <value>Yapılandırılmış yedekleme dizini</value>
+  </data>
+  <data name="Storage_PathRestriction" xml:space="preserve">
+    <value>Bu kurulum yalnızca eksik canlı veritabanını oluşturabilir; var olan bir dosyayı yükseltemez, üzerine yazamaz, geri yükleyemez veya değiştiremez.</value>
+  </data>
+  <data name="Storage_ActionTitle" xml:space="preserve">
+    <value>Eksik veritabanını oluşturun</value>
+  </data>
+  <data name="Storage_ActionExplanation" xml:space="preserve">
+    <value>İşlem kabul edilmiş şema zincirini yeni bir geçici dosyada kurar, doğrular ve yalnızca hedef hâlâ boşsa yayımlar.</value>
+  </data>
+  <data name="Storage_ConfirmationLabel" xml:space="preserve">
+    <value>Gösterilen canlı veritabanı ve yedekleme konumlarını gözden geçirdim.</value>
+  </data>
+  <data name="Storage_Submit" xml:space="preserve">
+    <value>Yerel veri deposunu oluştur</value>
+  </data>
+  <data name="Storage_Validation_ConfirmationRequired" xml:space="preserve">
+    <value>Oluşturmadan önce gösterilen konumları gözden geçirdiğinizi onaylayın.</value>
+  </data>
+  <data name="Storage_CreatedStatus" xml:space="preserve">
+    <value>Depolama oluşturuldu</value>
+  </data>
+  <data name="Storage_CreatedTitle" xml:space="preserve">
+    <value>Yeni yerel veritabanı doğrulandı</value>
+  </data>
+  <data name="Storage_CreatedGuidance" xml:space="preserve">
+    <value>Bu süreç başlangıç kipini değiştirmez. WealthLedger'ı temiz biçimde yeniden başlatın; sonraki başlangıç çalışma alanı kurulumunu açacaktır.</value>
+  </data>
+  <data name="Storage_Error_ConfigurationUnavailable" xml:space="preserve">
+    <value>Güvenli depolama yapılandırması okunamadı. Tarayıcıdan yol girmeyin; Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Storage_Error_ExistingNotReady" xml:space="preserve">
+    <value>Hedefte güvenle yeniden kullanılamayan bir veritabanı yapısı var. Hiçbir dosyanın üzerine yazılmadı; Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Storage_Error_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir yerel veri işlemi devam ediyor. Hiçbir dosyanın üzerine yazılmadı; işlem tamamlandıktan sonra güvenle yeniden deneyin.</value>
+  </data>
+  <data name="Storage_Error_InitializationFailed" xml:space="preserve">
+    <value>Yerel veri deposu güvenle oluşturulamadı. Sonuç doğrulanmadı ve var olan hiçbir dosyanın üzerine yazılmadı.</value>
+  </data>
+  <data name="Workspace_Title" xml:space="preserve">
+    <value>Çalışma alanınızı hazırlayın</value>
+  </data>
+  <data name="Workspace_Introduction" xml:space="preserve">
+    <value>İlk para birimini, haneyi ve temel yatırım yapılarını tek ve atomik bir işlemle oluşturun. Bu adım bakiye veya işlem kaydı oluşturmaz.</value>
+  </data>
+  <data name="Workspace_CurrencyTitle" xml:space="preserve">
+    <value>Temel para birimi</value>
+  </data>
+  <data name="Workspace_BaseCurrencyNameLabel" xml:space="preserve">
+    <value>Para birimi adı</value>
+  </data>
+  <data name="Workspace_MinorUnitDigitsLabel" xml:space="preserve">
+    <value>Ondalık basamak sayısı</value>
+  </data>
+  <data name="Workspace_MinorUnitDigitsHelp" xml:space="preserve">
+    <value>Türk lirası için 2 kullanılır. İzin verilen aralık 0–8'dir.</value>
+  </data>
+  <data name="Workspace_HouseholdTitle" xml:space="preserve">
+    <value>Hane</value>
+  </data>
+  <data name="Workspace_HouseholdNameLabel" xml:space="preserve">
+    <value>Hane adı</value>
+  </data>
+  <data name="Workspace_MemberNameLabel" xml:space="preserve">
+    <value>İlk hane üyesinin görünen adı</value>
+  </data>
+  <data name="Workspace_OptionalHelp" xml:space="preserve">
+    <value>İsteğe bağlı</value>
+  </data>
+  <data name="Workspace_InstitutionTitle" xml:space="preserve">
+    <value>Kurum</value>
+  </data>
+  <data name="Workspace_InstitutionNameLabel" xml:space="preserve">
+    <value>Kurum adı</value>
+  </data>
+  <data name="Workspace_InstitutionTypeLabel" xml:space="preserve">
+    <value>Kurum türü</value>
+  </data>
+  <data name="Workspace_PortfolioAccountTitle" xml:space="preserve">
+    <value>Portföy ve hesap</value>
+  </data>
+  <data name="Workspace_PortfolioNameLabel" xml:space="preserve">
+    <value>Portföy adı</value>
+  </data>
+  <data name="Workspace_AccountNameLabel" xml:space="preserve">
+    <value>Hesap adı</value>
+  </data>
+  <data name="Workspace_AccountTypeLabel" xml:space="preserve">
+    <value>Hesap türü</value>
+  </data>
+  <data name="Workspace_AccountOpenedOnLabel" xml:space="preserve">
+    <value>Hesap açılış tarihi</value>
+  </data>
+  <data name="Workspace_AssetsTitle" xml:space="preserve">
+    <value>İlk varlıklar</value>
+  </data>
+  <data name="Workspace_AssetsExplanation" xml:space="preserve">
+    <value>Bir nakit varlığı ve parti takibi gereken bir fon tanımlayın. Miktarlar daha sonraki kayıt iş akışlarında girilecektir.</value>
+  </data>
+  <data name="Workspace_CashAssetNameLabel" xml:space="preserve">
+    <value>Nakit varlığının adı</value>
+  </data>
+  <data name="Workspace_FundAssetNameLabel" xml:space="preserve">
+    <value>İlk fonun adı</value>
+  </data>
+  <data name="Workspace_StableCodesTitle" xml:space="preserve">
+    <value>Kalıcı kodları gözden geçirin</value>
+  </data>
+  <data name="Workspace_StableCodesExplanation" xml:space="preserve">
+    <value>Bu önerilen kodlar kurulumdan sonra kalıcı tanımlayıcı olur. A–Z, 0–9, alt çizgi ve kısa çizgi kullanın.</value>
+  </data>
+  <data name="Workspace_BaseCurrencyCodeLabel" xml:space="preserve">
+    <value>Para birimi kodu</value>
+  </data>
+  <data name="Workspace_InstitutionCodeLabel" xml:space="preserve">
+    <value>Kurum kodu</value>
+  </data>
+  <data name="Workspace_PortfolioCodeLabel" xml:space="preserve">
+    <value>Portföy kodu</value>
+  </data>
+  <data name="Workspace_AccountCodeLabel" xml:space="preserve">
+    <value>Hesap kodu</value>
+  </data>
+  <data name="Workspace_CashAssetCodeLabel" xml:space="preserve">
+    <value>Nakit varlık kodu</value>
+  </data>
+  <data name="Workspace_FundAssetCodeLabel" xml:space="preserve">
+    <value>Fon varlığı kodu</value>
+  </data>
+  <data name="Workspace_ActionTitle" xml:space="preserve">
+    <value>Atomik kurulumu tamamlayın</value>
+  </data>
+  <data name="Workspace_ActionExplanation" xml:space="preserve">
+    <value>Tüm temel kayıtlar birlikte doğrulanır ve tek işlemde kaydedilir. Herhangi biri başarısız olursa hiçbir kısmi çalışma alanı kabul edilmez.</value>
+  </data>
+  <data name="Workspace_NoFinancialHistory" xml:space="preserve">
+    <value>Bu işlem bakiye, pozisyon, yatırım işlemi, lot veya maliyet kaydı oluşturmaz.</value>
+  </data>
+  <data name="Workspace_Submit" xml:space="preserve">
+    <value>Çalışma alanını oluştur</value>
+  </data>
+  <data name="Workspace_CreatedStatus" xml:space="preserve">
+    <value>Çalışma alanı oluşturuldu</value>
+  </data>
+  <data name="Workspace_CreatedTitle" xml:space="preserve">
+    <value>Temel kayıtlar atomik olarak kaydedildi</value>
+  </data>
+  <data name="Workspace_CreatedGuidance" xml:space="preserve">
+    <value>Bu süreç kurulum kipinde kalır ve normal kayıt rotalarını açmaz. Bir sonraki korumalı adıma geçmek için WealthLedger'ı temiz biçimde yeniden başlatın.</value>
+  </data>
+  <data name="Workspace_BackupDeferred" xml:space="preserve">
+    <value>İlk doğrulanmış yedek henüz oluşturulmadı. Bu sınırda otomatik yedek veya tamamlandı bildirimi yoktur.</value>
+  </data>
+  <data name="Workspace_Validation_Required" xml:space="preserve">
+    <value>Bu alan zorunludur.</value>
+  </data>
+  <data name="Workspace_Validation_TooLong" xml:space="preserve">
+    <value>Bu alan izin verilen uzunluğu aşıyor.</value>
+  </data>
+  <data name="Workspace_Validation_CurrencyCode" xml:space="preserve">
+    <value>Para birimi kodu tam olarak üç Latin harfi olmalıdır.</value>
+  </data>
+  <data name="Workspace_Validation_StableCode" xml:space="preserve">
+    <value>Kod en fazla 64 karakter olmalı ve yalnızca A–Z, 0–9, alt çizgi veya kısa çizgi içermelidir.</value>
+  </data>
+  <data name="Workspace_Validation_MinorUnitDigits" xml:space="preserve">
+    <value>Ondalık basamak sayısı 0 ile 8 arasında bir tam sayı olmalıdır.</value>
+  </data>
+  <data name="Workspace_Validation_InstitutionType" xml:space="preserve">
+    <value>Desteklenen bir kurum türü seçin.</value>
+  </data>
+  <data name="Workspace_Validation_AccountType" xml:space="preserve">
+    <value>Desteklenen bir hesap türü seçin.</value>
+  </data>
+  <data name="Workspace_Validation_Date" xml:space="preserve">
+    <value>Geçerli bir takvim tarihi girin.</value>
+  </data>
+  <data name="Workspace_Validation_AssetCodesDistinct" xml:space="preserve">
+    <value>Nakit ve fon varlıkları farklı kalıcı kodlar kullanmalıdır.</value>
+  </data>
+  <data name="Workspace_Error_StateUnavailable" xml:space="preserve">
+    <value>Çalışma alanı durumu güvenle okunamadı. Hiçbir kayıt oluşturulmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Workspace_Error_PartialState" xml:space="preserve">
+    <value>Veritabanında kısmi veya çelişkili temel kayıtlar bulundu. Tarayıcı bunları tahmin ederek tamamlamaz; Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Workspace_Error_AlreadyInitializedConflict" xml:space="preserve">
+    <value>Başka bir deneme temel kayıtları değiştirdi ancak tamamlanmış durum doğrulanamadı. Hiçbir ek kayıt oluşturulmadı; uygulamayı yeniden başlatın.</value>
+  </data>
+  <data name="Workspace_Error_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir yerel veri işlemi devam ediyor. Hiçbir kısmi çalışma alanı kabul edilmedi; işlem tamamlandıktan sonra güvenle yeniden deneyin.</value>
+  </data>
+  <data name="Workspace_Error_SetupUnavailable" xml:space="preserve">
+    <value>Çalışma alanı kurulumu şu anda güvenle kullanılamıyor. Hiçbir kısmi çalışma alanı kabul edilmedi.</value>
+  </data>
+  <data name="Workspace_Error_InvalidInput" xml:space="preserve">
+    <value>Girilen değerler temel kayıt kurallarını karşılamadı. Alanları gözden geçirin; hiçbir kayıt oluşturulmadı.</value>
+  </data>
+  <data name="Workspace_Error_PersistenceConflict" xml:space="preserve">
+    <value>Temel kayıtlar atomik olarak kaydedilemedi. İşlem tamamlanmadı; güvenli durumu yeniden okumak için uygulamayı yeniden başlatın.</value>
+  </data>
+  <data name="Backup_Title" xml:space="preserve">
+    <value>İlk doğrulanmış yedeği oluşturun</value>
+  </data>
+  <data name="Backup_Introduction" xml:space="preserve">
+    <value>Çalışma alanını normal kullanıma açmadan önce ona ait yeni ve bağımsız olarak doğrulanmış bir yedek kuşağı oluşturun.</value>
+  </data>
+  <data name="Backup_DestinationTitle" xml:space="preserve">
+    <value>Yedekleme hedefini gözden geçirin</value>
+  </data>
+  <data name="Backup_DestinationExplanation" xml:space="preserve">
+    <value>Bu hedef sunucu yapılandırmasından gelir. Tarayıcı başka bir dizin seçemez, dosya yükleyemez veya var olan bir yedeğin üzerine yazamaz.</value>
+  </data>
+  <data name="Backup_DirectoryLabel" xml:space="preserve">
+    <value>Yapılandırılmış yedekleme dizini</value>
+  </data>
+  <data name="Backup_DirectoryStateLabel" xml:space="preserve">
+    <value>Dizin durumu</value>
+  </data>
+  <data name="Backup_EncryptionModeLabel" xml:space="preserve">
+    <value>Uygulama düzeyi şifreleme kipi</value>
+  </data>
+  <data name="Backup_SeparationAttestationLabel" xml:space="preserve">
+    <value>Hedef ayrımı beyanı</value>
+  </data>
+  <data name="Backup_EncryptionAttestationLabel" xml:space="preserve">
+    <value>Cihaz şifreleme beyanı</value>
+  </data>
+  <data name="Backup_State_Available" xml:space="preserve">
+    <value>Mevcut</value>
+  </data>
+  <data name="Backup_State_WillBeCreated" xml:space="preserve">
+    <value>İlk başarılı yedekte oluşturulacak</value>
+  </data>
+  <data name="Backup_State_Confirmed" xml:space="preserve">
+    <value>Onaylandı</value>
+  </data>
+  <data name="Backup_State_NotConfirmed" xml:space="preserve">
+    <value>Onaylanmadı</value>
+  </data>
+  <data name="Backup_AttestationExplanation" xml:space="preserve">
+    <value>Bu iki beyan M004 veri güvenliği uyarılarıdır. Çalışma alanına ait doğrulanmış yedek zorunludur; beyanların kendisi normal yerel kabuğu açma koşulu değildir.</value>
+  </data>
+  <data name="Backup_ProtectionTitle" xml:space="preserve">
+    <value>Geçerli koruma durumu</value>
+  </data>
+  <data name="Backup_ProtectionRequired" xml:space="preserve">
+    <value>Bu çalışma alanıyla eşleşen doğrulanmış bir paket henüz yok. Başka bir çalışma alanının paketi bu adımı tamamlamaz.</value>
+  </data>
+  <data name="Backup_UnrelatedPackagesExplanation" xml:space="preserve">
+    <value>Dizinde doğrulanabilen ancak bu çalışma alanına ait olduğu kanıtlanamayan paketler var. Bunlar korunma veya tamamlanma sayılmaz ve değiştirilmeyecektir.</value>
+  </data>
+  <data name="Backup_UnrelatedPackagesCountLabel" xml:space="preserve">
+    <value>Eşleşmeyen paket sayısı</value>
+  </data>
+  <data name="Backup_ActionTitle" xml:space="preserve">
+    <value>Yeni değişmez kuşak oluşturun</value>
+  </data>
+  <data name="Backup_ActionExplanation" xml:space="preserve">
+    <value>WealthLedger canlı veritabanının tutarlı bir anlık görüntüsünü alır, paketi bağımsız olarak doğrular ve yalnızca doğrulama geçerse benzersiz bir .wlbackup dosyası yayımlar.</value>
+  </data>
+  <data name="Backup_ConfirmationLabel" xml:space="preserve">
+    <value>Gösterilen hedefi ve yeni bir yedek kuşağı oluşturulacağını gözden geçirdim.</value>
+  </data>
+  <data name="Backup_Submit" xml:space="preserve">
+    <value>Yedeği oluştur ve doğrula</value>
+  </data>
+  <data name="Backup_Validation_ConfirmationRequired" xml:space="preserve">
+    <value>Yedeği oluşturmadan önce gösterilen hedefi gözden geçirdiğinizi onaylayın.</value>
+  </data>
+  <data name="Backup_Error_StateUnavailable" xml:space="preserve">
+    <value>Yedekleme durumu güvenle okunamadı. Hiçbir paket oluşturulmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Backup_Error_OwnershipBusy" xml:space="preserve">
+    <value>Başka bir yerel veri işlemi devam ediyor. Yeni paket yayımlanmadı; işlem tamamlandıktan sonra güvenle yeniden deneyin.</value>
+  </data>
+  <data name="Backup_Error_VerificationFailed" xml:space="preserve">
+    <value>Yeni yedek bağımsız doğrulamayı tamamlamadı. Son görünümlü bir paket yayımlanmadı; güvenle yeniden deneyebilirsiniz.</value>
+  </data>
+  <data name="Backup_Error_DatabaseNotReady" xml:space="preserve">
+    <value>Canlı veritabanı artık bu yedekleme adımı için hazır değil. Paket oluşturulmadı; uygulamayı temiz biçimde yeniden başlatın.</value>
+  </data>
+  <data name="Backup_Error_Cancelled" xml:space="preserve">
+    <value>Yedekleme yayımlanmadan iptal edildi. Güvenli durumu yeniden okuyup tekrar deneyebilirsiniz.</value>
+  </data>
+  <data name="Backup_Error_CreationFailed" xml:space="preserve">
+    <value>Yeni yedek güvenle oluşturulup doğrulanamadı. Var olan paketler değiştirilmedi; güvenle yeniden deneyebilirsiniz.</value>
+  </data>
+  <data name="Complete_Title" xml:space="preserve">
+    <value>İlk kurulum korumalı durumda</value>
+  </data>
+  <data name="Complete_Introduction" xml:space="preserve">
+    <value>Çalışma alanına ait ilk değişmez yedek oluşturuldu ve bağımsız olarak doğrulandı.</value>
+  </data>
+  <data name="Complete_Status" xml:space="preserve">
+    <value>Yedek doğrulandı</value>
+  </data>
+  <data name="Complete_BackupTitle" xml:space="preserve">
+    <value>Eşleşen yedek özeti</value>
+  </data>
+  <data name="Complete_BackupPathLabel" xml:space="preserve">
+    <value>Doğrulanmış paket</value>
+  </data>
+  <data name="Complete_CreatedAtLabel" xml:space="preserve">
+    <value>Oluşturulma zamanı</value>
+  </data>
+  <data name="Complete_VerifiedAtLabel" xml:space="preserve">
+    <value>Doğrulama zamanı</value>
+  </data>
+  <data name="Complete_DigestPrefixLabel" xml:space="preserve">
+    <value>Doğrulama özeti öneki</value>
+  </data>
+  <data name="Complete_WorkspaceBindingLabel" xml:space="preserve">
+    <value>Çalışma alanı ilişkisi</value>
+  </data>
+  <data name="Complete_WorkspaceBindingMatched" xml:space="preserve">
+    <value>Eşleşti</value>
+  </data>
+  <data name="Complete_RestartTitle" xml:space="preserve">
+    <value>WealthLedger'ı temiz biçimde yeniden başlatın</value>
+  </data>
+  <data name="Complete_RestartExplanation" xml:space="preserve">
+    <value>Bu süreci durdurun ve WealthLedger'ı yeniden başlatın. Yeni süreç depolama, çalışma alanı ve eşleşen yedeği baştan doğruladıktan sonra normal kullanıma geçecektir.</value>
+  </data>
+  <data name="Complete_ProcessStillSetup" xml:space="preserve">
+    <value>Çalışan süreç hâlâ InitialBackupRequired kurulum kipindedir; normal kayıt rotaları bu süreçte açılmaz.</value>
+  </data>
+  <data name="Complete_NoHoldings" xml:space="preserve">
+    <value>Kurulum bakiye, pozisyon veya yatırım işlemi oluşturmadı. Varlık geçmişi daha sonraki kabul edilmiş kayıt iş akışlarıyla başlayacaktır.</value>
+  </data>
+  <data name="Complete_Error_StateUnavailable" xml:space="preserve">
+    <value>Tamamlanma durumu güvenle doğrulanamadı. Normal kullanım açılmadı; uygulamayı yeniden başlatın ve Operations durum denetimini kullanın.</value>
+  </data>
+  <data name="Shell_PrimaryNavigationLabel" xml:space="preserve">
+    <value>Ana gezinme</value>
+  </data>
+  <data name="Shell_Navigation_Today" xml:space="preserve">
+    <value>Bugün</value>
+  </data>
+  <data name="Shell_Navigation_Ledger" xml:space="preserve">
+    <value>Defter</value>
+  </data>
+  <data name="Shell_Navigation_Settings" xml:space="preserve">
+    <value>Ayarlar</value>
+  </data>
+  <data name="Common_TechnicalDetails" xml:space="preserve">
+    <value>Teknik ayrıntılar</value>
+  </data>
+  <data name="Common_NameLabel" xml:space="preserve">
+    <value>Ad</value>
+  </data>
+  <data name="Common_CodeLabel" xml:space="preserve">
+    <value>Kalıcı kod</value>
+  </data>
+  <data name="Common_TypeLabel" xml:space="preserve">
+    <value>Tür</value>
+  </data>
+  <data name="Common_StateLabel" xml:space="preserve">
+    <value>Durum</value>
+  </data>
+  <data name="Common_CreatedAtLabel" xml:space="preserve">
+    <value>Oluşturulma zamanı</value>
+  </data>
+  <data name="Common_ClosedAtLabel" xml:space="preserve">
+    <value>Kapanış</value>
+  </data>
+  <data name="Common_Active" xml:space="preserve">
+    <value>Etkin</value>
+  </data>
+  <data name="Common_Inactive" xml:space="preserve">
+    <value>Etkin değil</value>
+  </data>
+  <data name="Ready_CurrentHouseholdLabel" xml:space="preserve">
+    <value>Geçerli hane:</value>
+  </data>
+  <data name="Ready_Household_StateTitle" xml:space="preserve">
+    <value>Hane bağlamı seçilemedi</value>
+  </data>
+  <data name="Ready_Household_None" xml:space="preserve">
+    <value>Kullanılabilir bir hane bulunamadı. Bu süreç herhangi bir kimliği varsaymaz.</value>
+  </data>
+  <data name="Ready_Household_Multiple" xml:space="preserve">
+    <value>Birden fazla hane bulundu. Açık bir seçim olmadan hiçbir hane varsayılmadı.</value>
+  </data>
+  <data name="Ready_Household_Unavailable" xml:space="preserve">
+    <value>Hane ve kayıt bağlamı şu anda güvenle okunamıyor.</value>
+  </data>
+  <data name="Today_Title" xml:space="preserve">
+    <value>Bugün</value>
+  </data>
+  <data name="Today_Eyebrow" xml:space="preserve">
+    <value>Yerel çalışma alanı</value>
+  </data>
+  <data name="Today_Introduction" xml:space="preserve">
+    <value>Doğrulanmış yerel güvenlik durumunu ve en son kaydedilen defter hareketlerini gösterir.</value>
+  </data>
+  <data name="Today_SafetyTitle" xml:space="preserve">
+    <value>Yerel veri güvenliği</value>
+  </data>
+  <data name="Today_BackupBindingLabel" xml:space="preserve">
+    <value>Yedek çalışma alanı ilişkisi</value>
+  </data>
+  <data name="Today_BackupAgeLabel" xml:space="preserve">
+    <value>Son doğrulanmış yedeğin yaşı</value>
+  </data>
+  <data name="Today_BackupVerifiedAtLabel" xml:space="preserve">
+    <value>Son doğrulama zamanı</value>
+  </data>
+  <data name="Today_DataSafetyLink" xml:space="preserve">
+    <value>Veri güvenliği ayrıntılarını aç</value>
+  </data>
+  <data name="Today_SafetyUnavailable" xml:space="preserve">
+    <value>Yerel güvenlik durumu şu anda güvenle gösterilemiyor.</value>
+  </data>
+  <data name="Today_KnownFactsTitle" xml:space="preserve">
+    <value>Şu anda bilinenler</value>
+  </data>
+  <data name="Today_KnownFactsExplanation" xml:space="preserve">
+    <value>Bu görünüm yalnızca kaydedilmiş defter hareketlerini ve yerel veri koruma gerçeklerini açıklar. Henüz kabul edilmiş bir değerleme veya toplam sözleşmesi yoktur.</value>
+  </data>
+  <data name="Today_RecentTitle" xml:space="preserve">
+    <value>Son kaydedilen hareketler</value>
+  </data>
+  <data name="Today_AllLedgerLink" xml:space="preserve">
+    <value>Tüm son kayıtları göster</value>
+  </data>
+  <data name="Today_EmptyTitle" xml:space="preserve">
+    <value>Henüz kaydedilmiş işlem yok</value>
+  </data>
+  <data name="Today_EmptyExplanation" xml:space="preserve">
+    <value>Temel çalışma alanı hazırdır ancak defterde henüz kaydedilmiş ekonomik olay bulunmamaktadır.</value>
+  </data>
+  <data name="Today_NoFabricatedTotals" xml:space="preserve">
+    <value>Bakiye, piyasa değeri, getiri veya nakit mevcudu tahmin edilmez ve burada sıfırmış gibi gösterilmez.</value>
+  </data>
+  <data name="Ledger_Title" xml:space="preserve">
+    <value>Defter</value>
+  </data>
+  <data name="Ledger_Eyebrow" xml:space="preserve">
+    <value>Kaydedilmiş geçmiş</value>
+  </data>
+  <data name="Ledger_Introduction" xml:space="preserve">
+    <value>En yeni kaydedilmiş işlemleri, değişmez ekonomik etkileriyle birlikte gösterir.</value>
+  </data>
+  <data name="Ledger_CurrentContextNotice" xml:space="preserve">
+    <value>Adlar ve etkinlik durumları bugünkü ana veri bağlamıdır; işlem zamanındaki adların tarihsel görüntüsü değildir.</value>
+  </data>
+  <data name="Ledger_NavigationErrorTitle" xml:space="preserve">
+    <value>Bu defter sayfası açılamadı</value>
+  </data>
+  <data name="Ledger_NavigationErrorExplanation" xml:space="preserve">
+    <value>Sayfalama bağlantısı geçersiz, eski veya bu kapsamla ilişkili değil. İçeriği açıklanmadan reddedildi.</value>
+  </data>
+  <data name="Ledger_FirstPageLink" xml:space="preserve">
+    <value>İlk sayfaya dön</value>
+  </data>
+  <data name="Ledger_UnavailableTitle" xml:space="preserve">
+    <value>Defter şu anda kullanılamıyor</value>
+  </data>
+  <data name="Ledger_UnavailableExplanation" xml:space="preserve">
+    <value>Kaydedilmiş geçmiş güvenle okunamadı. Hiçbir özel tanı ayrıntısı gösterilmedi.</value>
+  </data>
+  <data name="Ledger_EmptyTitle" xml:space="preserve">
+    <value>Kaydedilmiş işlem bulunamadı</value>
+  </data>
+  <data name="Ledger_EmptyExplanation" xml:space="preserve">
+    <value>Bu hanenin son kaydedilmiş işlem akışı boş.</value>
+  </data>
+  <data name="Ledger_PaginationLabel" xml:space="preserve">
+    <value>Defter sayfaları</value>
+  </data>
+  <data name="Ledger_NextPageLink" xml:space="preserve">
+    <value>Daha eski kayıtlar</value>
+  </data>
+  <data name="Ledger_ExecutionDateLabel" xml:space="preserve">
+    <value>Gerçekleşme tarihi</value>
+  </data>
+  <data name="Ledger_ExternalReferenceLabel" xml:space="preserve">
+    <value>Dış referans</value>
+  </data>
+  <data name="Ledger_InactiveCurrentContext" xml:space="preserve">
+    <value>Bu kayıtta kullanılan güncel ana verilerden en az biri artık etkin değil veya arşivlenmiş.</value>
+  </data>
+  <data name="Ledger_TransactionIdLabel" xml:space="preserve">
+    <value>İşlem kimliği</value>
+  </data>
+  <data name="Ledger_TransactionTypeLabel" xml:space="preserve">
+    <value>İşlem türü kodu</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Ayarlar</value>
+  </data>
+  <data name="Settings_Eyebrow" xml:space="preserve">
+    <value>Salt okunur çalışma alanı bilgisi</value>
+  </data>
+  <data name="Settings_Introduction" xml:space="preserve">
+    <value>Geçerli ana veri bağlamını ve yerel veri güvenliği ayrıntılarını değiştirmeden inceleyin.</value>
+  </data>
+  <data name="Settings_HouseholdTitle" xml:space="preserve">
+    <value>Hane</value>
+  </data>
+  <data name="Settings_HouseholdNameLabel" xml:space="preserve">
+    <value>Hane adı</value>
+  </data>
+  <data name="Settings_BaseCurrencyLabel" xml:space="preserve">
+    <value>Temel para birimi</value>
+  </data>
+  <data name="Settings_HouseholdCreatedAtLabel" xml:space="preserve">
+    <value>Hane oluşturulma zamanı</value>
+  </data>
+  <data name="Settings_SectionsLabel" xml:space="preserve">
+    <value>Ayar bölümleri</value>
+  </data>
+  <data name="Settings_MasterDataLinkTitle" xml:space="preserve">
+    <value>Geçerli ana veriler</value>
+  </data>
+  <data name="Settings_MasterDataLinkExplanation" xml:space="preserve">
+    <value>Hane üyelerini, kurumları, portföyleri, hesapları, para birimlerini ve varlıkları salt okunur olarak inceleyin.</value>
+  </data>
+  <data name="Settings_DataSafetyLinkTitle" xml:space="preserve">
+    <value>Veri güvenliği ve teknik durum</value>
+  </data>
+  <data name="Settings_DataSafetyLinkExplanation" xml:space="preserve">
+    <value>Depolama konumlarını, şema uyumluluğunu, bütünlüğü ve doğrulanmış yedek durumunu inceleyin.</value>
+  </data>
+  <data name="Settings_ReadOnlyNotice" xml:space="preserve">
+    <value>Bu alan salt okunurdur. Gösterilen metni değiştirmek kalıcı kayıtları değiştirmez.</value>
+  </data>
+  <data name="Settings_BackLink" xml:space="preserve">
+    <value>Ayarlara dön</value>
+  </data>
+  <data name="MasterData_Title" xml:space="preserve">
+    <value>Geçerli ana veriler</value>
+  </data>
+  <data name="MasterData_Introduction" xml:space="preserve">
+    <value>Çalışma alanının şu anki adlarını, kodlarını ve durumlarını salt okunur olarak gösterir.</value>
+  </data>
+  <data name="MasterData_UnavailableTitle" xml:space="preserve">
+    <value>Ana veriler kullanılamıyor</value>
+  </data>
+  <data name="MasterData_UnavailableExplanation" xml:space="preserve">
+    <value>Geçerli ana veri bağlamı güvenle okunamadı.</value>
+  </data>
+  <data name="MasterData_CurrentStateNotice" xml:space="preserve">
+    <value>Bunlar güncel ana verilerdir; geçmiş işlemlerdeki kaynak-zamanı ad görüntüleri değildir.</value>
+  </data>
+  <data name="MasterData_BoundedNotice" xml:space="preserve">
+    <value>Bu salt okunur görünüm kabul edilen sınır içinde ilk 100 kaydı gösteriyor; tüm liste olduğu varsayılmadı.</value>
+  </data>
+  <data name="MasterData_MembersTitle" xml:space="preserve">
+    <value>Hane üyeleri</value>
+  </data>
+  <data name="MasterData_InstitutionsTitle" xml:space="preserve">
+    <value>Kurumlar</value>
+  </data>
+  <data name="MasterData_PortfoliosTitle" xml:space="preserve">
+    <value>Portföyler</value>
+  </data>
+  <data name="MasterData_AccountsTitle" xml:space="preserve">
+    <value>Hesaplar</value>
+  </data>
+  <data name="MasterData_CurrenciesTitle" xml:space="preserve">
+    <value>Para birimleri</value>
+  </data>
+  <data name="MasterData_AssetsTitle" xml:space="preserve">
+    <value>Varlıklar</value>
+  </data>
+  <data name="MasterData_InstitutionLabel" xml:space="preserve">
+    <value>Kurum</value>
+  </data>
+  <data name="MasterData_MinorDigitsLabel" xml:space="preserve">
+    <value>Ondalık basamak</value>
+  </data>
+  <data name="MasterData_UnitLabel" xml:space="preserve">
+    <value>Temel birim</value>
+  </data>
+  <data name="MasterData_OpenedOnLabel" xml:space="preserve">
+    <value>Açılış tarihi</value>
+  </data>
+  <data name="MasterData_BaseCurrencyLabel" xml:space="preserve">
+    <value>Temel para birimi</value>
+  </data>
+  <data name="MasterData_LotTrackingLabel" xml:space="preserve">
+    <value>Lot izleme</value>
+  </data>
+  <data name="DataSafety_Title" xml:space="preserve">
+    <value>Veri güvenliği ve teknik durum</value>
+  </data>
+  <data name="DataSafety_Introduction" xml:space="preserve">
+    <value>Bu yerel inceleme ekranı depolama, şema, bütünlük ve doğrulanmış yedek gerçeklerini gösterir.</value>
+  </data>
+  <data name="DataSafety_UnavailableTitle" xml:space="preserve">
+    <value>Veri güvenliği durumu kullanılamıyor</value>
+  </data>
+  <data name="DataSafety_UnavailableExplanation" xml:space="preserve">
+    <value>Yerel durum güvenle okunamadı; özel altyapı tanıları gösterilmedi.</value>
+  </data>
+  <data name="DataSafety_StorageTitle" xml:space="preserve">
+    <value>Yerel depolama</value>
+  </data>
+  <data name="DataSafety_DatabasePathLabel" xml:space="preserve">
+    <value>Çözümlenmiş veritabanı yolu</value>
+  </data>
+  <data name="DataSafety_BackupDirectoryLabel" xml:space="preserve">
+    <value>Çözümlenmiş yedekleme dizini</value>
+  </data>
+  <data name="DataSafety_ApplicationVersionLabel" xml:space="preserve">
+    <value>Uygulama sürümü</value>
+  </data>
+  <data name="DataSafety_WorkspacePrefixLabel" xml:space="preserve">
+    <value>Çalışma alanı kimliği öneki</value>
+  </data>
+  <data name="DataSafety_PathDisclosureNotice" xml:space="preserve">
+    <value>Tam yollar yalnızca bu yerel veri güvenliği inceleme ekranında gösterilir. Tarayıcı bunları değiştiremez veya dosya seçemez.</value>
+  </data>
+  <data name="DataSafety_SchemaTitle" xml:space="preserve">
+    <value>Şema ve bütünlük</value>
+  </data>
+  <data name="DataSafety_CompatibilityLabel" xml:space="preserve">
+    <value>Veritabanı uyumluluğu</value>
+  </data>
+  <data name="DataSafety_IntegrityLabel" xml:space="preserve">
+    <value>Bütünlük denetimi</value>
+  </data>
+  <data name="DataSafety_EncryptionModeLabel" xml:space="preserve">
+    <value>Yedek şifreleme kipi</value>
+  </data>
+  <data name="DataSafety_AppliedMigrationsTitle" xml:space="preserve">
+    <value>Uygulanan geçişler</value>
+  </data>
+  <data name="DataSafety_PendingMigrationsTitle" xml:space="preserve">
+    <value>Bekleyen geçişler</value>
+  </data>
+  <data name="DataSafety_AttestationsTitle" xml:space="preserve">
+    <value>Operatör beyanları</value>
+  </data>
+  <data name="DataSafety_LocalProtectionLabel" xml:space="preserve">
+    <value>M004 yerel koruma uyarısı</value>
+  </data>
+  <data name="DataSafety_ProtectionReady" xml:space="preserve">
+    <value>İki operatör beyanı da onaylandı</value>
+  </data>
+  <data name="DataSafety_ProtectionWarning" xml:space="preserve">
+    <value>Operatör beyanlarından en az biri onaylanmadı</value>
+  </data>
+  <data name="DataSafety_AttestationExplanation" xml:space="preserve">
+    <value>Bu beyanlar M004 veri güvenliği uyarılarıdır; Ready kabuğunun açılma koşulu değildir ve doğrulanmış yedeğin yerini tutmaz.</value>
+  </data>
+  <data name="DataSafety_LatestBackupTitle" xml:space="preserve">
+    <value>Son eşleşen doğrulanmış yedek</value>
+  </data>
+  <data name="DataSafety_NoMatchedBackup" xml:space="preserve">
+    <value>Bu çalışma alanıyla eşleşen doğrulanmış bir yedek gösterilemiyor.</value>
+  </data>
+  <data name="DataSafety_LatestMigrationLabel" xml:space="preserve">
+    <value>Paketin son geçişi</value>
+  </data>
+  <data name="Detail_Title" xml:space="preserve">
+    <value>İşlem açıklaması</value>
+  </data>
+  <data name="Detail_Eyebrow" xml:space="preserve">
+    <value>Değişmez kaydedilmiş gerçekler</value>
+  </data>
+  <data name="Detail_Introduction" xml:space="preserve">
+    <value>Kaydedilmiş işlemi, alt kayıtlarını ve bugünkü ana veri bağlamını salt okunur olarak açıklar.</value>
+  </data>
+  <data name="Detail_InvalidTitle" xml:space="preserve">
+    <value>İşlem adresi geçersiz</value>
+  </data>
+  <data name="Detail_InvalidExplanation" xml:space="preserve">
+    <value>İstenen işlem kimliği geçerli biçimde değil. İstek değeri açıklanmadan reddedildi.</value>
+  </data>
+  <data name="Detail_NotFoundTitle" xml:space="preserve">
+    <value>İşlem bulunamadı</value>
+  </data>
+  <data name="Detail_NotFoundExplanation" xml:space="preserve">
+    <value>Bu hane kapsamında açıklanabilir bir işlem bulunamadı.</value>
+  </data>
+  <data name="Detail_UnavailableTitle" xml:space="preserve">
+    <value>İşlem şu anda açıklanamıyor</value>
+  </data>
+  <data name="Detail_UnavailableExplanation" xml:space="preserve">
+    <value>İşlem ve güncel bağlamı birlikte güvenle okunamadı. Özel altyapı tanıları gösterilmedi.</value>
+  </data>
+  <data name="Detail_BackToLedger" xml:space="preserve">
+    <value>Deftere dön</value>
+  </data>
+  <data name="Detail_CurrentContextNotice" xml:space="preserve">
+    <value>İşlem etkileri ve kimlikleri kaydedilmiş gerçeklerdir. Gösterilen ana veri adları ve etkinlik durumları bugünkü bağlamdır; kaynak-zamanı görüntüsü değildir.</value>
+  </data>
+  <data name="Detail_IdentityTitle" xml:space="preserve">
+    <value>İşlem gerçekleri</value>
+  </data>
+  <data name="Detail_HouseholdLabel" xml:space="preserve">
+    <value>Geçerli hane bağlamı</value>
+  </data>
+  <data name="Detail_HouseholdIdLabel" xml:space="preserve">
+    <value>Hane kimliği</value>
+  </data>
+  <data name="Detail_OrderDateLabel" xml:space="preserve">
+    <value>Emir tarihi</value>
+  </data>
+  <data name="Detail_SettlementDateLabel" xml:space="preserve">
+    <value>Valör tarihi</value>
+  </data>
+  <data name="Detail_NoteLabel" xml:space="preserve">
+    <value>Not</value>
+  </data>
+  <data name="Detail_PostedAtLabel" xml:space="preserve">
+    <value>Kaydedilme zamanı</value>
+  </data>
+  <data name="Detail_EntriesTitle" xml:space="preserve">
+    <value>Sıralı işlem girişleri</value>
+  </data>
+  <data name="Detail_EntrySequenceLabel" xml:space="preserve">
+    <value>Sıra</value>
+  </data>
+  <data name="Detail_QuantityLabel" xml:space="preserve">
+    <value>Miktar etkisi</value>
+  </data>
+  <data name="Detail_RoleLabel" xml:space="preserve">
+    <value>Giriş rolü</value>
+  </data>
+  <data name="Detail_UnitPriceLabel" xml:space="preserve">
+    <value>Kaydedilmiş birim fiyat</value>
+  </data>
+  <data name="Detail_PortfolioLabel" xml:space="preserve">
+    <value>Geçerli portföy</value>
+  </data>
+  <data name="Detail_AccountLabel" xml:space="preserve">
+    <value>Geçerli hesap</value>
+  </data>
+  <data name="Detail_InstitutionLabel" xml:space="preserve">
+    <value>Geçerli kurum</value>
+  </data>
+  <data name="Detail_AssetLabel" xml:space="preserve">
+    <value>Geçerli varlık</value>
+  </data>
+  <data name="Detail_EntryIdLabel" xml:space="preserve">
+    <value>Giriş kimliği</value>
+  </data>
+  <data name="Detail_PortfolioIdLabel" xml:space="preserve">
+    <value>Portföy kimliği</value>
+  </data>
+  <data name="Detail_AccountIdLabel" xml:space="preserve">
+    <value>Hesap kimliği</value>
+  </data>
+  <data name="Detail_InstitutionIdLabel" xml:space="preserve">
+    <value>Kurum kimliği</value>
+  </data>
+  <data name="Detail_AssetIdLabel" xml:space="preserve">
+    <value>Varlık kimliği</value>
+  </data>
+  <data name="Detail_CashFlowTitle" xml:space="preserve">
+    <value>Nakit akışı sınıflandırması</value>
+  </data>
+  <data name="Detail_CategoryLabel" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="Detail_MemberLabel" xml:space="preserve">
+    <value>Geçerli hane üyesi</value>
+  </data>
+  <data name="Detail_MemberIdLabel" xml:space="preserve">
+    <value>Hane üyesi kimliği</value>
+  </data>
+  <data name="Detail_NoCashFlow" xml:space="preserve">
+    <value>Bu işlem için nakit akışı sınıflandırması uygulanmaz.</value>
+  </data>
+  <data name="Detail_CostsTitle" xml:space="preserve">
+    <value>İşlem maliyetleri</value>
+  </data>
+  <data name="Detail_NoCosts" xml:space="preserve">
+    <value>Kaydedilmiş ayrı maliyet bileşeni yok.</value>
+  </data>
+  <data name="Detail_CostTreatmentLabel" xml:space="preserve">
+    <value>Uygulama biçimi</value>
+  </data>
+  <data name="Detail_CostAmountLabel" xml:space="preserve">
+    <value>Kaydedilmiş tutar</value>
+  </data>
+  <data name="Detail_CostIdLabel" xml:space="preserve">
+    <value>Maliyet kimliği</value>
+  </data>
+  <data name="Detail_LotsTitle" xml:space="preserve">
+    <value>Bu işlemde oluşturulan lotlar</value>
+  </data>
+  <data name="Detail_NoLots" xml:space="preserve">
+    <value>Bu işlem yeni edinim lotu oluşturmadı.</value>
+  </data>
+  <data name="Detail_LotIdLabel" xml:space="preserve">
+    <value>Lot kimliği</value>
+  </data>
+  <data name="Detail_OpeningEntryLabel" xml:space="preserve">
+    <value>Açılış giriş kimliği</value>
+  </data>
+  <data name="Detail_AcquiredOnLabel" xml:space="preserve">
+    <value>Edinim tarihi</value>
+  </data>
+  <data name="Detail_CostBasisStatusLabel" xml:space="preserve">
+    <value>Maliyet esası durumu</value>
+  </data>
+  <data name="Detail_CostBasisAmountLabel" xml:space="preserve">
+    <value>Özgün maliyet esası</value>
+  </data>
+  <data name="Detail_AllocationsTitle" xml:space="preserve">
+    <value>Lot tahsisleri</value>
+  </data>
+  <data name="Detail_NoAllocations" xml:space="preserve">
+    <value>Bu işlemin girişlerinde lot tahsisi yok.</value>
+  </data>
+  <data name="Detail_AllocationIdLabel" xml:space="preserve">
+    <value>Tahsis kimliği</value>
+  </data>
+  <data name="Detail_ReversalTitle" xml:space="preserve">
+    <value>Ters kayıt ilişkisi</value>
+  </data>
+  <data name="Detail_OriginalTransactionLink" xml:space="preserve">
+    <value>Özgün işlemi aç</value>
+  </data>
+  <data name="Detail_ReversalTransactionLink" xml:space="preserve">
+    <value>Ters kayıt işlemini aç</value>
+  </data>
+  <data name="Detail_NoReversal" xml:space="preserve">
+    <value>Bu işlem için kaydedilmiş bir ters kayıt ilişkisi yok.</value>
+  </data>
+</root>

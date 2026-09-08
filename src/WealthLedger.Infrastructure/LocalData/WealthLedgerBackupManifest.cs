@@ -34,6 +34,23 @@ internal sealed record WealthLedgerBackupManifest
 
     public required string EncryptionMode { get; init; }
 
+    /*
+     * Additive optional member inside format version 1.
+     *
+     * The format version is deliberately not raised. The reader compares it
+     * for equality, so a version bump would make every existing package
+     * unreadable by this build and every new package unreadable by an
+     * earlier one. Because the serializer skips unmapped members, a package
+     * carrying this member still verifies on a build that predates it, and a
+     * package without it is simply of unknown lineage here.
+     *
+     * The manifest is outside the snapshot digest, so this value is a
+     * convenience copy only. Verification requires it to agree with the
+     * identity read from the snapshot itself, exactly as it already does for
+     * the recorded migration history.
+     */
+    public string? SourceWorkspaceId { get; init; }
+
     internal static JsonSerializerOptions JsonOptions { get; } = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

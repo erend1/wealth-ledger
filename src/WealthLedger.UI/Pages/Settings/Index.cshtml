@@ -1,0 +1,59 @@
+@page "/settings"
+@model WealthLedger.UI.Pages.Settings.IndexModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Settings_Title"];
+    ViewData["ActiveNavigation"] = "Settings";
+}
+
+<article class="flow" aria-labelledby="settings-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Settings_Eyebrow"]</p>
+        <h1 id="settings-heading">@Text["Settings_Title"]</h1>
+        <p class="lede">@Text["Settings_Introduction"]</p>
+    </header>
+
+    @if (!Model.HasHousehold)
+    {
+        <section class="summary-card summary-card--warning flow" role="status">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else
+    {
+        <section class="summary-card flow" aria-labelledby="settings-household-heading">
+            <h2 id="settings-household-heading">@Text["Settings_HouseholdTitle"]</h2>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Settings_HouseholdNameLabel"]</dt>
+                    <dd>@Model.HouseholdName</dd>
+                </div>
+                <div>
+                    <dt>@Text["Settings_BaseCurrencyLabel"]</dt>
+                    <dd><code>@Model.BaseCurrencyCode</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Settings_HouseholdCreatedAtLabel"]</dt>
+                    <dd aria-label="@Model.HouseholdCreatedAt!.AssistiveText">
+                        @Model.HouseholdCreatedAt.Text
+                    </dd>
+                </div>
+            </dl>
+        </section>
+    }
+
+    <nav class="settings-links" aria-label="@Text["Settings_SectionsLabel"]">
+        <a class="settings-link" asp-page="/Settings/MasterData">
+            @Text["Settings_MasterDataLinkTitle"]
+            <span>@Text["Settings_MasterDataLinkExplanation"]</span>
+        </a>
+        <a class="settings-link" asp-page="/Settings/DataSafety">
+            @Text["Settings_DataSafetyLinkTitle"]
+            <span>@Text["Settings_DataSafetyLinkExplanation"]</span>
+        </a>
+    </nav>
+
+    <p class="muted">@Text["Settings_ReadOnlyNotice"]</p>
+</article>

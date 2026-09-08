@@ -198,6 +198,13 @@ internal sealed class LocalBackupTestHarness : IAsyncDisposable
             new FixedTimeProvider(OperationTime),
             Hooks);
 
+    internal SqliteCoreLedgerSetupSessionFactory
+        CreateCoreLedgerSetupSessionFactory()
+        => new(
+            Resolver,
+            OwnershipGuard,
+            DatabaseVerifier);
+
     internal async Task<LocalDataOperationResult<LocalBackupCreation>>
         CreateBackupAsync()
         => await Creator.CreateAsync();

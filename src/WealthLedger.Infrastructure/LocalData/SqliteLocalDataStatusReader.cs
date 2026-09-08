@@ -63,10 +63,14 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
             }
         }
 
+        var liveWorkspaceId = verification?.WorkspaceId;
+        var unrelatedVerifiedBackupCount = 0;
+
         if (backupDirectory is not null && Directory.Exists(backupDirectory))
         {
             var latestResult = await FindLatestVerifiedBackupAsync(
                 backupDirectory,
+                liveWorkspaceId,
                 cancellationToken);
 
             if (!latestResult.Succeeded)
@@ -77,14 +81,23 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
             }
 
             latestVerifiedBackup = latestResult.Value!.Summary;
+            unrelatedVerifiedBackupCount = latestResult.Value.UnrelatedCount;
         }
 
+        /*
+         * A package is protection for this database only when its lineage is
+         * proved to match. Recency, filename, schema version, application
+         * version, and residence in the configured directory are not evidence
+         * of origin, individually or together.
+         */
         var localProtectionReady = databaseExists
                                    && verification?.Compatibility
                                        == LocalDatabaseCompatibility.Compatible
+                                   && liveWorkspaceId is not null
                                    && backupDirectory is not null
                                    && Directory.Exists(backupDirectory)
-                                   && latestVerifiedBackup is not null
+                                   && latestVerifiedBackup?.WorkspaceBinding
+                                       == LocalBackupWorkspaceBinding.Matched
                                    && _pathResolver
                                        .DestinationSeparationConfirmed
                                    && _pathResolver
@@ -107,6 +120,8 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
             verification?.IntegrityStatus
                 ?? LocalDataIntegrityStatus.NotChecked,
             latestVerifiedBackup,
+            unrelatedVerifiedBackupCount,
+            liveWorkspaceId,
             _pathResolver.DestinationSeparationConfirmed,
             _pathResolver.DestinationEncryptionConfirmed,
             localProtectionReady,
@@ -160,6 +175,7 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
     private async Task<LocalDataOperationResult<LatestBackupDiscovery>>
         FindLatestVerifiedBackupAsync(
             string backupDirectory,
+            string? liveWorkspaceId,
             CancellationToken cancellationToken)
     {
         try
@@ -179,7 +195,8 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
                     "The backup directory contains too many packages for bounded status inspection.");
             }
 
-            LocalBackupSummary? latest = null;
+            LocalBackupSummary? latestMatched = null;
+            var unrelatedCount = 0;
 
             foreach (var candidate in candidates)
             {
@@ -202,22 +219,32 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
 
                 await using var package = result.Value!;
                 var manifest = package.Manifest;
+                var binding = DetermineBinding(
+                    liveWorkspaceId,
+                    package.DatabaseVerification.WorkspaceId);
 
-                if (latest is null
-                    || manifest.CreatedAtUtc > latest.CreatedAtUtc)
+                if (binding != LocalBackupWorkspaceBinding.Matched)
                 {
-                    latest = new LocalBackupSummary(
+                    unrelatedCount++;
+                    continue;
+                }
+
+                if (latestMatched is null
+                    || manifest.CreatedAtUtc > latestMatched.CreatedAtUtc)
+                {
+                    latestMatched = new LocalBackupSummary(
                         package.PackagePath,
                         manifest.CreatedAtUtc,
                         manifest.VerifiedAtUtc,
                         manifest.SnapshotSha256[..12],
                         manifest.LatestSchemaVersion,
-                        manifest.EncryptionMode);
+                        manifest.EncryptionMode,
+                        binding);
                 }
             }
 
             return LocalDataOperationResult<LatestBackupDiscovery>.Success(
-                new LatestBackupDiscovery(latest));
+                new LatestBackupDiscovery(latestMatched, unrelatedCount));
         }
         catch (OperationCanceledException)
         {
@@ -236,6 +263,23 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
         }
     }
 
+    internal static LocalBackupWorkspaceBinding DetermineBinding(
+        string? liveWorkspaceId,
+        string? packageWorkspaceId)
+    {
+        if (liveWorkspaceId is null || packageWorkspaceId is null)
+        {
+            return LocalBackupWorkspaceBinding.Unknown;
+        }
+
+        return string.Equals(
+            liveWorkspaceId,
+            packageWorkspaceId,
+            StringComparison.Ordinal)
+            ? LocalBackupWorkspaceBinding.Matched
+            : LocalBackupWorkspaceBinding.Unrelated;
+    }
+
     private static string GetApplicationVersion()
         => typeof(SqliteLocalDataStatusReader).Assembly
                .GetName()
@@ -244,4 +288,6 @@ internal sealed class SqliteLocalDataStatusReader : ILocalDataStatusReader
            ?? "UNKNOWN";
 }
 
-internal sealed record LatestBackupDiscovery(LocalBackupSummary? Summary);
+internal sealed record LatestBackupDiscovery(
+    LocalBackupSummary? Summary,
+    int UnrelatedCount);

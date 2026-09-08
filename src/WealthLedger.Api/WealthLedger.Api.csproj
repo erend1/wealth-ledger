@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\WealthLedger.Application\WealthLedger.Application.csproj" />
     <ProjectReference Include="..\WealthLedger.Infrastructure\WealthLedger.Infrastructure.csproj" />
+    <ProjectReference Include="..\WealthLedger.UI\WealthLedger.UI.csproj" />
   </ItemGroup>
 
 </Project>

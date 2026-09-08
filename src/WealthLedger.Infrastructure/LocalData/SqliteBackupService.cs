@@ -158,7 +158,8 @@ internal sealed class SqliteBackupService
                 VerifiedAtUtc = verifiedAtUtc,
                 VerificationStatus = WealthLedgerBackupManifest.VerifiedStatus,
                 EncryptionMode =
-                    WealthLedgerBackupManifest.PlaintextEncryptionMode
+                    WealthLedgerBackupManifest.PlaintextEncryptionMode,
+                SourceWorkspaceId = snapshotVerification.Value.WorkspaceId
             };
             var finalPackagePath = CreatePackagePath(
                 backupDirectory,

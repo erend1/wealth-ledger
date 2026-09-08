@@ -1,0 +1,32 @@
+@inject UiText Text
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] — WealthLedger</title>
+    <link rel="stylesheet"
+          href="~/_content/WealthLedger.UI/css/setup.css"
+          asp-append-version="true" />
+</head>
+<body>
+    <a class="skip-link" href="#main-content">
+        @Text["Layout_SkipToContent"]
+    </a>
+    <header class="site-header">
+        <div class="site-header__inner">
+            <span class="brand">WealthLedger</span>
+            <span class="local-label">@Text["Layout_LocalOnly"]</span>
+        </div>
+    </header>
+    <main id="main-content" class="page-shell" tabindex="-1">
+        @RenderBody()
+    </main>
+    <footer class="site-footer">
+        <p>@Text["Layout_Footer"]</p>
+    </footer>
+    <script src="~/_content/WealthLedger.UI/js/focus-validation.js"
+            asp-append-version="true"
+            defer></script>
+</body>
+</html>

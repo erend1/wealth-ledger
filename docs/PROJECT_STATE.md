@@ -1,8 +1,10 @@
 # WealthLedger Project State
 
-As of: 2026-09-02
+As of: 2026-09-08
 
-Status source: verified against the repository, the generated EF model, and local .NET/SQLite test runs.
+Status source: verified against the repository, the generated EF model, local
+.NET/SQLite test runs, real-process lifecycle smoke tests, and local Chromium
+journeys over synthetic isolated data.
 
 ## Current checkpoint
 
@@ -12,7 +14,9 @@ posted reversal and correction workflow are implemented and verified. M004 now
 adds the verified fail-closed local database, ownership, backup, restore,
 migration, and loopback-hosting operating boundary. M005 adds verified bounded
 master/reference navigation, a recent Posted ledger feed, and valid-versus-
-unknown position-scope behavior.
+unknown position-scope behavior. M006 adds the verified local Razor Pages shell,
+fail-closed guided first run, exact Turkish-first presentation, and critical
+real-browser coverage.
 
 Starting without a database, the explicit operations CLI can initialize the
 accepted migration chain and verify the resulting file. The default-off setup
@@ -59,12 +63,30 @@ restart-safe cursors, and sanitized invalid position scopes. No M006 or later
 scope was implemented.
 
 [`M006: Local UI Shell and Guided First Run`](milestones/M006_ui_shell_and_guided_first_run.md)
-is Proposed for planning and human review only. Its M003-M005 ordering gate is
-now satisfied, but it cannot become In Progress until its eleven decisions are
-accepted and its architecture is recorded in an ADR. The proposal recommends
-one Razor Pages UI assembly in the existing loopback host, fail-closed readiness
-modes, a bounded first-run flow, exact human value presentation, and Today/
-Ledger/Settings read pages; no UI project or behavior is currently implemented.
+was accepted on 2026-09-03 after the human owner approved all eleven
+Recommended decisions, with Decision 4 amended by the workspace-binding gate
+found during pre-implementation reconciliation. ADR-008 records the accepted UI
+and hosting architecture and the two explicit refinements it makes to ADR-007.
+M006 was verified on 2026-09-08 after its accessibility/privacy checks, real-
+browser critical journeys, complete repository verification, and disposable
+M004 recovery smoke passed. No milestone is currently In Progress.
+
+The verified M006 delivery includes workspace-bound protection readiness, the
+`WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
+fail-closed startup-mode boundary, guided browser initialization for storage,
+workspace setup and the required initial backup, and the Ready shell with its
+complete read-only transaction explanation. Semantic landmarks, labels,
+validation focus, keyboard focus, skip navigation, reduced-motion handling,
+forced-color support, and responsive reflow have focused automated coverage;
+this is not a claim of general WCAG conformance.
+
+`InitialBackupRequired` maps the initial-backup review/action and completion
+pages. The running setup process remains in that static mode after backup
+creation and clearly requires one clean restart. `Ready` maps only Today,
+Ledger with direct transaction explanation, and read-only Settings pages. The
+real-browser suite covers the complete restart-delimited first run, Ready
+navigation, JavaScript-disabled operation, keyboard-only paths, narrow and
+desktop viewports, external-request rejection, and process/file cleanup.
 
 ## Verified implementation
 
@@ -86,6 +108,7 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - M002 migration: `20260827072019_002_CommandReceipt`.
 - M003 migration: `20260831113310_003_ReversalDependencySemantics`.
 - M005 migration: `20260902112549_004_LedgerNavigationQueries`.
+- M006 workspace-binding migration: `20260903075104_005_WorkspaceIdentity`.
 - Local database ownership is one adjacent cross-process exclusive file lock;
   it is not a distributed or remote multi-writer policy. M002/M003 database
   constraints still arbitrate scoped submission and reversal races.
@@ -254,6 +277,116 @@ local lifecycle command itself. Isolated restore never overwrites a target;
 confirmed active replacement first creates a verified pre-restore package,
 preserves the superseded database, and rolls a failed promotion back.
 
+Migration `20260903075104_005_WorkspaceIdentity` adds a durable random
+workspace identity to the database file, and protection readiness now requires
+a verified package proved to carry that same identity. The identity survives
+backup, isolated restore, active replacement, and a change of live path; it is
+outside the EF model, referenced by no ledger row, and read with a bounded
+direct query. A package predating the migration remains valid and restorable
+but cannot prove its origin and is not protection, so one new backup is
+required after upgrading. See the M006 Decision 4 amendment.
+
+### Local UI shell and startup modes
+
+`WealthLedger.UI` is a Razor Class Library referencing Application only. It has
+no reference to Infrastructure, EF Core, SQLite, or API contracts, and never
+calls the co-hosted JSON API over HTTP. `WealthLedger.Api` remains the single
+loopback host and composition root.
+
+Presentation formatters render persisted values exactly. Money, signed E8
+quantity, unit price, business date, UTC timestamp, and stable codes are
+decomposed with integer arithmetic and reassembled as text; no authoritative
+value passes through binary floating point, and both ends of the signed 64-bit
+range render without overflow. A value that cannot be rendered becomes an
+explicit unavailable state with a stable diagnostic category rather than zero.
+Unknown, Not applicable, and a recorded zero remain three distinct outputs, and
+the caller chooses between the first two from its own contract. Turkish is the
+shipping culture and lives in neutral UI resources; stable contract codes are
+never translated and are shown as technical detail beside a localized
+description. A test pins every UI stable code against the code the API mapper
+actually emits.
+
+The host derives exactly one startup mode before mapping routes, while holding
+no database lease: `Blocked`, `StorageUninitialized`, `WorkspaceUninitialized`,
+`InitialBackupRequired`, or `Ready`. Selection fails closed on an unsafe path,
+unconfigured backup directory, unavailable ownership, incompatible schema,
+pending migration, failed integrity, missing workspace identity, or a partial
+or conflicting core workspace. `Ready` additionally requires a verified backup
+proved to belong to the current workspace; it deliberately does not require the
+separation and encryption acknowledgements, which keep their M004
+operator-attestation meaning.
+
+Only `Ready` acquires the process-lifetime database lease, and a failed
+acquisition demotes the host to `Blocked`. Setup-mode operations acquire
+exclusive ownership for their own duration exactly as the operations console
+does, so a concurrent attempt produces one success and one sanitized busy
+result. Core setup runs through a lease-scoped session with its own
+`DbContext`, and the session releases the lease last.
+
+Razor page exposure is fail-closed by default: a page without an explicit
+startup-mode declaration is denied in every mode, a page requested outside its
+modes returns 404, and a non-GET request to a page that does not accept POST
+returns 405. The startup selection is written once at composition and cannot be
+changed by a request. UI responses carry a restrictive Content Security Policy,
+`nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
+
+Guided browser initialization covers the `Blocked`, `StorageUninitialized`, and
+`WorkspaceUninitialized` pages, followed by the `InitialBackupRequired` review,
+create, and completion pages described below. Storage creation and atomic
+workspace setup call the existing ownership-safe Application operations,
+require antiforgery, use Post/Redirect/Get, derive retry outcomes from persisted
+reality rather than client state, and leave the process in its startup mode with
+explicit restart guidance. Setup pages use only the framework antiforgery cookie
+and hold no authoritative workflow state. The default-off JSON setup endpoint is
+mapped only in `WorkspaceUninitialized` and remains independent of the browser
+wizard.
+
+`InitialBackupRequired` maps only `/setup`, `/setup/backup`, and
+`/setup/complete`. The backup GET reads current status without creating a
+directory or package. Its antiforgery-protected POST calls the existing M004
+backup Application operation, which owns the database only for that request,
+creates a new collision-safe immutable generation, independently verifies it,
+and publishes no final-looking package on failure. Completion is derived on
+each request only from a verified package whose workspace binding is `Matched`;
+the M004 separation and encryption acknowledgements are shown but do not gate
+completion. Successful and replayed POSTs use Post/Redirect/Get and never
+overwrite an earlier package. The completion page explains that the process is
+still in setup mode and requires a clean restart.
+
+Static RCL assets now receive the same CSP and `nosniff` policy as Razor Pages.
+Presentation culture/time-zone construction is deferred until after host build,
+where an unavailable configured culture or time zone is converted to the same
+sanitized fail-closed startup result as other startup failures.
+
+`Ready` exposes the read-only `/`, `/ledger`,
+`/ledger/{transactionId}`, `/settings`, `/settings/master-data`, and
+`/settings/data-safety` pages. Today shows only current local-safety facts,
+matched verified-backup age, and recent Posted activity; it invents no balance,
+market value, return, or other unavailable aggregate. Ledger passes the M005
+opaque cursor through unchanged and turns an invalid cursor into a sanitized
+page with a first-page link. Settings separates current master labels from the
+local storage, schema, integrity, attestation, and matched-backup review.
+
+A narrowly shaped Application query composes final M003 transaction detail
+with current M005 labels in bounded batches. Its Infrastructure adapter uses no
+per-entry or per-lot label lookup, retains inactive and archived current
+context, and is covered by a fixed query-count test. The UI renders transaction
+identity, dates, entries, costs, cash-flow classification, created lots,
+allocations, and both reversal directions without accounting arithmetic. Names
+are explicitly current context rather than source-time snapshots, while exact
+money, quantity, unit-price, date, timestamp, and stable-code presentation stays
+inside the existing UI presenter.
+
+Both setup and shell layouts place a working skip link before other focusable
+content and expose semantic header, navigation, main, and footer landmarks.
+Every setup control has a programmatic label and associated help or validation
+text. Invalid POSTs render a linked, focusable validation summary; a small local
+progressive-enhancement script moves focus on load, while the same critical
+flows remain usable when JavaScript is disabled. Visible focus, minimum control
+targets, reduced-motion preference, forced colors, and narrow/200%-equivalent
+reflow are covered mechanically and in real Chromium. These checks establish
+the accepted M006 behavior but do not establish broad WCAG conformance.
+
 ### Posted reversal and correction
 
 Application exposes a read-only eligibility preview and a retry-safe reversal
@@ -303,21 +436,27 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Results:
 
 - Domain tests: 83 passed, 0 failed.
-- Application tests: 95 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 145 passed, 0 failed.
-- API tests against real SQLite files: 71 passed, 0 failed.
+- Application tests: 122 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 172 passed, 0 failed.
+- UI presentation/contract tests: 63 passed, 0 failed.
+- API/UI host tests against real SQLite files: 114 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
-- Total: 417 passed, 0 failed.
-- Formatting drift: no committable content diff; see the SDK line-ending caveat
-  below.
-- EF model drift: none.
+- Playwright Chromium browser tests: 3 passed, 0 failed.
+- Total: 580 passed, 0 failed.
+- Formatting drift: none in the current worktree; see the SDK line-ending
+  caveat below.
+- EF model drift: none. The migration chain is unchanged at five migrations;
+  M006 has added no schema since `005_WorkspaceIdentity`.
 
-On the Windows .NET 10.0.400 SDK, a fresh LF checkout currently makes
+On the Windows .NET 10.0.400 SDK, a fresh LF checkout makes
 `dotnet format --verify-no-changes` report comment-adjacent whitespace at
 `LedgerTransaction.cs` lines 469, 471, and 472. Applying the formatter only
 rewrites that file's raw line endings to CRLF; Git normalizes it back to the
-same LF blob under the repository attributes. This tooling/configuration
-discrepancy remains open and is not introduced by M005.
+same LF blob under the repository attributes. The report therefore depends on
+the working copy's current line endings rather than on committed content, and
+the check passes in a worktree whose copy is already CRLF. This
+tooling/configuration discrepancy remains open and was not introduced by M005
+or M006.
 
 M004 focused verification passed 9 local-data Application tests, 42 backup-
 related Infrastructure tests, 20 restore-related Infrastructure tests, 28
@@ -347,6 +486,69 @@ and two. A dedicated synthetic M003-to-M005 recovery test verifies the
 pre-migration package, explicit migration, live integrity, data preservation,
 and an isolated restore of the old schema.
 
+The M006 workspace-binding correction adds 11 real-SQLite Infrastructure tests.
+They prove that independently initialized databases receive distinct
+identities, that an unrelated workspace's package is never protection, that a
+newer unrelated package never displaces an older matching one, that a forged or
+stripped manifest lineage is rejected against the snapshot, that a package
+predating lineage stays valid but unknown, that a migrated database does not
+accept its own pre-migration package until one new backup is taken, that the
+identity survives isolated restore and a fresh verifier, and that confirmed
+active replacement rebinds the live database to the promoted lineage. The
+existing local-data, migration, restore, and operations suites pass unchanged
+apart from the migration-chain head moving to 005.
+
+M006 verification at this checkpoint passes 63 UI presentation and stable-code
+contract tests. Focused coverage includes four Application transaction-
+explanation composition tests, the real-SQLite fixed query-count test, 27
+guided first-run UI tests, 10 Ready-shell UI tests, and two sanitized
+presentation-startup tests. The browser host tests prove mode-scoped route
+exposure, a read-only blocked page free of paths and storage internals,
+create-only storage initialization with Post/Redirect/Get, retry against
+already-created storage, sanitized ownership-busy guidance, atomic workspace
+setup with no partial graph on failure, and rejection of setup POSTs without a
+valid antiforgery token. They also prove that backup GET is side-effect free,
+each successful POST publishes a separate verified generation, failed and busy
+attempts expose no private diagnostics, unrelated-workspace packages cannot
+satisfy completion, M004 acknowledgement flags do not gate it, static assets
+receive security headers, and the current process never promotes itself to
+`Ready`. Setup pages use no authoritative client state beyond the framework
+antiforgery cookie.
+
+Ready-shell tests additionally prove GET-only page exposure, an honest empty
+Today view, local-only static assets, opaque cursor continuation, sanitized
+invalid cursors and transaction identities, read-only current master and data-
+safety views, exact transaction entries, costs, lots and allocations, both
+reversal directions, inactive current context, and omission of cursor payloads,
+request identities, SQL, connection strings, stack traces, notes, and
+references from captured logs.
+
+Four focused accessibility host tests prove one clear page heading, semantic
+landmarks, a first-focusable skip link, programmatic input labels and help/error
+relationships, focusable linked validation summaries, visible focus rules,
+minimum setup-control targets, reduced-motion behavior, and forced-color cues.
+The privacy log inspection visits all six Ready pages and malformed request
+paths and forbids private labels, notes, references, exact-value markers,
+resolved paths outside the accepted data-safety surface, SQL, connection
+strings, stack traces, cursors, and raw request values.
+
+Three Playwright 1.62.0 tests run against real loopback processes with Chromium
+revision 1234. They cover the complete restart-delimited
+`StorageUninitialized` -> `WorkspaceUninitialized` ->
+`InitialBackupRequired` -> `Ready` journey, click-through Ledger transaction
+detail and Settings navigation, JavaScript-disabled operation, keyboard-only
+validation and navigation, approximately 390-pixel and desktop viewports,
+100%/200%-equivalent reflow, reduced-motion and forced-color preferences, and
+rejection of every non-loopback request. Each test proves browser disconnection,
+host-process exit, and deletion of its unique synthetic data and backup root;
+no screenshots or traces were generated.
+
+The final M004 disposable real-process smoke passed on 2026-09-08: status,
+database initialization, backup creation and independent verification, isolated
+restore staging and status, loopback-only host startup, and fresh-process restart
+all completed against synthetic paths. No real household database or backup
+directory was used.
+
 The M003 suite proves exact Domain reversal and reconstitution, normalized
 reason and deterministic fingerprinting, receipt-first replay, generic
 eligibility preview, same-lot inverse allocation, atomic SQLite persistence and
@@ -365,26 +567,29 @@ verified M003 baseline and merged M004/M005 planning documents, that planning
 checkpoint had 243 passing tests with no EF model drift; the same formatter
 caveat remains.
 
-There is still no UI project, page, static-asset pipeline, or browser test.
-M006 remains Proposed and claims no UI behavior as implemented; its M003-M005
-ordering prerequisites are now verified, but its decision gates and ADR remain
-unaccepted.
+M006 was accepted on 2026-09-03 and its eleven decisions, with Decision 4 as
+amended, are recorded by ADR-008. Its UI assembly, presentation formatters,
+startup-mode boundary, guided storage/workspace/initial-backup initialization,
+Ready shell, transaction explanation, accessibility/privacy hardening, and
+critical browser journeys are implemented and covered by the suites above.
+M006 was verified on 2026-09-08.
 
 ## Next delivery candidate
 
-M006 is the next coherent delivery candidate: the local UI shell and guided
-first run. Its Proposed contract still requires explicit human acceptance of
-all decision gates and the accepted UI architecture ADR before implementation.
-There is currently no In Progress milestone.
+M006 is Verified. M007 is the next delivery candidate, but remains Planned until
+its bounded milestone contract and unresolved decisions receive explicit human
+acceptance. Do not begin M007 from this checkpoint merely because it is next in
+the roadmap.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
 ## Open decisions
 
-- The Proposed M006 UI framework, hosting, readiness, interaction, and exact-
-  presentation choices remain subject to human acceptance and an ADR.
 - Market/reference-data schemas and provider contracts.
-- Authentication and authorization.
+- Authentication, authorization, and transport security. The household intends
+  to move the API to a private home server so the UI can be reached from other
+  devices. ADR-008 keeps normal operation loopback-only; that move requires its
+  own accepted milestone and ADR before any non-loopback binding.
 - Application-level database or package encryption beyond M004's accepted
   OS/device-encryption reliance remains deferred to a separate ADR.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.

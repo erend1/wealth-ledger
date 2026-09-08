@@ -1,10 +1,54 @@
 # M006: Local UI Shell and Guided First Run
 
-Status: Proposed
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-08-31
+Accepted: 2026-09-03 (all eleven Recommended decisions, with Decision 4 amended
+by the workspace-binding gate recorded below and accepted as amended)
+
+Verified: 2026-09-08
+
+Architecture record: [ADR-008](../decisions/ADR-008-local-ui-shell-architecture.md)
+
+Last reviewed: 2026-09-08
+
+M006 is Verified. No milestone is currently In Progress.
+
+The workspace-binding prerequisite, accepted ADR-008 architecture,
+WealthLedger.UI assembly with exact Turkish-first presentation primitives,
+and fail-closed startup-mode boundary are implemented. The host derives
+Blocked, StorageUninitialized, WorkspaceUninitialized,
+InitialBackupRequired, or Ready before route mapping. Only Ready retains
+process-lifetime database ownership and exposes normal ledger routes.
+Core setup uses a lease-scoped session, and setup-state inspection
+distinguishes empty, complete, and partial/conflicting master graphs.
+
+Guided browser initialization now exposes only the mode-appropriate Blocked,
+StorageUninitialized, WorkspaceUninitialized, and InitialBackupRequired Razor
+Pages. Storage creation, atomic workspace setup, and initial verified-backup
+creation call the existing ownership-safe Application operations, require
+antiforgery for mutations, use PRG, derive retries and completion from persisted
+reality, and leave the process in its startup mode with honest restart guidance.
+Backup completion requires a verified package whose workspace binding is
+`Matched`; it does not use the M004 acknowledgement flags as a readiness gate.
+
+The Ready host now exposes the accepted read-only Today, recent Ledger,
+transaction explanation, Settings master-data, and Settings data-safety pages.
+The transaction explanation composes final M003 facts with current M005 labels
+through one bounded Application query, and inactive or archived current context
+remains visible without being presented as a source-time snapshot.
+
+Accessibility and privacy hardening now cover landmarks, labels, linked and
+focused validation, skip navigation, visible focus, target sizing, reduced
+motion, forced colors, responsive reflow, and Ready-page log inspection. This
+focused review does not claim general WCAG conformance.
+
+The pinned Playwright suite now exercises the restart-delimited first run and
+Ready navigation in real Chromium, including JavaScript-disabled and keyboard-
+only journeys, narrow and desktop viewports, non-loopback request rejection, and
+process/browser/file cleanup. The full repository gates and disposable M004
+recovery smoke passed on 2026-09-08.
 
 ## User outcome
 
@@ -26,22 +70,54 @@ ordered milestones.
 
 ## Current evidence
 
-This proposal was prepared on the stacked planning branch at commit `f58ebe6`
-on 2026-08-31. M003 is Accepted but not present on this branch; M004 and M005
-are Proposed planning documents only. No behavior from those three milestones
-is claimed as implemented.
+The verified M006 checkpoint on 2026-09-08 has 580 passing tests:
 
-The inherited source baseline has 163 passing tests:
+- Domain: 83;
+- Application: 122;
+- Infrastructure: 172;
+- UI: 63;
+- API/UI host: 114;
+- Operations: 23;
+- Playwright browser: 3.
 
-- Domain: 76;
-- Application: 33;
-- Infrastructure: 37;
-- API: 17.
+Playwright for .NET is pinned at `1.62.0`. Its generated install script at
+`tests/WealthLedger.UI.BrowserTests/bin/Debug/net10.0/playwright.ps1` installed
+Chromium revision `1234` (Chrome for Testing `151.0.7922.34`). The browser suite
+starts the real loopback host on an ephemeral port, uses a unique synthetic data
+and backup root per test, rejects every non-loopback request, and proves cleanup.
+No screenshot or trace artifact was generated.
 
-The EF Core model-drift check passes on the inherited baseline. The formatting
-check has the pre-existing `LedgerTransaction.cs` whitespace discrepancy
-already recorded by the M004 planning audit; M006 planning changes no source
-file and does not hide that discrepancy.
+The solution test, formatting, and EF model-drift gates pass with no new
+migration after `005_WorkspaceIdentity`. The final disposable M004 process smoke
+passed status, initialization, backup creation and independent verification,
+isolated restore staging, loopback binding, and restart. The documented
+`LedgerTransaction.cs` SDK/line-ending caveat remains unchanged.
+
+This proposal was originally prepared on the stacked planning branch at commit
+`f58ebe6` on 2026-08-31, when M003 was Accepted but absent from that branch and
+M004 and M005 were planning documents only. That planning baseline had 163
+passing tests and is now obsolete.
+
+It was reconciled against the verified checkpoint on 2026-09-03 at commit
+`5ef3363`, where M003, M004, and M005 are all Verified. That baseline has 417
+passing tests:
+
+- Domain: 83;
+- Application: 95;
+- Infrastructure: 145;
+- API: 71;
+- Operations: 23.
+
+The reconciliation confirmed that M005 navigation contracts, M003 transaction
+readback, and the M004 operations surface match what this proposal assumed,
+with two exceptions that required decisions rather than adaptation: the
+readiness gate recorded in the Decision 4 amendment, and the setup-mode
+ownership boundary recorded in Decision 4's hosting rules.
+
+The EF Core model-drift check passes. The formatting check has the pre-existing
+`LedgerTransaction.cs` whitespace discrepancy already recorded by the M004
+planning audit and repeated in `PROJECT_STATE.md`; M006 neither introduces nor
+hides it.
 
 Repository and SDK inspection establishes these facts:
 
@@ -242,6 +318,51 @@ the final M004 status contract cannot distinguish a compatible verified backup
 for the configured live database from an unrelated package, implementation
 must stop and return this decision to review rather than adding a weaker UI
 shortcut.
+
+#### Amendment accepted 2026-09-03: durable workspace binding
+
+Pre-implementation reconciliation established that the verified M004 status
+contract could not make that distinction. It enumerated every valid package in
+the configured directory, verified each in isolation, selected the newest, and
+reported protection without any evidence of origin. A synthetic reproduction
+using two independently initialized databases sharing one backup directory
+showed a database with no backups of its own reporting `LocalProtectionReady`
+against another workspace's package.
+
+The human owner accepted the following amendment on 2026-09-03. It was
+implemented and verified ahead of any UI work.
+
+`InitialBackupRequired` and `Ready` require a `.wlbackup` package whose
+**snapshot** carries the same durable workspace identity as the configured live
+database, cross-checked against the value recorded in its manifest. The newest
+*matching* package is selected; a newer non-matching package never substitutes
+for it. A package that predates durable lineage has unknown origin and is not
+protection. Recency, filename, creation timestamp, schema version, application
+version, directory location, and the existence of any `.wlbackup` remain
+insufficient, individually and in combination.
+
+The identity is a random opaque value held in the database file itself, so the
+relationship survives a process restart, an isolated restore, an active
+replacement, and a change of live path. After an active replacement the live
+database correctly rebinds to the promoted package's lineage, and packages of
+the superseded lineage correctly stop counting as protection.
+
+`LocalProtectionReady` was strengthened rather than duplicated: it now requires
+proved binding in addition to its existing M004 terms. This is a deliberate,
+recorded change of meaning, not a silent one. It corrects a warning that could
+previously tell an operator their data was protected when no backup of their
+database existed.
+
+`Ready` requires a workspace-bound verified package. The separation and
+encryption acknowledgements keep their accepted M004 meaning as operator
+attestations: they are shown on the data-safety page and still gate
+`LocalProtectionReady`, but they do not by themselves withhold the shell. The
+UI is therefore not stricter than the operations console, which only warns.
+
+`Backup:Directory` and the two acknowledgement settings remain host
+configuration. The browser cannot set them. A host started without a configured
+backup directory resolves to `Blocked` with the accepted console guidance,
+because status cannot report protection evidence without one.
 
 ### Decision 5: bounded guided setup
 
@@ -682,9 +803,31 @@ They do not return HTML from Application and do not calculate portfolio facts.
 
 ## Persistence impact
 
-No EF Core financial or master schema migration is expected. M006 uses the
-verified M004 operational artifacts, current normalized master tables, M003
-transaction readback, and M005 query index/contracts.
+M006 adds no financial or master schema change. It uses the verified M004
+operational artifacts, current normalized master tables, M003 transaction
+readback, and M005 query index/contracts.
+
+It does add exactly one non-financial migration,
+`20260903075104_005_WorkspaceIdentity`, required by the accepted Decision 4
+amendment above. That migration creates a single-row `WorkspaceIdentity` table
+holding a random opaque lineage value and its creation timestamp, seeded inside
+SQLite so every database receives its own distinct identity through any
+supported creation path.
+
+The table is deliberately outside the EF model. Infrastructure reads it with a
+bounded direct query, exactly as it already reads `__EFMigrationsHistory`, so
+the value can never be joined into a ledger query, projected into a read model,
+or mistaken for a financial fact. No ledger row or foreign key references it,
+it holds no household, account, asset, transaction, or other private fact, and
+the EF model-drift check remains clean.
+
+This refines M004's statement that no operational history table is added to the
+ledger. A single-row lineage identity is not history, but the earlier sentence
+is narrowed explicitly rather than reinterpreted.
+
+The guided setup still writes only the accepted core master graph through one
+existing atomic transaction, and the first backup still writes an external
+immutable `.wlbackup` package under M004.
 
 The guided setup writes only the already accepted core master graph, using one
 existing atomic transaction. The first backup writes an external immutable
@@ -692,9 +835,45 @@ existing atomic transaction. The first backup writes an external immutable
 
 Do not add server session persistence, wizard-progress tables, cached current
 positions, rendered HTML caches, browser databases, or service-worker storage.
-If implementation discovers that readiness cannot be derived without durable
-new state, stop and return the milestone to Proposed rather than hiding a new
-schema in M006.
+If implementation discovers that further readiness state is needed beyond the
+accepted lineage identity, stop and return the milestone to Proposed rather
+than hiding another schema change in M006.
+
+### Compatibility and rollback of the lineage migration
+
+The backup manifest stays at format version 1. The reader compares that version
+for equality, so raising it would make every existing package unreadable by
+this build and every new package unreadable by an earlier one. The lineage
+value is therefore an additive optional member inside version 1, under the
+compatibility rule M004 already accepted. Both directions were verified: a
+build that predates the member skips it and still verifies the package, and
+this build treats its absence as unknown lineage rather than as a failure.
+
+Because the manifest sits outside the snapshot digest, the manifest value is a
+convenience copy only. Verification requires it to agree with the identity read
+from the snapshot itself, mirroring the existing migration-history cross-check.
+A package whose manifest lineage was edited to claim another workspace, or
+stripped while its snapshot still carries one, is rejected as an invalid
+package. As with every other `.wlbackup` guarantee, this is corruption and
+mistake evidence, not authenticity against a determined editor.
+
+Packages created before this migration have no lineage and stop counting as
+protection. **After upgrading, an operator must create one new backup before
+status reports protection again.** The older packages remain valid, verifiable,
+and restorable; they simply cannot prove which database they came from.
+
+Rollback is no longer free. Once migration 005 is applied to a database, an
+earlier build reports it as `Incompatible`, and recovery is a pre-migration
+package restore through the accepted `OPERATIONS.md` procedure. This is the
+ordinary forward-only migration cost in this repository, but it replaces this
+milestone's earlier expectation that source rollback could remove M006 without
+touching stored data.
+
+One residual risk is recorded rather than designed away: two hosts that both
+descend from one restored package share a lineage identity and will each accept
+the other's packages. Detecting *divergence* between copies of one lineage
+would require content or generation tracking and new authoritative state, which
+is outside M006.
 
 ## Acceptance criteria
 
@@ -780,6 +959,14 @@ not enter Domain.
 
 - real-SQLite readiness for absent, initialized-empty, complete, partial,
   pending-migration, incompatible, corrupt, and ownership-busy synthetic files;
+- workspace binding, verified ahead of the UI and already passing:
+  independently initialized databases receive distinct identities; an unrelated
+  workspace's package is never protection; a newer unrelated package never
+  displaces an older matching one; a forged or stripped manifest lineage is
+  rejected; a package predating lineage stays valid but unknown; a migrated
+  database does not accept its own pre-migration package until one new backup
+  is taken; identity survives isolated restore and restart; active replacement
+  rebinds to the promoted lineage;
 - setup-mode initialize uses the same M004 operation, lifecycle guard, safe
   path, staging, and validation behavior as the console;
 - atomic core setup and rollback remain unchanged under UI invocation;
@@ -938,9 +1125,11 @@ desktop packaging, or provider integrations into M006.
 - **CSRF against localhost:** loopback alone does not stop a hostile website
   from attempting local requests. Require antiforgery, same-site cookies, no
   mutation on GET, restrictive headers, and route-mode tests.
-- **False readiness:** file existence or one backup manifest is not enough.
-  Consume the final M004 compatibility and verification result and do not
-  reimplement a weaker UI check.
+- **False readiness:** file existence or one backup manifest is not enough, and
+  neither is a verified package of unproved origin. Consume the M004
+  compatibility, verification, and workspace-binding result and do not
+  reimplement a weaker UI check. The Decision 4 amendment records why: the
+  earlier contract accepted any valid package in the configured directory.
 - **Partial setup:** browser navigation can stop between steps. Keep storage
   initialization staged, core setup atomic, progress derived, and restart tests
   exhaustive.
@@ -969,9 +1158,14 @@ desktop packaging, or provider integrations into M006.
   exist. Hide destinations without verified behavior and use honest empty
   states.
 
-M006 expects no schema migration, so source rollback removes the UI project,
-host registration, and tests without changing ledger rows. A database or
-backup successfully created through the accepted M004 operations is preserved;
-rollback never deletes it. If a presentation regression reaches a development
-build, the JSON API and M004 console remain the supported recovery surfaces.
-All rollback checks use synthetic copies, never the household's only database.
+Source rollback removes the UI project, host registration, and tests without
+changing ledger rows. It does **not** undo migration 005: a database that has
+already received its lineage identity is reported as `Incompatible` by an
+earlier build, and recovery is a pre-migration package restore under
+`OPERATIONS.md`. See the compatibility and rollback section above.
+
+A database or backup successfully created through the accepted M004 operations
+is preserved; rollback never deletes it. If a presentation regression reaches a
+development build, the JSON API and M004 console remain the supported recovery
+surfaces. All rollback checks use synthetic copies, never the household's only
+database.

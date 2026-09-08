@@ -1,0 +1,93 @@
+@model IReadOnlyList<WealthLedger.UI.Pages.RecentLedgerTransactionDisplay>
+@inject UiText Text
+
+<ol class="transaction-list">
+    @foreach (var transaction in Model)
+    {
+        <li class="transaction-card flow">
+            <header class="transaction-card__header">
+                <div>
+                    <h2>
+                        <a asp-page="/Ledger/Details"
+                           asp-route-transactionId="@transaction.TransactionId">
+                            @transaction.Type.Text
+                        </a>
+                    </h2>
+                    <p>
+                        <span aria-label="@transaction.Status.AssistiveText">
+                            @transaction.Status.Text
+                        </span>
+                        <code>@transaction.Status.TechnicalDetail</code>
+                    </p>
+                </div>
+                <p aria-label="@transaction.PostedAt.AssistiveText">
+                    @transaction.PostedAt.Text
+                </p>
+            </header>
+
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Ledger_ExecutionDateLabel"]</dt>
+                    <dd aria-label="@transaction.ExecutionDate.AssistiveText">
+                        @transaction.ExecutionDate.Text
+                    </dd>
+                </div>
+                @if (transaction.ExternalReference is not null)
+                {
+                    <div>
+                        <dt>@Text["Ledger_ExternalReferenceLabel"]</dt>
+                        <dd>@transaction.ExternalReference</dd>
+                    </div>
+                }
+            </dl>
+
+            <ol class="entry-list">
+                @foreach (var effect in transaction.EntryEffects)
+                {
+                    <li class="entry-card flow">
+                        <p class="context-line">
+                            <strong>@effect.AssetName</strong>
+                            <code>@effect.AssetCode</code>
+                        </p>
+                        <p aria-label="@effect.Quantity.AssistiveText">
+                            @effect.Quantity.Text
+                        </p>
+                        <p>
+                            @effect.Role.Text
+                            <code>@effect.Role.TechnicalDetail</code>
+                        </p>
+                        <p class="muted">
+                            @effect.PortfolioName · @effect.AccountName
+                            @if (effect.InstitutionName is not null)
+                            {
+                                <text> · @effect.InstitutionName</text>
+                            }
+                        </p>
+                        @if (!effect.AccountIsActive
+                             || !effect.AssetIsActive
+                             || effect.InstitutionIsActive == false)
+                        {
+                            <p class="state-text state-text--inactive">
+                                @Text["Ledger_InactiveCurrentContext"]
+                            </p>
+                        }
+                    </li>
+                }
+            </ol>
+
+            <details class="technical-details">
+                <summary>@Text["Common_TechnicalDetails"]</summary>
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["Ledger_TransactionIdLabel"]</dt>
+                        <dd><code class="technical-id">@transaction.TransactionId</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Ledger_TransactionTypeLabel"]</dt>
+                        <dd><code>@transaction.Type.TechnicalDetail</code></dd>
+                    </div>
+                </dl>
+            </details>
+        </li>
+    }
+</ol>

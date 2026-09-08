@@ -1,0 +1,70 @@
+@page "/setup/storage"
+@model WealthLedger.UI.Pages.Setup.StorageModel
+@inject UiText Text
+@{
+    ViewData["Title"] = Text["Storage_Title"];
+}
+
+<article class="flow" aria-labelledby="storage-heading">
+    <p class="eyebrow">@Text["Setup_Eyebrow"]</p>
+    <h1 id="storage-heading">@Text["Storage_Title"]</h1>
+    <p class="lede">@Text["Storage_Introduction"]</p>
+
+    <partial name="_ValidationSummary" />
+
+    @if (Model.StorageCreated)
+    {
+        <section class="panel panel--success" aria-labelledby="storage-created-heading">
+            <p class="status-mark">@Text["Storage_CreatedStatus"]</p>
+            <h2 id="storage-created-heading">@Text["Storage_CreatedTitle"]</h2>
+            <p>@Text["Storage_CreatedGuidance"]</p>
+        </section>
+    }
+    else if (Model.ConfigurationAvailable)
+    {
+        <section class="panel" aria-labelledby="storage-review-heading">
+            <h2 id="storage-review-heading">@Text["Storage_ReviewTitle"]</h2>
+            <p>@Text["Storage_ReviewExplanation"]</p>
+
+            <dl class="path-review">
+                <div>
+                    <dt>@Text["Storage_DatabasePathLabel"]</dt>
+                    <dd><code>@Model.DatabasePath</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Storage_BackupDirectoryLabel"]</dt>
+                    <dd><code>@Model.BackupDirectory</code></dd>
+                </div>
+            </dl>
+
+            <p class="muted">@Text["Storage_PathRestriction"]</p>
+        </section>
+
+        <form method="post"
+              asp-page="/Setup/Storage"
+              class="flow panel"
+              novalidate>
+            <h2>@Text["Storage_ActionTitle"]</h2>
+            <p>@Text["Storage_ActionExplanation"]</p>
+
+            <div class="check-field">
+                <input id="ConfirmInitialization"
+                       name="ConfirmInitialization"
+                       type="checkbox"
+                       value="true"
+                       aria-describedby="ConfirmInitialization-error"
+                       checked="@Model.ConfirmInitialization" />
+                <label for="ConfirmInitialization">
+                    @Text["Storage_ConfirmationLabel"]
+                </label>
+            </div>
+            <span id="ConfirmInitialization-error"
+                  class="field-error"
+                  asp-validation-for="ConfirmInitialization"></span>
+
+            <button class="button" type="submit">
+                @Text["Storage_Submit"]
+            </button>
+        </form>
+    }
+</article>

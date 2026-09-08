@@ -23,9 +23,10 @@ public sealed class NavigationApiTests
     [Fact]
     public async Task Navigation_MasterRoutesExposeStableCurrentFieldsAndScope()
     {
-        using var factory = new WealthLedgerApiFactory();
+        using var factory =
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeAsync(client);
+        var setup = factory.ReadySetup;
         await SeedNavigationMastersAsync(factory, setup);
 
         var householdFirst = await GetPageAsync<HouseholdNavigationResponse>(
@@ -134,9 +135,10 @@ public sealed class NavigationApiTests
     [Fact]
     public async Task Navigation_InvalidInputsAndUnknownScopesReturnSanitizedStableProblems()
     {
-        using var factory = new WealthLedgerApiFactory();
+        using var factory =
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeAsync(client);
+        var setup = factory.ReadySetup;
 
         await AssertProblemAsync(
             client,
@@ -205,9 +207,10 @@ public sealed class NavigationApiTests
     [Fact]
     public async Task Navigation_RecentLedgerMatchesDetailOmitsExpandedFactsAndPositionsValidateScope()
     {
-        using var factory = new WealthLedgerApiFactory();
+        using var factory =
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeAsync(client);
+        var setup = factory.ReadySetup;
         var contributionResponse = await SendWithIdempotencyAsync(
             client,
             HttpMethod.Post,
@@ -308,13 +311,14 @@ public sealed class NavigationApiTests
     [Fact]
     public async Task Navigation_LogsOnlyBoundedOperationalMetadata()
     {
-        using var factory = new WealthLedgerApiFactory();
+        using var factory =
+            new WealthLedgerApiFactory();
         var provider = new RecordingLoggerProvider();
         using var loggedFactory = factory.WithWebHostBuilder(
             builder => builder.ConfigureLogging(
                 logging => logging.AddProvider(provider)));
         using var client = loggedFactory.CreateClient();
-        var setup = await InitializeAsync(client);
+        var setup = factory.ReadySetup;
         var contributionResponse = await SendWithIdempotencyAsync(
             client,
             HttpMethod.Post,
@@ -398,9 +402,10 @@ public sealed class NavigationApiTests
     [Fact]
     public async Task Navigation_DoesNotExposeMasterWritesOrBroadSearchRoutes()
     {
-        using var factory = new WealthLedgerApiFactory();
+        using var factory =
+            new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeAsync(client);
+        var setup = factory.ReadySetup;
         var countsBeforeReads = await ReadDatabaseCountsAsync(factory);
 
         Assert.Equal(
@@ -452,17 +457,6 @@ public sealed class NavigationApiTests
         Assert.Equal(HttpStatusCode.NotFound, broadSearch.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, operations.StatusCode);
         Assert.Equal(countsBeforeReads, await ReadDatabaseCountsAsync(factory));
-    }
-
-    private static async Task<InitializeCoreLedgerResponse> InitializeAsync(
-        HttpClient client)
-    {
-        var response = await client.PostAsJsonAsync(
-            "/api/setup/core-ledger",
-            ApiTestData.CreateSetupRequest());
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return Assert.IsType<InitializeCoreLedgerResponse>(
-            await response.Content.ReadFromJsonAsync<InitializeCoreLedgerResponse>());
     }
 
     private static async Task SeedNavigationMastersAsync(

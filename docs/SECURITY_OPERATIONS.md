@@ -2,7 +2,7 @@
 
 Status: Accepted operational requirements
 
-Last reviewed: 2026-09-02
+Last reviewed: 2026-09-08
 
 ## Purpose
 
@@ -12,9 +12,10 @@ committed accidentally, exposed over a network, corrupted during backup, or
 lost with one workstation.
 
 This document defines required outcomes. M004 implements the bounded local-data
-baseline identified below; later requirements remain explicit rather than being
-implied by that milestone. Verified repository reality remains in
-`PROJECT_STATE.md`, and the operator procedure is in `OPERATIONS.md`.
+baseline identified below, and M006 adds the verified loopback browser boundary;
+later requirements remain explicit rather than being implied by either
+milestone. Verified repository reality remains in `PROJECT_STATE.md`, and the
+operator procedure is in `OPERATIONS.md`.
 
 ## Implemented M004 baseline
 
@@ -36,11 +37,51 @@ As verified for M004 on 2026-09-02:
   external destination separation and encryption rather than treating a digest
   as confidentiality or authenticity.
 
+Amended on 2026-09-03 under M006 authorization: local protection readiness now
+requires a verified package proved to belong to the configured live database.
+Packages created before this behaviour carry no lineage; they remain valid and
+restorable but no longer count as protection, so one new backup is required
+after upgrading. See `OPERATIONS.md` for the operator procedure.
+
+## Implemented M006 local UI boundary
+
+As verified for M006 on 2026-09-08, the single loopback host derives one static
+startup mode before route mapping. A centralized fail-closed page convention
+denies every undeclared or mode-inappropriate Razor Page:
+
+| Startup mode | Browser surface | Mutation boundary |
+|---|---|---|
+| `Blocked` | `GET /blocked` | None; normal API and setup routes are not mapped |
+| `StorageUninitialized` | `GET /setup`, `GET /setup/storage` | `POST /setup/storage` creates only a missing configured-safe database |
+| `WorkspaceUninitialized` | `GET /setup`, `GET /setup/workspace` | `POST /setup/workspace` performs atomic core setup; the legacy JSON setup route is available only when separately enabled |
+| `InitialBackupRequired` | `GET /setup`, `GET /setup/backup`, `GET /setup/complete` | `POST /setup/backup` creates and verifies one new immutable generation |
+| `Ready` | `GET /`, `/ledger`, `/ledger/{transactionId}`, `/settings`, `/settings/master-data`, and `/settings/data-safety`, plus accepted normal JSON routes | No UI mutation; every setup route returns 404 |
+
+Only `Ready` retains process-lifetime database ownership. Setup mutations call
+the existing Application operation directly and acquire exclusive ownership for
+that request only. They are POST-only, require ASP.NET Core antiforgery, use
+Post/Redirect/Get, and reconstruct success or retry state from persisted
+Application/M004 facts. The antiforgery cookie is not authoritative wizard
+state; the UI uses no session, TempData, local storage, or browser cache as a
+readiness source.
+
+Every page and static RCL asset carries `X-Content-Type-Options: nosniff` and the
+accepted restrictive Content Security Policy; pages additionally carry
+`X-Frame-Options: DENY` and `Referrer-Policy: no-referrer`. Runtime assets are
+local. Browser tests fail on any attempted non-loopback HTTP(S) request, and the
+critical journeys pass with JavaScript disabled.
+
+Routine page and startup logs contain stable route/mode/outcome categories, not
+master names, notes, references, exact financial markers, resolved paths, raw
+requests, cursor payloads, SQL, connection strings, EF/SQLite internals, or stack
+traces. Resolved local paths are rendered only on the accepted setup review and
+data-safety screens. Error pages use localized, non-disclosing guidance.
+
 ## Remaining operational boundaries
 
-M004 does not implement application-managed encryption, authentication,
+M004/M006 do not implement application-managed encryption, authentication,
 authorization, remote access, a remote/off-site provider, automatic scheduling
-or retention deletion, governed exports, or a UI. Full-disk/destination
+or retention deletion, or governed exports. Full-disk/destination
 encryption, recovery-key custody, physical separation, cadence, and restore
 drills remain operator responsibilities. Real household data must not rely on
 the repository, a single workstation, or one untested package as its only
@@ -113,7 +154,11 @@ require an accepted authentication, authorization, and transport-security
 design.
 
 M004 implements loopback-only validation for tracked settings, environment
-overrides, and process startup. It deliberately does not authorize remote use.
+overrides, and process startup. M006 serves its UI from that same host and does
+not relax the policy. A wildcard, LAN, reverse-proxy, or home-server deployment
+remains unsupported: loopback binding is not authentication, and remote access
+requires a new accepted threat model, authentication/authorization design,
+transport policy, milestone, and ADR.
 
 ### OPS-004: Setup and migration control
 
@@ -122,9 +167,11 @@ an explicit, observable operation with a pre-migration backup and a documented
 failure path. A normal application restart must not silently recreate master
 data or discard a failed database.
 
-M004 implements explicit initialization and migration commands. Normal API
-startup acquires ownership and validates readiness but neither creates nor
-migrates the database.
+M004 implements explicit initialization and migration commands. M006 permits
+only create-only database initialization from the browser when startup has
+already classified the configured path as `StorageUninitialized`; it cannot
+migrate, restore, replace, select, or override storage. `Ready` startup acquires
+ownership and validates readiness but neither creates nor migrates the database.
 
 ### OPS-005: Consistent backup
 
@@ -145,6 +192,25 @@ Each backup records or exposes:
 M004 uses SQLite's online backup API, verifies a standalone snapshot before and
 after packaging, and publishes a new immutable generation atomically. The
 versioned manifest records operational metadata only.
+
+M006 reuses that exact Application operation for the required initial backup.
+The browser cannot choose a file or destination, and a failed verification
+publishes no final-looking package. Completion requires a verified generation
+whose workspace binding is `Matched`; the M004 separation/encryption
+acknowledgements remain operator attestations rather than a shell-readiness gate.
+
+As of 2026-09-03 both branches of the source-identity requirement are
+satisfied. Every database carries a random opaque workspace identity, and each
+package records the identity of the database it was taken from. Verification
+requires the recorded value to agree with the identity inside the snapshot, so
+the manifest — which lies outside the snapshot digest — cannot claim a lineage
+its snapshot does not have.
+
+A package is protection for a live database only when that identity matches.
+This closes a gap in the original M004 implementation, where any valid package
+in the configured directory satisfied the protection check regardless of which
+database it came from. The identity is random and opaque; it carries no
+household, account, asset, transaction, or other private value.
 
 ### OPS-006: Restore verification
 
@@ -225,6 +291,11 @@ stable categories. Process tests inspect standard output and error for private
 values, SQL, connection strings, paths supplied as private markers, and stack
 traces.
 
+M006 extends those inspections across all blocked/setup/Ready pages, malformed
+transaction identities and cursors, static assets, and captured host logs. Its
+real-browser tests also inspect console and failed-request signals and generate
+no screenshots or traces.
+
 ### OPS-011: Governed exports
 
 An export states its schema/version, effective time, included regions, and
@@ -243,6 +314,10 @@ explicit diagnostics and must not silently create posted facts.
 M004's seven-command surface accepts no SQL and changes no posted ledger fact.
 Application owns the operation-oriented use cases while Infrastructure confines
 the necessary SQLite, EF migration, archive, lock, and filesystem mechanics.
+
+M006 PageModels also call only focused Application use cases/query services.
+`WealthLedger.UI` references neither Infrastructure nor API transport types and
+never self-calls the co-hosted JSON API.
 
 ## Backup cadence recommendation
 

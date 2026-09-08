@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Portfolios;
@@ -158,9 +159,17 @@ public sealed class CoreLedgerSetupTests
 
     private static InitializeCoreLedgerUseCase CreateUseCase(
         WealthLedgerDbContext context)
-        => new(
-            new EfCoreLedgerSetupStore(context),
+    {
+        var store =
+            new EfCoreLedgerSetupStore(context);
+
+        var sessionFactory =
+            new StoreBackedSetupSessionFactory(store);
+
+        return new InitializeCoreLedgerUseCase(
+            sessionFactory,
             new FixedTimeProvider(InitializedAtUtc));
+    }
 
     private static InitializeCoreLedgerCommand CreateCommand()
         => new(
@@ -199,5 +208,54 @@ public sealed class CoreLedgerSetupTests
         }
 
         public override DateTimeOffset GetUtcNow() => _utcNow;
+    }
+
+    private sealed class StoreBackedSetupSessionFactory
+    : ICoreLedgerSetupSessionFactory
+    {
+        private readonly EfCoreLedgerSetupStore _store;
+
+        internal StoreBackedSetupSessionFactory(
+            EfCoreLedgerSetupStore store)
+        {
+            _store = store;
+        }
+
+        public Task<
+            LocalDataOperationResult<ICoreLedgerSetupSession>> OpenAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ICoreLedgerSetupSession session =
+                new StoreBackedSetupSession(_store);
+
+            return Task.FromResult(
+                LocalDataOperationResult<
+                    ICoreLedgerSetupSession>.Success(
+                    session));
+        }
+    }
+
+    private sealed class StoreBackedSetupSession
+        : ICoreLedgerSetupSession
+    {
+        private readonly EfCoreLedgerSetupStore _store;
+
+        internal StoreBackedSetupSession(
+            EfCoreLedgerSetupStore store)
+        {
+            _store = store;
+        }
+
+        public Task<bool> TryInitializeAsync(
+            CoreLedgerSetup setup,
+            CancellationToken cancellationToken = default)
+            => _store.TryInitializeAsync(
+                setup,
+                cancellationToken);
+
+        public ValueTask DisposeAsync()
+            => ValueTask.CompletedTask;
     }
 }

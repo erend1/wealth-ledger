@@ -1,0 +1,493 @@
+@page "/ledger/{transactionId}"
+@model WealthLedger.UI.Pages.Ledger.DetailsModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Detail_Title"];
+    ViewData["ActiveNavigation"] = "Ledger";
+}
+
+<article class="flow" aria-labelledby="detail-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Detail_Eyebrow"]</p>
+        <h1 id="detail-heading">@Text["Detail_Title"]</h1>
+        <p class="lede">@Text["Detail_Introduction"]</p>
+    </header>
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Detail_InvalidTitle"]</h2>
+            <p>@Text["Detail_InvalidExplanation"]</p>
+        </section>
+    }
+    else if (Model.TransactionNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="status">
+            <h2>@Text["Detail_NotFoundTitle"]</h2>
+            <p>@Text["Detail_NotFoundExplanation"]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Detail_UnavailableTitle"]</h2>
+            <p>@Text["Detail_UnavailableExplanation"]</p>
+        </section>
+    }
+    else if (Model.HouseholdStateResourceKey.Length > 0)
+    {
+        <section class="summary-card summary-card--warning flow" role="status">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.Transaction is { } transaction)
+    {
+        <p class="muted">@Text["Detail_CurrentContextNotice"]</p>
+
+        <section class="summary-card flow" aria-labelledby="identity-heading">
+            <h2 id="identity-heading">@Text["Detail_IdentityTitle"]</h2>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Detail_HouseholdLabel"]</dt>
+                    <dd>@transaction.HouseholdName</dd>
+                </div>
+                <div>
+                    <dt>@Text["Common_TypeLabel"]</dt>
+                    <dd aria-label="@transaction.Type.AssistiveText">
+                        @transaction.Type.Text
+                        <code>@transaction.Type.TechnicalDetail</code>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Common_StateLabel"]</dt>
+                    <dd aria-label="@transaction.Status.AssistiveText">
+                        @transaction.Status.Text
+                        <code>@transaction.Status.TechnicalDetail</code>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Detail_OrderDateLabel"]</dt>
+                    <dd aria-label="@transaction.OrderDate.AssistiveText">
+                        @transaction.OrderDate.Text
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Ledger_ExecutionDateLabel"]</dt>
+                    <dd aria-label="@transaction.ExecutionDate.AssistiveText">
+                        @transaction.ExecutionDate.Text
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Detail_SettlementDateLabel"]</dt>
+                    <dd aria-label="@transaction.SettlementDate.AssistiveText">
+                        @transaction.SettlementDate.Text
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Common_CreatedAtLabel"]</dt>
+                    <dd aria-label="@transaction.CreatedAt.AssistiveText">
+                        @transaction.CreatedAt.Text
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Detail_PostedAtLabel"]</dt>
+                    <dd aria-label="@transaction.PostedAt.AssistiveText">
+                        @transaction.PostedAt.Text
+                    </dd>
+                </div>
+                @if (transaction.ExternalReference is not null)
+                {
+                    <div>
+                        <dt>@Text["Ledger_ExternalReferenceLabel"]</dt>
+                        <dd>@transaction.ExternalReference</dd>
+                    </div>
+                }
+                @if (transaction.Note is not null)
+                {
+                    <div>
+                        <dt>@Text["Detail_NoteLabel"]</dt>
+                        <dd>@transaction.Note</dd>
+                    </div>
+                }
+            </dl>
+            <details class="technical-details">
+                <summary>@Text["Common_TechnicalDetails"]</summary>
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["Ledger_TransactionIdLabel"]</dt>
+                        <dd><code class="technical-id">@transaction.TransactionId</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Detail_HouseholdIdLabel"]</dt>
+                        <dd><code class="technical-id">@transaction.HouseholdId</code></dd>
+                    </div>
+                </dl>
+            </details>
+        </section>
+
+        <section class="flow" aria-labelledby="entries-heading">
+            <h2 id="entries-heading">@Text["Detail_EntriesTitle"]</h2>
+            <ol class="entry-list">
+                @foreach (var entry in transaction.Entries)
+                {
+                    <li class="entry-card flow">
+                        <h3>@Text["Detail_EntrySequenceLabel"] @entry.Sequence</h3>
+                        <dl class="fact-grid">
+                            <div>
+                                <dt>@Text["Detail_AssetLabel"]</dt>
+                                <dd>
+                                    @entry.AssetName <code>@entry.AssetCode</code>
+                                    — @entry.AssetType.Text
+                                    <code>@entry.AssetType.TechnicalDetail</code>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Detail_QuantityLabel"]</dt>
+                                <dd aria-label="@entry.Quantity.AssistiveText">
+                                    @entry.Quantity.Text
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Detail_RoleLabel"]</dt>
+                                <dd>
+                                    @entry.Role.Text
+                                    <code>@entry.Role.TechnicalDetail</code>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Detail_UnitPriceLabel"]</dt>
+                                <dd aria-label="@entry.UnitPrice.AssistiveText">
+                                    @entry.UnitPrice.Text
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Detail_PortfolioLabel"]</dt>
+                                <dd>
+                                    @entry.PortfolioName <code>@entry.PortfolioCode</code>
+                                    — @entry.PortfolioStatus.Text
+                                    <code>@entry.PortfolioStatus.TechnicalDetail</code>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Detail_AccountLabel"]</dt>
+                                <dd>
+                                    @entry.AccountName <code>@entry.AccountCode</code>
+                                    — @entry.AccountType.Text
+                                    <code>@entry.AccountType.TechnicalDetail</code>
+                                    — @(entry.AccountIsActive
+                                        ? Text["Common_Active"]
+                                        : Text["Common_Inactive"])
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Detail_InstitutionLabel"]</dt>
+                                <dd>
+                                    @if (entry.InstitutionName is null)
+                                    {
+                                        @Text["State_NotApplicable"]
+                                    }
+                                    else
+                                    {
+                                        @entry.InstitutionName <code>@entry.InstitutionCode</code>
+                                        <text> — @entry.InstitutionType!.Text</text>
+                                        <code>@entry.InstitutionType.TechnicalDetail</code>
+                                        <text> — @(entry.InstitutionIsActive == true
+                                            ? Text["Common_Active"]
+                                            : Text["Common_Inactive"])</text>
+                                    }
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Common_CreatedAtLabel"]</dt>
+                                <dd aria-label="@entry.CreatedAt.AssistiveText">
+                                    @entry.CreatedAt.Text
+                                </dd>
+                            </div>
+                        </dl>
+                        @if (!entry.AccountIsActive
+                             || !entry.AssetIsActive
+                             || entry.InstitutionIsActive == false
+                             || !entry.PortfolioIsActive)
+                        {
+                            <p class="state-text state-text--inactive">
+                                @Text["Ledger_InactiveCurrentContext"]
+                            </p>
+                        }
+                        <details class="technical-details">
+                            <summary>@Text["Common_TechnicalDetails"]</summary>
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Detail_EntryIdLabel"]</dt>
+                                    <dd><code class="technical-id">@entry.EntryId</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_PortfolioIdLabel"]</dt>
+                                    <dd><code class="technical-id">@entry.PortfolioId</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_AccountIdLabel"]</dt>
+                                    <dd><code class="technical-id">@entry.AccountId</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_InstitutionIdLabel"]</dt>
+                                    <dd><code class="technical-id">@(entry.InstitutionId?.ToString() ?? Text["State_NotApplicable"])</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_AssetIdLabel"]</dt>
+                                    <dd><code class="technical-id">@entry.AssetId</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["MasterData_UnitLabel"]</dt>
+                                    <dd><code>@entry.AssetUnit.TechnicalDetail</code></dd>
+                                </div>
+                            </dl>
+                        </details>
+                    </li>
+                }
+            </ol>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="cash-flow-heading">
+            <h2 id="cash-flow-heading">@Text["Detail_CashFlowTitle"]</h2>
+            @if (transaction.CashFlow is null)
+            {
+                <p>@Text["Detail_NoCashFlow"]</p>
+            }
+            else
+            {
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["Detail_CategoryLabel"]</dt>
+                        <dd>
+                            @transaction.CashFlow.Category.Text
+                            <code>@transaction.CashFlow.Category.TechnicalDetail</code>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Detail_MemberLabel"]</dt>
+                        <dd>
+                            @if (transaction.CashFlow.MemberName is null)
+                            {
+                                @transaction.CashFlow.MissingMember!.Text
+                            }
+                            else
+                            {
+                                @transaction.CashFlow.MemberName
+                                <text> — @(transaction.CashFlow.MemberIsActive == true
+                                    ? Text["Common_Active"]
+                                    : Text["Common_Inactive"])</text>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+                <details class="technical-details">
+                    <summary>@Text["Common_TechnicalDetails"]</summary>
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Detail_MemberIdLabel"]</dt>
+                            <dd>
+                                @if (transaction.CashFlow.MemberId is Guid memberId)
+                                {
+                                    <code class="technical-id">@memberId</code>
+                                }
+                                else
+                                {
+                                    @Text["State_Unknown"]
+                                }
+                            </dd>
+                        </div>
+                    </dl>
+                </details>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="costs-heading">
+            <h2 id="costs-heading">@Text["Detail_CostsTitle"]</h2>
+            @if (transaction.Costs.Count == 0)
+            {
+                <p>@Text["Detail_NoCosts"]</p>
+            }
+            else
+            {
+                <ol class="entry-list">
+                    @foreach (var cost in transaction.Costs)
+                    {
+                        <li class="entry-card flow">
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Common_TypeLabel"]</dt>
+                                    <dd>@cost.Type.Text <code>@cost.Type.TechnicalDetail</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_CostTreatmentLabel"]</dt>
+                                    <dd>@cost.Treatment.Text <code>@cost.Treatment.TechnicalDetail</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_CostAmountLabel"]</dt>
+                                    <dd aria-label="@cost.Amount.AssistiveText">@cost.Amount.Text</dd>
+                                </div>
+                                @if (cost.Note is not null)
+                                {
+                                    <div>
+                                        <dt>@Text["Detail_NoteLabel"]</dt>
+                                        <dd>@cost.Note</dd>
+                                    </div>
+                                }
+                            </dl>
+                            <details class="technical-details">
+                                <summary>@Text["Common_TechnicalDetails"]</summary>
+                                <code class="technical-id">@cost.CostId</code>
+                            </details>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="lots-heading">
+            <h2 id="lots-heading">@Text["Detail_LotsTitle"]</h2>
+            @if (transaction.CreatedLots.Count == 0)
+            {
+                <p>@Text["Detail_NoLots"]</p>
+            }
+            else
+            {
+                <ol class="entry-list">
+                    @foreach (var lot in transaction.CreatedLots)
+                    {
+                        <li class="entry-card flow">
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Detail_AssetLabel"]</dt>
+                                    <dd>
+                                        @lot.AssetName <code>@lot.AssetCode</code>
+                                        — @lot.AssetType.Text
+                                        <code>@lot.AssetType.TechnicalDetail</code>
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_AcquiredOnLabel"]</dt>
+                                    <dd aria-label="@lot.AcquiredOn.AssistiveText">@lot.AcquiredOn.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_CostBasisStatusLabel"]</dt>
+                                    <dd>@lot.CostBasisStatus.Text <code>@lot.CostBasisStatus.TechnicalDetail</code></dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Detail_CostBasisAmountLabel"]</dt>
+                                    <dd aria-label="@lot.CostBasisAmount.AssistiveText">@lot.CostBasisAmount.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Common_StateLabel"]</dt>
+                                    <dd>@(lot.AssetIsActive ? Text["Common_Active"] : Text["Common_Inactive"])</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Common_CreatedAtLabel"]</dt>
+                                    <dd aria-label="@lot.CreatedAt.AssistiveText">@lot.CreatedAt.Text</dd>
+                                </div>
+                            </dl>
+                            <details class="technical-details">
+                                <summary>@Text["Common_TechnicalDetails"]</summary>
+                                <dl class="fact-grid">
+                                    <div>
+                                        <dt>@Text["Detail_LotIdLabel"]</dt>
+                                        <dd><code class="technical-id">@lot.AssetLotId</code></dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Detail_OpeningEntryLabel"]</dt>
+                                        <dd><code class="technical-id">@lot.OpeningTransactionEntryId</code></dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Detail_AssetIdLabel"]</dt>
+                                        <dd><code class="technical-id">@lot.AssetId</code></dd>
+                                    </div>
+                                </dl>
+                            </details>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="allocations-heading">
+            <h2 id="allocations-heading">@Text["Detail_AllocationsTitle"]</h2>
+            @if (transaction.LotAllocations.Count == 0)
+            {
+                <p>@Text["Detail_NoAllocations"]</p>
+            }
+            else
+            {
+                <ol class="entry-list">
+                    @foreach (var allocation in transaction.LotAllocations)
+                    {
+                        <li class="entry-card flow">
+                            <p>
+                                <strong>@allocation.AssetName</strong>
+                                <code>@allocation.AssetCode</code>
+                            </p>
+                            <p aria-label="@allocation.Quantity.AssistiveText">
+                                @allocation.Quantity.Text
+                            </p>
+                            @if (!allocation.AssetIsActive)
+                            {
+                                <p class="state-text state-text--inactive">
+                                    @Text["Ledger_InactiveCurrentContext"]
+                                </p>
+                            }
+                            <details class="technical-details">
+                                <summary>@Text["Common_TechnicalDetails"]</summary>
+                                <dl class="fact-grid">
+                                    <div>
+                                        <dt>@Text["Detail_AllocationIdLabel"]</dt>
+                                        <dd><code class="technical-id">@allocation.AllocationId</code></dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Detail_LotIdLabel"]</dt>
+                                        <dd><code class="technical-id">@allocation.AssetLotId</code></dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Detail_EntryIdLabel"]</dt>
+                                        <dd><code class="technical-id">@allocation.TransactionEntryId</code></dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Common_CreatedAtLabel"]</dt>
+                                        <dd aria-label="@allocation.CreatedAt.AssistiveText">@allocation.CreatedAt.Text</dd>
+                                    </div>
+                                </dl>
+                            </details>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="reversal-heading">
+            <h2 id="reversal-heading">@Text["Detail_ReversalTitle"]</h2>
+            @if (transaction.ReversalOfTransactionId is Guid originalId)
+            {
+                <a class="card-link"
+                   asp-page="/Ledger/Details"
+                   asp-route-transactionId="@originalId">
+                    @Text["Detail_OriginalTransactionLink"]
+                </a>
+            }
+            @if (transaction.ReversedByTransactionId is Guid reversalId)
+            {
+                <a class="card-link"
+                   asp-page="/Ledger/Details"
+                   asp-route-transactionId="@reversalId">
+                    @Text["Detail_ReversalTransactionLink"]
+                </a>
+            }
+            @if (transaction.ReversalOfTransactionId is null
+                 && transaction.ReversedByTransactionId is null)
+            {
+                <p>@Text["Detail_NoReversal"]</p>
+            }
+        </section>
+    }
+
+    <a class="card-link" asp-page="/Ledger/Index">@Text["Detail_BackToLedger"]</a>
+</article>

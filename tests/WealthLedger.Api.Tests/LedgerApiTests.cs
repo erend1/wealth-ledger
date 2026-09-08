@@ -20,7 +20,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         client.DefaultRequestHeaders.Add(
             "Idempotency-Key",
@@ -338,7 +338,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         var request = CreateContributionRequest(setup) with
         {
@@ -368,7 +368,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         var request = CreateContributionRequest(setup) with
         {
@@ -420,7 +420,7 @@ public sealed class LedgerApiTests
             }));
 
         using var client = failingFactory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         client.DefaultRequestHeaders.Add(
             "Idempotency-Key",
@@ -449,7 +449,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         var response = await client.PostAsJsonAsync(
             "/api/ledger/contributions",
@@ -475,7 +475,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         client.DefaultRequestHeaders.Add(
             "Idempotency-Key",
@@ -495,7 +495,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
         var request = CreateContributionRequest(setup);
 
         client.DefaultRequestHeaders.Add(
@@ -516,7 +516,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         const string key =
             "api-contribution-replay-001";
@@ -573,7 +573,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         const string key =
             "api-contribution-conflict-001";
@@ -604,7 +604,7 @@ public sealed class LedgerApiTests
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = factory.CreateClient();
-        var setup = await InitializeCoreLedgerAsync(client);
+        var setup = factory.ReadySetup;
 
         client.DefaultRequestHeaders.Add(
             "Idempotency-Key",
@@ -678,8 +678,7 @@ public sealed class LedgerApiTests
             factory.CreateClient();
 
         var setup =
-            await InitializeCoreLedgerAsync(
-                client);
+            factory.ReadySetup;
 
         var response =
             await client.PostAsJsonAsync(
@@ -701,8 +700,7 @@ public sealed class LedgerApiTests
             factory.CreateClient();
 
         var setup =
-            await InitializeCoreLedgerAsync(
-                client);
+            factory.ReadySetup;
 
         const string key =
             "api-fund-purchase-replay-001";
@@ -794,8 +792,7 @@ public sealed class LedgerApiTests
             factory.CreateClient();
 
         var setup =
-            await InitializeCoreLedgerAsync(
-                client);
+            factory.ReadySetup;
 
         const string key =
             "api-fund-purchase-conflict-001";
@@ -847,21 +844,6 @@ public sealed class LedgerApiTests
         Assert.Equal(
             "Idempotency key conflict",
             problem.Title);
-    }
-
-    private static async Task<InitializeCoreLedgerResponse>
-        InitializeCoreLedgerAsync(HttpClient client)
-    {
-        var response = await client.PostAsJsonAsync(
-            "/api/setup/core-ledger",
-            ApiTestData.CreateSetupRequest());
-
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-
-        var setup = await response.Content
-            .ReadFromJsonAsync<InitializeCoreLedgerResponse>();
-
-        return Assert.IsType<InitializeCoreLedgerResponse>(setup);
     }
 
     private static RecordContributionRequest CreateContributionRequest(

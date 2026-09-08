@@ -1,0 +1,194 @@
+@page "/settings/data-safety"
+@model WealthLedger.UI.Pages.Settings.DataSafetyModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["DataSafety_Title"];
+    ViewData["ActiveNavigation"] = "Settings";
+}
+
+<article class="flow" aria-labelledby="data-safety-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Settings_Eyebrow"]</p>
+        <h1 id="data-safety-heading">@Text["DataSafety_Title"]</h1>
+        <p class="lede">@Text["DataSafety_Introduction"]</p>
+    </header>
+
+    @if (!Model.StatusAvailable)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["DataSafety_UnavailableTitle"]</h2>
+            <p>@Text["DataSafety_UnavailableExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        <section class="summary-card flow" aria-labelledby="storage-heading">
+            <h2 id="storage-heading">@Text["DataSafety_StorageTitle"]</h2>
+            <dl class="path-review">
+                <div>
+                    <dt>@Text["DataSafety_DatabasePathLabel"]</dt>
+                    <dd><code>@Model.DatabasePath</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["DataSafety_BackupDirectoryLabel"]</dt>
+                    <dd><code>@Model.BackupDirectory</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["DataSafety_ApplicationVersionLabel"]</dt>
+                    <dd><code>@Model.ApplicationVersion</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["DataSafety_WorkspacePrefixLabel"]</dt>
+                    <dd>
+                        @if (Model.WorkspaceIdPrefix is null)
+                        {
+                            @Text["State_Unknown"]
+                        }
+                        else
+                        {
+                            <code>@Model.WorkspaceIdPrefix</code>
+                        }
+                    </dd>
+                </div>
+            </dl>
+            <p class="muted">@Text["DataSafety_PathDisclosureNotice"]</p>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="schema-heading">
+            <h2 id="schema-heading">@Text["DataSafety_SchemaTitle"]</h2>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["DataSafety_CompatibilityLabel"]</dt>
+                    <dd>
+                        @Model.Compatibility!.Text
+                        <code>@Model.Compatibility.TechnicalDetail</code>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["DataSafety_IntegrityLabel"]</dt>
+                    <dd>
+                        @Model.Integrity!.Text
+                        <code>@Model.Integrity.TechnicalDetail</code>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["DataSafety_EncryptionModeLabel"]</dt>
+                    <dd>
+                        @Model.EncryptionMode!.Text
+                        <code>@Model.EncryptionMode.TechnicalDetail</code>
+                    </dd>
+                </div>
+            </dl>
+
+            <h3>@Text["DataSafety_AppliedMigrationsTitle"]</h3>
+            <ol class="plain-list">
+                @foreach (var migration in Model.AppliedMigrations)
+                {
+                    <li><code>@migration</code></li>
+                }
+            </ol>
+
+            @if (Model.PendingMigrations.Count > 0)
+            {
+                <h3>@Text["DataSafety_PendingMigrationsTitle"]</h3>
+                <ol class="plain-list">
+                    @foreach (var migration in Model.PendingMigrations)
+                    {
+                        <li><code>@migration</code></li>
+                    }
+                </ol>
+            }
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="attestations-heading">
+            <h2 id="attestations-heading">@Text["DataSafety_AttestationsTitle"]</h2>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Backup_SeparationAttestationLabel"]</dt>
+                    <dd>
+                        @(Model.DestinationSeparationConfirmed
+                            ? Text["Backup_State_Confirmed"]
+                            : Text["Backup_State_NotConfirmed"])
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_EncryptionAttestationLabel"]</dt>
+                    <dd>
+                        @(Model.DestinationEncryptionConfirmed
+                            ? Text["Backup_State_Confirmed"]
+                            : Text["Backup_State_NotConfirmed"])
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["DataSafety_LocalProtectionLabel"]</dt>
+                    <dd>
+                        @(Model.LocalProtectionReady
+                            ? Text["DataSafety_ProtectionReady"]
+                            : Text["DataSafety_ProtectionWarning"])
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_UnrelatedPackagesCountLabel"]</dt>
+                    <dd>@Model.UnrelatedVerifiedBackupCount</dd>
+                </div>
+            </dl>
+            <p class="muted">@Text["DataSafety_AttestationExplanation"]</p>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="latest-backup-heading">
+            <h2 id="latest-backup-heading">@Text["DataSafety_LatestBackupTitle"]</h2>
+            @if (Model.LatestBackup is null)
+            {
+                <p class="state-text state-text--unavailable">
+                    @Text["DataSafety_NoMatchedBackup"]
+                </p>
+            }
+            else
+            {
+                <dl class="path-review">
+                    <div>
+                        <dt>@Text["Complete_BackupPathLabel"]</dt>
+                        <dd><code>@Model.LatestBackup.FilePath</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Complete_CreatedAtLabel"]</dt>
+                        <dd aria-label="@Model.LatestBackup.CreatedAt.AssistiveText">
+                            @Model.LatestBackup.CreatedAt.Text
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Complete_VerifiedAtLabel"]</dt>
+                        <dd aria-label="@Model.LatestBackup.VerifiedAt.AssistiveText">
+                            @Model.LatestBackup.VerifiedAt.Text
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Complete_DigestPrefixLabel"]</dt>
+                        <dd><code>@Model.LatestBackup.DigestPrefix</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["DataSafety_LatestMigrationLabel"]</dt>
+                        <dd><code>@Model.LatestBackup.LatestMigration</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Complete_WorkspaceBindingLabel"]</dt>
+                        <dd>
+                            @Model.LatestBackup.WorkspaceBinding.Text
+                            <code>@Model.LatestBackup.WorkspaceBinding.TechnicalDetail</code>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["DataSafety_EncryptionModeLabel"]</dt>
+                        <dd>
+                            @Model.LatestBackup.EncryptionMode.Text
+                            <code>@Model.LatestBackup.EncryptionMode.TechnicalDetail</code>
+                        </dd>
+                    </div>
+                </dl>
+            }
+        </section>
+    }
+
+    <a class="card-link" asp-page="/Settings/Index">@Text["Settings_BackLink"]</a>
+</article>

@@ -183,6 +183,15 @@ internal sealed class LocalBackupPackageReader
                     "The backup manifest does not match the snapshot migration history.");
             }
 
+            if (!string.Equals(
+                    manifest.SourceWorkspaceId,
+                    databaseVerification.WorkspaceId,
+                    StringComparison.Ordinal))
+            {
+                return InvalidPackage(
+                    "The backup manifest does not match the snapshot workspace identity.");
+            }
+
             var expectedCompatibilityOutcome =
                 databaseVerification.Compatibility
                     == LocalDatabaseCompatibility.MigrationRequired
@@ -293,6 +302,14 @@ internal sealed class LocalBackupPackageReader
         {
             return InvalidFailure(
                 "The backup manifest contains an invalid snapshot digest.");
+        }
+
+        if (manifest.SourceWorkspaceId is not null
+            && !SqliteDatabaseVerifier.IsWellFormedWorkspaceId(
+                manifest.SourceWorkspaceId))
+        {
+            return InvalidFailure(
+                "The backup manifest contains an invalid workspace identity.");
         }
 
         if (!string.Equals(

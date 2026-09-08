@@ -179,6 +179,13 @@ internal static class OperationsProgram
                 "WARNING LOCAL_PROTECTION_NOT_READY: Confirm separated encrypted backup protection and create a verified generation before real-data use.");
         }
 
+        if (result.Value.LatestVerifiedBackup is null
+            && result.Value.UnrelatedVerifiedBackupCount > 0)
+        {
+            output.WriteLine(
+                "WARNING UNRELATED_BACKUPS_ONLY: The configured directory contains verified packages, but none belong to this database. Create a backup of this database.");
+        }
+
         output.WriteLine("SUCCESS STATUS");
         return 0;
     }
@@ -376,6 +383,10 @@ internal static class OperationsProgram
         output.WriteLine($"Compatibility: {status.Compatibility}");
         output.WriteLine($"IntegrityStatus: {status.IntegrityStatus}");
         output.WriteLine(
+            $"WorkspaceIdPrefix: {FormatWorkspaceIdPrefix(status.LiveWorkspaceId)}");
+        output.WriteLine(
+            $"UnrelatedVerifiedBackupCount: {status.UnrelatedVerifiedBackupCount}");
+        output.WriteLine(
             $"DestinationSeparationConfirmed: {FormatBoolean(status.DestinationSeparationConfirmed)}");
         output.WriteLine(
             $"DestinationEncryptionConfirmed: {FormatBoolean(status.DestinationEncryptionConfirmed)}");
@@ -391,12 +402,24 @@ internal static class OperationsProgram
                 $"LatestBackupCreatedAtUtc: {FormatUtc(status.LatestVerifiedBackup.CreatedAtUtc)}");
             output.WriteLine(
                 $"LatestBackupDigestPrefix: {status.LatestVerifiedBackup.DigestPrefix}");
+            output.WriteLine(
+                $"LatestBackupWorkspaceBinding: {status.LatestVerifiedBackup.WorkspaceBinding}");
         }
         else
         {
             output.WriteLine("LatestBackupFile: NONE");
         }
     }
+
+    /*
+     * The lineage identity is opaque and carries no private fact, but status
+     * output stays conservative and prints only a prefix, matching the way a
+     * snapshot digest is reported.
+     */
+    private static string FormatWorkspaceIdPrefix(string? workspaceId)
+        => string.IsNullOrEmpty(workspaceId)
+            ? "NONE"
+            : workspaceId[..8];
 
     private static void WriteBackupCreation(
         TextWriter output,

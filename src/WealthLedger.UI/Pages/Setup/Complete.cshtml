@@ -1,0 +1,55 @@
+@page "/setup/complete"
+@model WealthLedger.UI.Pages.Setup.CompleteModel
+@inject UiText Text
+@{
+    ViewData["Title"] = Text["Complete_Title"];
+}
+
+<article class="flow" aria-labelledby="complete-heading">
+    <p class="eyebrow">@Text["Setup_Eyebrow"]</p>
+    <h1 id="complete-heading">@Text["Complete_Title"]</h1>
+    <p class="lede">@Text["Complete_Introduction"]</p>
+
+    <partial name="_ValidationSummary" />
+    @if (ViewData.ModelState.IsValid)
+    {
+        <section class="panel panel--success flow" aria-labelledby="complete-backup-heading">
+            <p class="status-mark">@Text["Complete_Status"]</p>
+            <h2 id="complete-backup-heading">@Text["Complete_BackupTitle"]</h2>
+
+            <dl class="path-review">
+                <div>
+                    <dt>@Text["Complete_BackupPathLabel"]</dt>
+                    <dd><code>@Model.BackupFilePath</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Complete_CreatedAtLabel"]</dt>
+                    <dd aria-label="@Model.CreatedAt!.AssistiveText">@Model.CreatedAt.Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Complete_VerifiedAtLabel"]</dt>
+                    <dd aria-label="@Model.VerifiedAt!.AssistiveText">@Model.VerifiedAt.Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Complete_DigestPrefixLabel"]</dt>
+                    <dd><code>@Model.DigestPrefix</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Complete_WorkspaceBindingLabel"]</dt>
+                    <dd>@Text["Complete_WorkspaceBindingMatched"]</dd>
+                </div>
+                <div>
+                    <dt>@Text["Backup_EncryptionModeLabel"]</dt>
+                    <dd><code>@Model.EncryptionMode</code></dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="panel panel--action flow" aria-labelledby="complete-restart-heading">
+            <h2 id="complete-restart-heading">@Text["Complete_RestartTitle"]</h2>
+            <p>@Text["Complete_RestartExplanation"]</p>
+            <p class="muted">@Text["Complete_ProcessStillSetup"]</p>
+            <p class="muted">@Text["Complete_NoHoldings"]</p>
+        </section>
+    }
+</article>
