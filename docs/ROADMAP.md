@@ -126,12 +126,27 @@ of the following are verified:
 - the live database is outside the repository and ignored by source control —
   verified by M004;
 - backup and restore have a user-visible, tested workflow — verified locally by
-  M004, while off-device protection and recurring drills remain operator duties;
+  M004 and extended by M006, which requires a verified package proved to belong
+  to the current workspace before the shell reports protection; off-device
+  protection and recurring drills remain operator duties;
 - setup is default-off and normal startup cannot initialize or migrate —
-  verified by M004;
-- logs, errors, exports, and screenshots do not expose avoidable private data;
+  verified by M004 and preserved by M006. The JSON setup endpoint remains
+  default-off and is mapped only in `WorkspaceUninitialized`. M006 additionally
+  allows the browser to create a missing configured-safe database, and only
+  that: it cannot migrate, restore, replace, select a package, or change an
+  unsafe path, and a `Ready` host maps no setup route at all;
+- logs, errors, exports, and screenshots do not expose avoidable private data —
+  verified by M006 for rendered pages, error pages, and captured logs across
+  every startup mode. Governed exports do not exist yet, and screenshots taken
+  by an operator remain an operator duty;
 - the user can reconcile an imported or entered position with independent
-  evidence.
+  evidence — **not yet satisfied**; it needs the M010 search, inventory, and
+  reconciliation work.
+
+One bullet therefore remains open. Recording real household balances still
+depends on M007 opening positions, the M008/M009 lifecycles, and M010
+reconciliation, so WealthLedger should not yet be the sole record of real
+assets.
 
 This gate does not block development with synthetic test data.
 

@@ -47,6 +47,15 @@ launchSettings.json
 *.coverage
 *.coveragexml
 
+## Playwright browser-test artifacts (rendered pages may contain private data)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+tests/WealthLedger.UI.BrowserTests/**/*.png
+tests/WealthLedger.UI.BrowserTests/**/*.webm
+tests/WealthLedger.UI.BrowserTests/**/*.zip
+
 ## OS files
 .DS_Store
 Thumbs.db
