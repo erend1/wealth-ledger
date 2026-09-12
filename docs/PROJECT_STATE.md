@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-09-08
+As of: 2026-09-11
 
 Status source: verified against the repository, the generated EF model, local
 .NET/SQLite test runs, real-process lifecycle smoke tests, and local Chromium
@@ -16,12 +16,15 @@ migration, and loopback-hosting operating boundary. M005 adds verified bounded
 master/reference navigation, a recent Posted ledger feed, and valid-versus-
 unknown position-scope behavior. M006 adds the verified local Razor Pages shell,
 fail-closed guided first run, exact Turkish-first presentation, and critical
-real-browser coverage.
+real-browser coverage. M007 adds the verified controlled opening-balance
+cutover for cash, foreign currency, funds, equities, and physical-gold lots,
+including persisted verification and bounded immutable correction.
 
 Starting without a database, the explicit operations CLI can initialize the
 accepted migration chain and verify the resulting file. The default-off setup
 endpoint can then initialize required master data. Supported ledger use cases
-record retry-safe contributions and fund purchases, create acquisition lots,
+record retry-safe contributions, fund purchases, and one-scope opening balances,
+create acquisition lots,
 read posted transactions through stable HTTP projections, derive positions from
 immutable posted entry history, preview reversal eligibility, and post an exact
 retry-safe reversal without editing or deleting the original transaction.
@@ -69,7 +72,13 @@ found during pre-implementation reconciliation. ADR-008 records the accepted UI
 and hosting architecture and the two explicit refinements it makes to ADR-007.
 M006 was verified on 2026-09-08 after its accessibility/privacy checks, real-
 browser critical journeys, complete repository verification, and disposable
-M004 recovery smoke passed. No milestone is currently In Progress.
+M004 recovery smoke passed.
+
+[`M007: Controlled Opening-Balance Cutover`](milestones/M007_opening_balance_cutover.md)
+was accepted on 2026-09-10 after the human owners approved all fifteen
+Recommended decisions exactly as written. M007 was verified on 2026-09-11 after
+its Domain, Application, SQLite, API, Razor UI, real-browser, privacy, backup,
+and restore evidence passed. No milestone is currently In Progress.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
@@ -82,17 +91,25 @@ this is not a claim of general WCAG conformance.
 
 `InitialBackupRequired` maps the initial-backup review/action and completion
 pages. The running setup process remains in that static mode after backup
-creation and clearly requires one clean restart. `Ready` maps only Today,
-Ledger with direct transaction explanation, and read-only Settings pages. The
-real-browser suite covers the complete restart-delimited first run, Ready
-navigation, JavaScript-disabled operation, keyboard-only paths, narrow and
-desktop viewports, external-request rejection, and process/file cleanup.
+creation and clearly requires one clean restart. `Ready` maps Today, Ledger with
+direct transaction explanation, read-only Settings, and the dedicated M007
+opening/receipt/reversal pages and JSON adapters. The real-browser suite covers
+the complete restart-delimited first run, Ready navigation and opening cutover,
+JavaScript-disabled operation, keyboard-only paths, narrow and desktop
+viewports, external-request rejection, and process/file cleanup.
 
 ## Verified implementation
 
 ### Domain
 
 The repository contains the accepted fixed-point value objects, assets and stable vocabulary, master data, ledger aggregate and children, reversal behavior, cost basis, asset lots, signed lot-entry allocations, physical-gold detail, and FIFO allocation planning described by the canonical domain documents and ADRs.
+
+M007 tightens `OpeningBalance` to exactly one positive Principal entry with an
+execution/as-of date and required source note, with no order/settlement date,
+cash-flow detail, transaction cost, balancing entry, or unit price. Physical-
+gold lots require detail, fineness accepts exact per-mille conversion to integer
+ppm, and checked decimal arithmetic derives fine weight without persisting it.
+Known, Unknown, and NotApplicable cost retain distinct shapes.
 
 The persisted model does not contain a `Reversed` status, `LotDisposal`, lot custody fields, mutable remaining-quantity fields, binary floating-point financial fields, or authoritative position/value/allocation tables.
 
@@ -109,6 +126,7 @@ The persisted model does not contain a `Reversed` status, `LotDisposal`, lot cus
 - M003 migration: `20260831113310_003_ReversalDependencySemantics`.
 - M005 migration: `20260902112549_004_LedgerNavigationQueries`.
 - M006 workspace-binding migration: `20260903075104_005_WorkspaceIdentity`.
+- M007 migration: `20260910101810_006_OpeningBalanceCutoverGuards`.
 - Local database ownership is one adjacent cross-process exclusive file lock;
   it is not a distributed or remote multi-writer policy. M002/M003 database
   constraints still arbitrate scoped submission and reversal races.
@@ -117,7 +135,10 @@ M002 adds dedicated `CommandReceipt` persistence. M003 is behavior-only: it
 replaces the posting-validation trigger while preserving all previous guards
 and changes only the acquisition-reversal dependency predicate. M005 adds only
 the descending recent-ledger query index; it adds no table or authoritative
-financial field.
+financial field. M006 adds the non-financial workspace identity outside the EF
+model. M007 adds one opening-scope TransactionEntry index and one additive
+Draft-to-Posted trigger; it adds no balance, valuation, cost cache, or other
+authoritative financial table.
 
 M002 adds a second schema migration for dedicated `CommandReceipt` persistence.
 A receipt is identified by household, stable operation code, and idempotency
@@ -132,7 +153,13 @@ lock.
 
 The migration creates the normalized core master-data, ledger, lot, allocation, cash-flow, cost-component, and physical-gold tables. Financial values use signed integer minor units or signed E8 integers. GUIDs, business dates, UTC timestamps, and enum-like values have explicit SQLite representations.
 
-SQLite foreign keys are enabled on every opened connection. Check constraints, restrictive foreign keys, indexes, and triggers protect household consistency, transaction date ordering, posted aggregate immutability, reversal uniqueness and exact inverse facts, required lot reconciliation, allocation sign and asset consistency, non-negative lot balances, known-versus-unknown cost basis, and physical-gold detail consistency.
+SQLite foreign keys are enabled on every opened connection. Check constraints,
+restrictive foreign keys, indexes, and triggers protect household consistency,
+transaction date ordering, posted aggregate immutability, reversal uniqueness
+and exact inverse facts, required lot reconciliation, allocation sign and asset
+consistency, non-negative lot balances, known-versus-unknown cost basis,
+physical-gold detail consistency, M007 opening shape, and concurrent semantic
+opening eligibility.
 
 The Infrastructure persistence rows remain internal implementation records. No generic repository abstraction has been introduced.
 
@@ -196,9 +223,14 @@ the transaction.
 - `GET /api/households/{householdId}/accounts`;
 - `GET /api/institutions`, `GET /api/currencies`, and `GET /api/assets`;
 - `GET /api/households/{householdId}/ledger/transactions`;
-- `GET /api/households/{householdId}/portfolios/{portfolioId}/accounts/{accountId}/positions/{assetId}`.
+- `GET /api/households/{householdId}/portfolios/{portfolioId}/accounts/{accountId}/positions/{assetId}`;
+- `POST /api/ledger/opening-balances/preview` and
+  `POST /api/ledger/opening-balances`;
+- `GET /api/households/{householdId}/ledger/opening-balances/{transactionId}/verification`;
+- opening-scoped `PUT` routes for Currency, Institution, Account, and Asset
+  reference creation.
 
-Contribution and fund-purchase submissions require a bounded opaque
+Contribution, fund-purchase, and opening-balance submissions require a bounded opaque
 `Idempotency-Key`. Equivalent replay returns the original stable identities and
 transaction Location. Reuse of a scoped key for a different semantic command
 returns sanitized 409 Problem Details.
@@ -358,9 +390,10 @@ Presentation culture/time-zone construction is deferred until after host build,
 where an unavailable configured culture or time zone is converted to the same
 sanitized fail-closed startup result as other startup failures.
 
-`Ready` exposes the read-only `/`, `/ledger`,
-`/ledger/{transactionId}`, `/settings`, `/settings/master-data`, and
-`/settings/data-safety` pages. Today shows only current local-safety facts,
+`Ready` exposes `/`, `/ledger`, `/ledger/{transactionId}`, `/settings`,
+`/settings/master-data`, `/settings/data-safety`, and the M007
+`/record/opening-balance` review/post/receipt/reversal pages. Today shows only
+current local-safety facts,
 matched verified-backup age, and recent Posted activity; it invents no balance,
 market value, return, or other unavailable aggregate. Ledger passes the M005
 opaque cursor through unchanged and turns an invalid cursor into a sanitized
@@ -386,6 +419,49 @@ flows remain usable when JavaScript is disabled. Visible focus, minimum control
 targets, reduced-motion preference, forced colors, and narrow/200%-equivalent
 reflow are covered mechanically and in real Chromium. These checks establish
 the accepted M006 behavior but do not establish broad WCAG conformance.
+
+### Controlled opening-balance cutover
+
+Application now owns explicit opening choice, narrow reference creation,
+preview, record, and persisted-verification use cases. One command covers one
+Household, Portfolio, Account, Asset, and as-of date. Currency, Institution,
+Account, or Asset can be created by stable code for this workflow only;
+equivalent retry returns the existing reference and conflicting facts return a
+sanitized conflict. Household and Portfolio remain existing selections.
+
+Cash in the household base currency and foreign Currency create one positive
+entry with no lot and NotApplicable cost. Fund and Equity accept Optional or
+Required stored lot tracking but M007 requires complete positive opening lots
+and exact allocation. PhysicalGold requires Required tracking in a
+PhysicalVault; gross weight is authoritative and every lot records fineness,
+positive pieces, and optional provenance detail. Known total historical lot
+cost is preserved only when supported, while Unknown has no amount, currency,
+date inference, or transaction unit price.
+
+The record use case resolves a scoped receipt before semantic eligibility,
+uses a versioned canonical fingerprint, and persists the transaction, entry,
+all lots/details/allocations, receipt, and Posted transition atomically.
+Application preflight rejects a second effective opening or any other effective
+history in the exact scope; migration 006's posting trigger arbitrates
+different-key races and direct SQL. A fully Posted reversal neutralizes its
+original for a separately reviewed corrected opening.
+
+The Razor UI follows Identify, Source facts, Review, and explicit Post. Human
+decimals are converted with checked fixed-point rules; currency minor digits,
+E8 scale/overflow, exact lot reconciliation, dates, cost shape, and fineness are
+validated before posting. Review and receipts show normalized exact values,
+Unknown/NotApplicable distinctly, and derived fine-gold weight, while omitting
+current value, performance, and profit/loss. Browser refresh, retry, direct
+receipt navigation, process restart, JavaScript-disabled use, keyboard-only use,
+and responsive reflow are covered.
+
+Receipt data is reconstructed from persisted transaction history and a point-
+position query. It exposes the transaction identity, stored quantity,
+allocation reconciliation, derived current position, source-entry count,
+additional-history warning, and transaction-detail link. The opening-specific
+reverse page reuses M003 preview/post, shows exact inverse entries and lot
+allocations, blocks outstanding downstream allocation dependencies, and never
+mutates or deletes the original.
 
 ### Posted reversal and correction
 
@@ -435,18 +511,18 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 
 Results:
 
-- Domain tests: 83 passed, 0 failed.
-- Application tests: 122 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 172 passed, 0 failed.
-- UI presentation/contract tests: 63 passed, 0 failed.
-- API/UI host tests against real SQLite files: 114 passed, 0 failed.
+- Domain tests: 98 passed, 0 failed.
+- Application tests: 156 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 195 passed, 0 failed.
+- UI presentation/contract tests: 71 passed, 0 failed.
+- API/UI host tests against real SQLite files: 130 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
 - Playwright Chromium browser tests: 3 passed, 0 failed.
-- Total: 580 passed, 0 failed.
+- Total: 676 passed, 0 failed.
 - Formatting drift: none in the current worktree; see the SDK line-ending
   caveat below.
-- EF model drift: none. The migration chain is unchanged at five migrations;
-  M006 has added no schema since `005_WorkspaceIdentity`.
+- EF model drift: none. The migration chain contains six migrations and ends at
+  `006_OpeningBalanceCutoverGuards`.
 
 On the Windows .NET 10.0.400 SDK, a fresh LF checkout makes
 `dotnet format --verify-no-changes` report comment-adjacent whitespace at
@@ -536,12 +612,47 @@ Three Playwright 1.62.0 tests run against real loopback processes with Chromium
 revision 1234. They cover the complete restart-delimited
 `StorageUninitialized` -> `WorkspaceUninitialized` ->
 `InitialBackupRequired` -> `Ready` journey, click-through Ledger transaction
-detail and Settings navigation, JavaScript-disabled operation, keyboard-only
-validation and navigation, approximately 390-pixel and desktop viewports,
-100%/200%-equivalent reflow, reduced-motion and forced-color preferences, and
-rejection of every non-loopback request. Each test proves browser disconnection,
-host-process exit, and deletion of its unique synthetic data and backup root;
-no screenshots or traces were generated.
+detail and Settings navigation, plus M007 cash, two-lot fund, equity, and
+physical-gold opening review/post/receipt. The opening journey covers a linked
+lot-mismatch correction, narrow asset/account creation, exact gold derivation,
+semantic correction through reversal and replacement, double-submit, direct
+receipt navigation, and restart readback. The suite also covers JavaScript-
+disabled operation, keyboard-only validation and navigation, approximately
+390-pixel and desktop viewports, 100%/200%-equivalent reflow, reduced-motion and
+forced-color preferences, and rejection of every non-loopback request. Each
+test proves browser disconnection, host-process exit, and deletion of its unique
+synthetic data and backup root; no screenshots or traces were generated.
+
+M007 focused verification adds 15 Domain tests, 34 Application tests, 23 real-
+SQLite Infrastructure tests, 8 UI mapping/presentation tests, and 16 API/UI host
+tests over the M006 baseline. Coverage includes every opening shape and account
+matrix, Known/Unknown/NotApplicable cost, exact decimal scale and overflow,
+date rules, Optional/Required lot reconciliation, fineness presets and precise
+conversion, fine-weight derivation, reference retries/conflicts, receipt-first
+idempotency, semantic duplicate/prior-history races, atomic rollback, direct-SQL
+trigger rejection, migration up/down/upgrade, stable Problem Details, Razor
+review/receipt/reversal, accessibility links, and privacy-safe logs.
+
+The retained M007 learning lab completed the four successful first-run modes on
+2026-09-11; automated host/browser coverage separately proves `Blocked`. It used
+explicit synthetic-only roots below `%LOCALAPPDATA%`, outside the
+repository and with ambient storage/backup configuration confirmed absent. It
+posted TRY cash, USD currency, mixed-cost two-lot fund units, an Unknown-cost
+equity lot, and a two-piece 22-karat physical-gold lot; persisted verification
+matched every raw E8 position and derived `25.25 * 0.916 = 23.129` fine grams.
+The lab rejected an invalid USD scale and a second effective opening without a
+write, reversed 17 shares, posted a separate 18-share replacement, and returned
+the same receipt on equivalent retry. Two immutable workspace-matched backups
+were independently verified. The second was staged to a separate retained
+restore root, and a fresh Ready process over that copy read all seven audit
+transactions, the corrected position, receipt, and gold detail. No active
+replacement, real data, screenshot, trace, commit, or remote mutation occurred.
+
+Startup currently emits EF warning 10102 for M006's unordered `Take(2)`
+multiple-household cardinality probe. Any two rows produce the same unsupported
+classification, so the warning is diagnostic noise rather than a behavioral or
+financial correctness failure; it contains no stored value and was not changed
+under M007.
 
 The final M004 disposable real-process smoke passed on 2026-09-08: status,
 database initialization, backup creation and independent verification, isolated
@@ -576,10 +687,10 @@ M006 was verified on 2026-09-08.
 
 ## Next delivery candidate
 
-M006 is Verified. M007 is the next delivery candidate, but remains Planned until
-its bounded milestone contract and unresolved decisions receive explicit human
-acceptance. Do not begin M007 from this checkpoint merely because it is next in
-the roadmap.
+M007 is Verified and no milestone is In Progress. M008 is the next planned
+roadmap item, but its ROADMAP entry is not implementation authority. Do not
+begin the normal investment-fund lifecycle until a bounded milestone contract
+is reviewed and explicitly accepted.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
@@ -594,6 +705,6 @@ Do not start live market data, provider-specific integration, optimization, AI/L
   OS/device-encryption reliance remains deferred to a separate ADR.
 - Partial cost-basis rounding allocation if a concrete use case exposes a gap.
 - SQLite concurrency beyond M004's single-machine ownership boundary and the
-  scoped database collisions handled by M002/M003.
+  scoped database collisions handled by M002/M003/M007.
 
 Record a new ADR only when one of these or another cross-cutting architectural choice is accepted or superseded.

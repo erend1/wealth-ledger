@@ -2,7 +2,7 @@
 
 Status: Accepted operational requirements
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-11
 
 ## Purpose
 
@@ -12,10 +12,11 @@ committed accidentally, exposed over a network, corrupted during backup, or
 lost with one workstation.
 
 This document defines required outcomes. M004 implements the bounded local-data
-baseline identified below, and M006 adds the verified loopback browser boundary;
-later requirements remain explicit rather than being implied by either
-milestone. Verified repository reality remains in `PROJECT_STATE.md`, and the
-operator procedure is in `OPERATIONS.md`.
+baseline, M006 adds the verified loopback browser boundary, and M007 adds one
+controlled financial write surface inside that boundary. Later requirements
+remain explicit rather than being implied by those milestones. Verified
+repository reality remains in `PROJECT_STATE.md`, and the operator procedure is
+in `OPERATIONS.md`.
 
 ## Implemented M004 baseline
 
@@ -55,7 +56,7 @@ denies every undeclared or mode-inappropriate Razor Page:
 | `StorageUninitialized` | `GET /setup`, `GET /setup/storage` | `POST /setup/storage` creates only a missing configured-safe database |
 | `WorkspaceUninitialized` | `GET /setup`, `GET /setup/workspace` | `POST /setup/workspace` performs atomic core setup; the legacy JSON setup route is available only when separately enabled |
 | `InitialBackupRequired` | `GET /setup`, `GET /setup/backup`, `GET /setup/complete` | `POST /setup/backup` creates and verifies one new immutable generation |
-| `Ready` | `GET /`, `/ledger`, `/ledger/{transactionId}`, `/settings`, `/settings/master-data`, and `/settings/data-safety`, plus accepted normal JSON routes | No UI mutation; every setup route returns 404 |
+| `Ready` | Today, Ledger, Settings, `/record/opening-balance`, its receipt/reversal pages, and accepted normal JSON routes | Antiforgery-protected M007 opening/reference/reversal POSTs only; every setup route returns 404 |
 
 Only `Ready` retains process-lifetime database ownership. Setup mutations call
 the existing Application operation directly and acquire exclusive ownership for
@@ -77,9 +78,42 @@ requests, cursor payloads, SQL, connection strings, EF/SQLite internals, or stac
 traces. Resolved local paths are rendered only on the accepted setup review and
 data-safety screens. Error pages use localized, non-disclosing guidance.
 
+## Implemented M007 opening-write boundary
+
+As verified on 2026-09-11, only a process that selected `Ready` maps the M007
+opening UI and JSON adapters. Razor Page handlers call the shared Application
+use cases directly rather than making HTTP calls to the co-hosted API. Every UI
+POST requires ASP.NET Core antiforgery; the financial post additionally uses a
+server-generated idempotency key and Post/Redirect/Get receipt navigation.
+
+The command is limited to one household/portfolio/account/asset/as-of scope.
+Missing Currency, Institution, Account, or Asset references can be created only
+through narrow stable-code create-and-use commands; there is no generic edit,
+delete, archive, or reactivate surface. Reference creation cannot create a
+holding and financial review is non-mutating.
+
+Application preflight and the M007 SQLite posting trigger both enforce active,
+household-consistent references, the accepted account/asset matrix, exact lot
+allocation, and the absence of price, cash-flow, balancing, and transaction-cost
+facts. The trigger is the final authority for concurrent semantic duplicates
+and prior effective scope history. Transaction, entry, all lots, gold details,
+allocations, receipt, and Posted transition commit in one SQLite transaction.
+
+Receipts reconstruct their result from persisted ledger history and compare it
+with the derived scoped position. A mistake uses the existing M003 reversal
+command; no UI or API endpoint edits or deletes a Posted graph. Downstream lot
+dependencies remain blockers, and a corrected replacement is a new command.
+
+M007 tests and the retained synthetic operational run inspect validation,
+Problem Details, captured logs, browser console/network signals, and generated
+artifacts. Entered quantity, note, reference, hallmark/certificate, idempotency
+key, request body, SQL, storage internals, and stack traces are absent from
+routine logs and errors. Browser tests make no external request and generate no
+screenshot or trace by default.
+
 ## Remaining operational boundaries
 
-M004/M006 do not implement application-managed encryption, authentication,
+M004-M007 do not implement application-managed encryption, authentication,
 authorization, remote access, a remote/off-site provider, automatic scheduling
 or retention deletion, or governed exports. Full-disk/destination
 encryption, recovery-key custody, physical separation, cadence, and restore
@@ -296,6 +330,11 @@ transaction identities and cursors, static assets, and captured host logs. Its
 real-browser tests also inspect console and failed-request signals and generate
 no screenshots or traces.
 
+M007 extends the same rule across opening reference creation, validation,
+review, posting, receipts, semantic conflicts, gold detail, and reversal. Stable
+errors may identify the existing or blocking transaction needed for correction,
+but do not echo submitted source text or persistence internals.
+
 ### OPS-011: Governed exports
 
 An export states its schema/version, effective time, included regions, and
@@ -303,7 +342,7 @@ whether private fields are redacted. Exporting does not mutate the ledger.
 Machine-readable exports use stable identifiers and exact decimal strings or
 integer representations without binary floating-point loss.
 
-Governed exports remain outside M004.
+Governed exports remain outside M004-M007.
 
 ### OPS-012: Direct-write prohibition
 
@@ -318,6 +357,11 @@ the necessary SQLite, EF migration, archive, lock, and filesystem mechanics.
 M006 PageModels also call only focused Application use cases/query services.
 `WealthLedger.UI` references neither Infrastructure nor API transport types and
 never self-calls the co-hosted JSON API.
+
+M007 follows the same adapter boundary. UI, JSON API, automated browser clients,
+and future approved agents may submit only through the opening Application
+commands. Persisted position and lot arithmetic are never delegated to a client
+or LLM.
 
 ## Backup cadence recommendation
 
@@ -360,6 +404,11 @@ Before entering real household balances:
 - [ ] Encryption and recovery-key custody are explicitly decided.
 - [ ] Logs and error responses are inspected for sensitive fields.
 - [ ] Duplicate-request behavior and correction behavior are verified.
+- [ ] M007 is Verified and every proposed opening has retained independent
+      source evidence; current market value is not used as historical cost.
+- [ ] Each entered position can be reconciled independently; until M010
+      supplies the broader workbench, retain that comparison outside the ledger
+      without treating it as an application-verified fact.
 - [ ] The household understands which copy is authoritative and which copies
       are backups or exports.
 

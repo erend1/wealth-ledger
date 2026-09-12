@@ -2,15 +2,17 @@
 
 Status: Proposed product interaction model
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-11
 
 ## Scope and constraint
 
 This document describes the broader MVP interaction model, much of which remains
-proposed independently of a delivery framework. The implemented M006 subset uses
-server-rendered Razor Pages in a dedicated UI assembly and the existing local API
-host, as accepted by ADR-008. That decision does not accept Blazor, a SPA,
-desktop, or mobile delivery for later workflows.
+proposed independently of a delivery framework. The implemented M006 shell and
+M007 opening-balance subset use server-rendered Razor Pages in a dedicated UI
+assembly and the existing local API host, as accepted by ADR-008. The PageModels
+invoke Application use cases directly; they do not call the co-hosted JSON API.
+That decision does not accept Blazor, a SPA, desktop, or mobile delivery for
+later workflows.
 
 The MVP is a private household tool used periodically, especially before and
 after a monthly allocation decision. It should optimize for correctness,
@@ -39,7 +41,8 @@ clarity, and low entry friction rather than trading-terminal density.
 
 ### Today
 
-The M006 landing workspace shows only facts supported by current read contracts:
+The M006/M007 landing workspace shows only facts supported by current read
+contracts:
 
 - current local data-safety state;
 - age and workspace binding of the latest applicable verified backup;
@@ -64,8 +67,9 @@ cash-flow treatment, and source data.
 
 ### Record
 
-Record is not implemented by M006. It remains a later task-oriented entry point
-with explicit choices:
+M007 implements Record's dedicated **Opening balance** choice at
+`/record/opening-balance`. It is not a generic transaction editor. The following
+other task choices remain later workflows:
 
 - Contribution
 - Withdrawal
@@ -74,12 +78,12 @@ with explicit choices:
 - Physical-gold purchase
 - Physical-gold sale
 - Transfer
-- Opening balance
 - Adjustment
 - Reverse or correct an existing transaction
 
-Each choice opens a dedicated workflow rather than a generic transaction table
-editor.
+Each implemented choice opens a dedicated workflow rather than a generic
+transaction table editor. An opening receipt exposes the bounded reversal path
+for that opening and a link to start another single-asset opening.
 
 ### Assets
 
@@ -96,9 +100,14 @@ facts, exact effects, costs, lots, allocations, and both reversal directions.
 Current master labels are visibly current context and inactive or archived
 masters remain explainable.
 
+M007 extends persisted transaction readback and Ledger detail with physical-gold
+fineness, piece count, optional identifiers/notes, and exact derived fine weight.
+Opening receipts are a focused verification view over the same persisted
+history, not client-side success state.
+
 Broad filters for date, type, asset, institution, account, portfolio, external
 reference, status, and reversal relationship remain part of M010 rather than
-M006.
+M007.
 
 ### Plan
 
@@ -137,9 +146,11 @@ directly through Application use cases:
 - a valid empty position is distinct from the sanitized unknown/cross-household
   scope error.
 
-Master-data editing, broad local administration, selector caching, and the later
+Broad master-data editing, local administration, selector caching, and the later
 Record/Assets/Plan workflows remain responsibilities of later accepted
-milestones. M006 presentation formatting is implemented in `WealthLedger.UI`.
+milestones. M007 permits only opening-scoped create-and-use actions for a missing
+Currency, Institution, Account, or Asset. Household and Portfolio remain
+existing selections; there is no edit, delete, archive, or reactivation UI.
 
 ## First-run experience
 
@@ -163,8 +174,8 @@ M006 implements this restart-delimited first-run flow:
 The user never constructs GUIDs, E8 or minor-unit integers, connection strings,
 SQL, or migration identities. Readiness is reconstructed from Application/M004
 state on every request, not session, cookies, TempData, local storage, or a UI
-cache. Opening-balance import and practice transaction entry are not M006
-features and remain later work.
+cache. M007 begins only after Ready and therefore cannot bypass any of these
+storage, workspace, backup, or restart gates.
 
 ## Monthly review flow
 
@@ -211,6 +222,49 @@ Show, in formatted units:
 
 Require an explicit confirmation, post once, then navigate to the resolvable
 transaction detail. The result screen links to position and lot impact.
+
+## Opening-balance cutover
+
+M007 implements this four-stage pattern for exactly one household, portfolio,
+account, asset, and as-of date per command:
+
+1. **Identify:** select existing Household/Portfolio context, a compatible
+   Account and supported Asset, and the opening as-of date. Missing Currency,
+   Institution, Account, or Asset may be created through a separate narrow
+   create-and-use form that does not create a holding.
+2. **Enter source facts:** enter a positive exact quantity, required source note,
+   optional external reference, and the complete lot breakdown for Fund,
+   Equity, or PhysicalGold. Cash/Currency shows cost as Not applicable and has
+   no lot. Lot cost is Known only with a supported amount/currency or explicitly
+   Unknown with neither.
+3. **Review:** show normalized exact quantity, account/portfolio/asset/date,
+   allocation total, cost state, acquisition dates, provenance, and physical-
+   gold derived fine weight. Lot mismatch, invalid scale, incompatible choices,
+   and semantic duplicate errors are linked to real fields. Review shows no
+   current value, return, or profit/loss.
+4. **Post and receipt:** require a final action, submit through the established
+   idempotency contract, redirect to a receipt reconstructed from persisted
+   ledger history, compare the submitted quantity with the derived scoped
+   position, and link to full transaction detail.
+
+Cash and foreign Currency accept CurrencyUnit/NONE in Cash, Investment, or
+Pension accounts; Cash must use the household base currency and Currency must
+not. Fund and Equity accept FundUnit/Share with Optional or Required lot
+tracking in Investment or Pension accounts, but M007 requires complete opening
+lots in both modes. PhysicalGold requires GrossGram/REQUIRED in a PhysicalVault.
+
+The fineness control offers explicit 24K/999.9, 22K/916, 18K/750, 14K/585, and
+8K/333 per-mille mappings plus a precise 0.001-to-1000 per-mille option with at
+most three decimals. It displays the resulting ppm and derives exact fine grams
+from authoritative gross weight. Pieces may be grouped only when their product,
+fineness, acquisition, cost, identifiers, and provenance form one evidence
+group.
+
+A second effective opening in the same exact scope links to the existing
+receipt and does not write. An opening also cannot be added over other effective
+history. Correction uses `/record/opening-balance/{transactionId}/reverse`:
+the user reviews exact inverse entries/allocations, supplies a reason, posts a
+separate M003 reversal, and then records a separately reviewed replacement.
 
 ## Fund purchase form
 
@@ -304,16 +358,19 @@ result must be retrieved by its retry identity.
   summaries, visible keyboard focus, logical navigation, and text-based status.
 - Layouts reflow at narrow and desktop widths and at a 200%-equivalent effective
   viewport. CSS respects reduced-motion and forced-color preferences.
-- Critical first-run and Ledger navigation pass in real Chromium with JavaScript
-  disabled and with keyboard-only operation. These focused checks do not claim
-  general WCAG conformance or replace assistive-technology review.
+- Critical first-run, Ledger navigation, and M007 review/post/receipt/reversal
+  paths pass in real Chromium with JavaScript disabled and with keyboard-only
+  operation. They include linked financial validation, double-submit/retry,
+  restart readback, narrow and 200%-equivalent reflow, reduced motion, and
+  forced colors. These focused checks do not claim general WCAG conformance or
+  replace assistive-technology review.
 - Confirmation text and errors use plain, sanitized language.
 - Screenshots and diagnostic exports default to hiding household names,
   references, notes, and exact values unless explicitly included.
 - The UI must not expose connection strings, raw SQL, stack traces, or internal
   row representations during routine use.
-- M006 adds no screenshot or diagnostic-export feature. Tests and any manually
-  captured artifacts use synthetic isolated data only.
+- M006/M007 add no screenshot or diagnostic-export feature. Tests and any
+  manually captured artifacts use synthetic isolated data only.
 
 ## MVP UX acceptance
 
@@ -323,6 +380,13 @@ and browse Today, recent Ledger explanations, and read-only Settings without
 issuing an HTTP request or editing SQLite directly. That outcome is implemented
 and covered by real-browser journeys.
 
-The broader MVP interaction model is not yet complete. Opening positions,
-ordinary contribution/acquisition entry, position navigation, and correction
-from the UI remain in M007 and later accepted milestones.
+The M007 subset is verified when that Ready user can create only the missing
+opening-scoped references, review and post cash/currency, fund, equity, and
+physical-gold openings, inspect persisted receipts and derived positions, and
+reverse and replace an incorrect opening without editing history. That outcome
+is implemented and covered by real-browser and retained synthetic recovery
+journeys.
+
+The broader MVP interaction model is not yet complete. Ordinary contribution,
+purchase, sale, transfer, searchable inventory/reconciliation, valuation, and
+planning entry from the UI remain in later accepted milestones.

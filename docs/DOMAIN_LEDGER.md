@@ -2,7 +2,7 @@
 
 Status: Canonical domain model
 
-Last distilled: 2026-08-24
+Last distilled: 2026-09-11
 
 ## Numerical language
 
@@ -253,13 +253,37 @@ Standalone Fee and Tax transactions use appropriately negative effective entries
 
 ### OpeningBalance
 
-OpeningBalance imports real quantity that predates the ledger.
+OpeningBalance records a position that predates the ledger without fabricating
+a Contribution or Buy. The implemented M007 shape contains exactly one positive
+Principal entry for one household, portfolio, account, asset, and as-of
+`ExecutionDate`.
 
-- entries and opening lot allocations are positive;
-- known historical cost may be recorded when supported;
-- unknown historical cost uses CostBasis.Unknown with no amount;
-- do not fabricate a price from current market value;
-- performance since ledger inception may be computed from an inception valuation, but lifetime return remains unknown when original cost is unknown.
+- OrderDate and SettlementDate are absent.
+- A normalized source note is required; ExternalReference is optional.
+- CashFlowDetail, transaction costs, balancing entries, and UnitPrice are
+  forbidden.
+- Cash in the household base currency and foreign Currency use no lot;
+  acquisition cost is NotApplicable.
+- Fund and Equity accept Optional or Required lot-tracking assets, but an M007
+  opening always creates one or more positive lots and reconciles their
+  allocations exactly to the entry.
+- PhysicalGold requires Required lot tracking, a PhysicalVault account, one or
+  more gross-weight lots, and PhysicalGoldLotDetail for every lot.
+- Known historical cost is recorded only as a supported total lot cost.
+  Unknown uses `CostBasis.Unknown()` with no amount or currency; an unknown
+  acquisition date remains null.
+- No current quote, aggregate division, or inferred average is persisted as an
+  acquisition price.
+
+Only one effective opening may exist for the exact
+household/portfolio/account/asset scope, and an opening cannot be placed over
+other effective Posted history in that scope. Those stored-history rules are
+Application concerns backed by the M007 SQLite posting guard. A Posted reversal
+neutralizes an incorrect opening; its corrected replacement is a new reviewed
+OpeningBalance rather than an edit.
+
+Performance since ledger inception may later use a separate dated inception
+valuation, but lifetime return remains unknown when original cost is unknown.
 
 ### Adjustment
 
@@ -358,6 +382,7 @@ An acquisition entry may create more than one lot, for example multiple physical
 - opening quantity is positive;
 - opening quantity does not exceed the opening entry quantity;
 - physical-gold details may be attached only to a PhysicalGold asset;
+- a PhysicalGold asset must have physical-gold details;
 - creation adds the initial positive allocation.
 
 ### LotEntryAllocation
@@ -378,7 +403,9 @@ Allocation invariants:
 - allocation sign matches entry sign;
 - one lot's allocation to an entry cannot exceed that entry's magnitude;
 - an allocation must not make the lot's total quantity negative;
-- total allocations across all lots for a Required lot-tracked entry equal the entry quantity exactly.
+- total allocations across all lots for a Required lot-tracked entry equal the entry quantity exactly;
+- M007 additionally requires exact allocation for Fund and Equity openings when
+  the stored asset mode is Optional.
 
 The last rule spans multiple lots and is enforced by the Application/domain service plus persistence tests.
 
@@ -419,9 +446,17 @@ Contains:
 
 Gross weight is the lot quantity. Fine-gold weight is derived:
 
-    gross quantity × fineness
+    gross raw E8 × fineness ppm / 100,000,000 / 1,000,000
 
-Neither value is duplicated in the detail record.
+`Fineness.FromPerMille` accepts exact decimal input from 0.001 through 1000 per
+mille with at most three fractional digits and maps it deterministically to 1
+through 1,000,000 ppm. Extra precision is rejected rather than rounded. M007's
+labelled karat choices map to explicit ppm values; arbitrary `karat / 24`
+inference is not a Domain rule.
+
+Fine weight uses checked decimal arithmetic and may carry more precision than
+E8. It is returned for display/query use and is not persisted as a second
+quantity. Neither gross nor fine weight is duplicated in the detail record.
 
 ## Derived results
 
