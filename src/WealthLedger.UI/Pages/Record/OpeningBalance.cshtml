@@ -1,0 +1,720 @@
+@page "/record/opening-balance"
+@model WealthLedger.UI.Pages.Record.OpeningBalanceModel
+@inject UiText Text
+@using WealthLedger.Domain.Assets
+@using WealthLedger.Domain.Lots
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Opening_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="opening-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Opening_Eyebrow"]</p>
+        <h1 id="opening-heading">@Text["Opening_Title"]</h1>
+        <p class="lede">@Text["Opening_Introduction"]</p>
+    </header>
+
+    <partial name="_ValidationSummary" />
+
+    @if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable || Model.Choices is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Opening_LoadErrorTitle"]</h2>
+            <p>@Text["Opening_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(Model.NoticeResourceKey))
+        {
+            <section class="summary-card panel--success flow" role="status">
+                <h2>@Text["Opening_ReferenceCreatedTitle"]</h2>
+                <p>@Text[Model.NoticeResourceKey]</p>
+            </section>
+        }
+
+        @if (Model.ChoicesAreTruncated)
+        {
+            <section class="summary-card summary-card--warning flow" role="status">
+                <h2>@Text["Opening_ChoicesTruncatedTitle"]</h2>
+                <p>@Text["Opening_ChoicesTruncatedExplanation"]</p>
+            </section>
+        }
+
+        <details class="panel technical-details reference-create">
+            <summary>@Text["Opening_MissingReferenceTitle"]</summary>
+            <p>@Text["Opening_MissingReferenceExplanation"]</p>
+
+            <div class="reference-create__grid">
+                <form method="post" asp-page-handler="CreateCurrency" class="fact-card flow" novalidate>
+                    <h2>@Text["Opening_CreateCurrencyTitle"]</h2>
+                    <div class="field">
+                        <label asp-for="CurrencyInput.Code">@Text["Opening_CurrencyCodeLabel"]</label>
+                        <input asp-for="CurrencyInput.Code" maxlength="3" pattern="[A-Za-z]{3}"
+                               aria-describedby="CurrencyInput_Code-error" />
+                        <span id="CurrencyInput_Code-error" class="field-error"
+                              asp-validation-for="CurrencyInput.Code"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="CurrencyInput.Name">@Text["Opening_NameLabel"]</label>
+                        <input asp-for="CurrencyInput.Name" maxlength="128"
+                               aria-describedby="CurrencyInput_Name-error" />
+                        <span id="CurrencyInput_Name-error" class="field-error"
+                              asp-validation-for="CurrencyInput.Name"></span>
+                    </div>
+                    <div class="field field--short">
+                        <label asp-for="CurrencyInput.MinorUnitDigits">@Text["Opening_MinorUnitDigitsLabel"]</label>
+                        <input asp-for="CurrencyInput.MinorUnitDigits" type="number" min="0" max="8"
+                               inputmode="numeric" aria-describedby="currency-digits-help CurrencyInput_MinorUnitDigits-error" />
+                        <p id="currency-digits-help" class="help">@Text["Opening_MinorUnitDigitsHelp"]</p>
+                        <span id="CurrencyInput_MinorUnitDigits-error" class="field-error"
+                              asp-validation-for="CurrencyInput.MinorUnitDigits"></span>
+                    </div>
+                    <button class="button button--secondary" type="submit">@Text["Opening_CreateCurrencyAction"]</button>
+                </form>
+
+                <form method="post" asp-page-handler="CreateInstitution" class="fact-card flow" novalidate>
+                    <h2>@Text["Opening_CreateInstitutionTitle"]</h2>
+                    <div class="field">
+                        <label asp-for="InstitutionInput.Code">@Text["Opening_StableCodeLabel"]</label>
+                        <input asp-for="InstitutionInput.Code" maxlength="64" pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="InstitutionInput_Code-error" />
+                        <span id="InstitutionInput_Code-error" class="field-error"
+                              asp-validation-for="InstitutionInput.Code"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="InstitutionInput.Name">@Text["Opening_NameLabel"]</label>
+                        <input asp-for="InstitutionInput.Name" maxlength="256"
+                               aria-describedby="InstitutionInput_Name-error" />
+                        <span id="InstitutionInput_Name-error" class="field-error"
+                              asp-validation-for="InstitutionInput.Name"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="InstitutionInput.TypeCode">@Text["Opening_InstitutionTypeLabel"]</label>
+                        <select asp-for="InstitutionInput.TypeCode" aria-describedby="InstitutionInput_TypeCode-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var option in Model.InstitutionTypes)
+                            {
+                                <option value="@option.Code">@option.Text (@option.Code)</option>
+                            }
+                        </select>
+                        <span id="InstitutionInput_TypeCode-error" class="field-error"
+                              asp-validation-for="InstitutionInput.TypeCode"></span>
+                    </div>
+                    <button class="button button--secondary" type="submit">@Text["Opening_CreateInstitutionAction"]</button>
+                </form>
+
+                <form method="post" asp-page-handler="CreateAccount" class="fact-card flow" novalidate>
+                    <h2>@Text["Opening_CreateAccountTitle"]</h2>
+                    <div class="field">
+                        <label asp-for="AccountInput.Code">@Text["Opening_StableCodeLabel"]</label>
+                        <input asp-for="AccountInput.Code" maxlength="64" pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="AccountInput_Code-error" />
+                        <span id="AccountInput_Code-error" class="field-error"
+                              asp-validation-for="AccountInput.Code"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AccountInput.Name">@Text["Opening_NameLabel"]</label>
+                        <input asp-for="AccountInput.Name" maxlength="256"
+                               aria-describedby="AccountInput_Name-error" />
+                        <span id="AccountInput_Name-error" class="field-error"
+                              asp-validation-for="AccountInput.Name"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AccountInput.TypeCode">@Text["Opening_AccountTypeLabel"]</label>
+                        <select asp-for="AccountInput.TypeCode" aria-describedby="AccountInput_TypeCode-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var option in Model.AccountTypes)
+                            {
+                                <option value="@option.Code">@option.Text (@option.Code)</option>
+                            }
+                        </select>
+                        <span id="AccountInput_TypeCode-error" class="field-error"
+                              asp-validation-for="AccountInput.TypeCode"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AccountInput.InstitutionId">@Text["Opening_InstitutionLabel"]</label>
+                        <select asp-for="AccountInput.InstitutionId" aria-describedby="account-institution-help AccountInput_InstitutionId-error">
+                            <option value="">@Text["State_NotApplicable"]</option>
+                            @foreach (var institution in Model.Choices.Institutions.Items)
+                            {
+                                <option value="@institution.InstitutionId.ToString("D")">
+                                    @institution.Name (@institution.Code)
+                                </option>
+                            }
+                        </select>
+                        <p id="account-institution-help" class="help">@Text["Opening_InstitutionHelp"]</p>
+                        <span id="AccountInput_InstitutionId-error" class="field-error"
+                              asp-validation-for="AccountInput.InstitutionId"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AccountInput.OpenedOn">@Text["Opening_AccountOpenedOnLabel"]</label>
+                        <input asp-for="AccountInput.OpenedOn" type="date"
+                               aria-describedby="AccountInput_OpenedOn-error" />
+                        <span id="AccountInput_OpenedOn-error" class="field-error"
+                              asp-validation-for="AccountInput.OpenedOn"></span>
+                    </div>
+                    <button class="button button--secondary" type="submit">@Text["Opening_CreateAccountAction"]</button>
+                </form>
+
+                <form method="post" asp-page-handler="CreateAsset" class="fact-card flow" novalidate>
+                    <h2>@Text["Opening_CreateAssetTitle"]</h2>
+                    <div class="field">
+                        <label asp-for="AssetInput.Code">@Text["Opening_StableCodeLabel"]</label>
+                        <input asp-for="AssetInput.Code" maxlength="64" pattern="[A-Za-z0-9_-]+"
+                               aria-describedby="AssetInput_Code-error" />
+                        <span id="AssetInput_Code-error" class="field-error"
+                              asp-validation-for="AssetInput.Code"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AssetInput.Name">@Text["Opening_NameLabel"]</label>
+                        <input asp-for="AssetInput.Name" maxlength="256"
+                               aria-describedby="AssetInput_Name-error" />
+                        <span id="AssetInput_Name-error" class="field-error"
+                              asp-validation-for="AssetInput.Name"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AssetInput.TypeCode">@Text["Opening_AssetTypeLabel"]</label>
+                        <select asp-for="AssetInput.TypeCode" aria-describedby="AssetInput_TypeCode-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var option in Model.AssetTypes)
+                            {
+                                <option value="@option.Code">@option.Text (@option.Code)</option>
+                            }
+                        </select>
+                        <span id="AssetInput_TypeCode-error" class="field-error"
+                              asp-validation-for="AssetInput.TypeCode"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AssetInput.BaseCurrencyCode">@Text["Opening_BaseCurrencyLabel"]</label>
+                        <select asp-for="AssetInput.BaseCurrencyCode" aria-describedby="AssetInput_BaseCurrencyCode-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var currency in Model.Choices.Currencies.Items)
+                            {
+                                <option value="@currency.Code">@currency.Name (@currency.Code)</option>
+                            }
+                        </select>
+                        <span id="AssetInput_BaseCurrencyCode-error" class="field-error"
+                              asp-validation-for="AssetInput.BaseCurrencyCode"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="AssetInput.LotTrackingModeCode">@Text["Opening_LotTrackingModeLabel"]</label>
+                        <select asp-for="AssetInput.LotTrackingModeCode" aria-describedby="asset-lot-mode-help AssetInput_LotTrackingModeCode-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var option in Model.LotTrackingModes)
+                            {
+                                <option value="@option.Code">@option.Text (@option.Code)</option>
+                            }
+                        </select>
+                        <p id="asset-lot-mode-help" class="help">@Text["Opening_LotTrackingModeHelp"]</p>
+                        <span id="AssetInput_LotTrackingModeCode-error" class="field-error"
+                              asp-validation-for="AssetInput.LotTrackingModeCode"></span>
+                    </div>
+                    <button class="button button--secondary" type="submit">@Text["Opening_CreateAssetAction"]</button>
+                </form>
+            </div>
+        </details>
+
+        <form method="post" asp-page="/Record/OpeningBalance" class="flow" novalidate>
+            <input asp-for="Input.IdempotencyKey" type="hidden" />
+
+            <fieldset class="panel flow">
+                <legend>@Text["Opening_IdentifyTitle"]</legend>
+                <p>@Text["Opening_IdentifyExplanation"]</p>
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["Opening_HouseholdLabel"]</dt>
+                        <dd>@Model.Choices.Household.Name</dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Opening_HouseholdCurrencyLabel"]</dt>
+                        <dd>@Model.Choices.Household.BaseCurrency.Name (@Model.Choices.Household.BaseCurrency.Code)</dd>
+                    </div>
+                </dl>
+                <div class="form-grid">
+                    <div class="field">
+                        <label asp-for="Input.PortfolioId">@Text["Opening_PortfolioLabel"]</label>
+                        <select asp-for="Input.PortfolioId" aria-describedby="Input_PortfolioId-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var portfolio in Model.Choices.Portfolios.Items)
+                            {
+                                <option value="@portfolio.PortfolioId.ToString("D")">
+                                    @portfolio.Name (@portfolio.Code)
+                                </option>
+                            }
+                        </select>
+                        <span id="Input_PortfolioId-error" class="field-error"
+                              asp-validation-for="Input.PortfolioId"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Input.AccountId">@Text["Opening_AccountLabel"]</label>
+                        <select asp-for="Input.AccountId" aria-describedby="Input_AccountId-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var account in Model.AvailableAccounts)
+                            {
+                                <option value="@account.AccountId.ToString("D")">
+                                    @account.Name (@account.Code)
+                                </option>
+                            }
+                        </select>
+                        <span id="Input_AccountId-error" class="field-error"
+                              asp-validation-for="Input.AccountId"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Input.AssetId">@Text["Opening_AssetLabel"]</label>
+                        <select asp-for="Input.AssetId" aria-describedby="asset-change-help Input_AssetId-error">
+                            <option value="">@Text["Common_SelectPrompt"]</option>
+                            @foreach (var asset in Model.Choices.Assets.Items)
+                            {
+                                <option value="@asset.AssetId.ToString("D")">
+                                    @asset.Name (@asset.Code)
+                                </option>
+                            }
+                        </select>
+                        <p id="asset-change-help" class="help">@Text["Opening_AssetChangeHelp"]</p>
+                        <span id="Input_AssetId-error" class="field-error"
+                              asp-validation-for="Input.AssetId"></span>
+                        <button class="button button--secondary" type="submit"
+                                asp-page-handler="SelectAsset">
+                            @Text["Opening_ApplyAssetAction"]
+                        </button>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Input.AsOfDate">@Text["Opening_AsOfDateLabel"]</label>
+                        <input asp-for="Input.AsOfDate" type="date"
+                               aria-describedby="as-of-help Input_AsOfDate-error" />
+                        <p id="as-of-help" class="help">@Text["Opening_AsOfDateHelp"]</p>
+                        <span id="Input_AsOfDate-error" class="field-error"
+                              asp-validation-for="Input.AsOfDate"></span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="panel flow">
+                <legend>@Text["Opening_SourceFactsTitle"]</legend>
+                @if (Model.SelectedAsset is null)
+                {
+                    <p class="muted">@Text["Opening_SelectAssetFirst"]</p>
+                }
+                else
+                {
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Opening_SelectedAssetTypeLabel"]</dt>
+                            <dd>
+                                @Model.PresentAssetType(Model.SelectedAsset.Type).Text
+                                (<code>@Model.PresentAssetType(Model.SelectedAsset.Type).TechnicalDetail</code>)
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_SelectedAssetUnitLabel"]</dt>
+                            <dd>
+                                @Model.PresentAssetUnit(Model.SelectedAsset.BaseUnit).Text
+                                (<code>@Model.PresentAssetUnit(Model.SelectedAsset.BaseUnit).TechnicalDetail</code>)
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_SelectedLotModeLabel"]</dt>
+                            <dd>
+                                @Model.PresentLotTrackingMode(Model.SelectedAsset.LotTrackingMode).Text
+                                (<code>@Model.PresentLotTrackingMode(Model.SelectedAsset.LotTrackingMode).TechnicalDetail</code>)
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_BaseCurrencyLabel"]</dt>
+                            <dd><code>@Model.SelectedAsset.BaseCurrencyCode</code></dd>
+                        </div>
+                    </dl>
+
+                    <div class="field field--short">
+                        <label asp-for="Input.Quantity">
+                            @(Model.SelectedAssetIsGold
+                                ? Text["Opening_GrossQuantityLabel"]
+                                : Model.SelectedAsset.Type is AssetType.Cash or AssetType.Currency
+                                    ? Text["Opening_CashQuantityLabel"]
+                                    : Text["Opening_QuantityLabel"])
+                        </label>
+                        <input asp-for="Input.Quantity" inputmode="decimal"
+                               autocomplete="off" aria-describedby="quantity-help Input_Quantity-error" />
+                        <p id="quantity-help" class="help">
+                            @(Model.SelectedAsset.Type is AssetType.Cash or AssetType.Currency
+                                ? Text["Opening_CashQuantityHelp"]
+                                : Text["Opening_QuantityHelp"])
+                        </p>
+                        <span id="Input_Quantity-error" class="field-error"
+                              asp-validation-for="Input.Quantity"></span>
+                    </div>
+
+                    @if (!Model.SelectedAssetUsesLots)
+                    {
+                        <section class="fact-card flow" aria-labelledby="cash-cost-heading">
+                            <h2 id="cash-cost-heading">@Text["Opening_CostBasisTitle"]</h2>
+                            <p class="state-text">@Text["State_NotApplicable"]</p>
+                            <p class="muted">@Text["Opening_CashNoLotExplanation"]</p>
+                        </section>
+                    }
+                    else
+                    {
+                        <section id="Input_Lots" class="flow" aria-labelledby="opening-lots-heading">
+                            <div class="section-heading">
+                                <div>
+                                    <h2 id="opening-lots-heading">@Text["Opening_LotsTitle"]</h2>
+                                    <p class="muted">@Text["Opening_LotsExplanation"]</p>
+                                </div>
+                                <button class="button button--secondary" type="submit"
+                                        asp-page-handler="AddLot">
+                                    @Text["Opening_AddLotAction"]
+                                </button>
+                            </div>
+
+                            <span id="Input_Lots-error" class="field-error"
+                                  asp-validation-for="Input.Lots"></span>
+
+                            <ol class="entry-list opening-lot-list">
+                                @for (var index = 0; index < Model.Input.Lots.Count; index++)
+                                {
+                                    <li class="entry-card flow">
+                                        <div class="section-heading">
+                                            <h3>@Text["Opening_LotSequenceLabel"] @(index + 1)</h3>
+                                            @if (Model.Input.Lots.Count > 1)
+                                            {
+                                                <button class="button button--danger" type="submit"
+                                                        asp-page-handler="RemoveLot"
+                                                        name="lotIndex" value="@index">
+                                                    @Text["Opening_RemoveLotAction"] @(index + 1)
+                                                </button>
+                                            }
+                                        </div>
+                                        <div class="form-grid">
+                                            <div class="field">
+                                                <label asp-for="Input.Lots[index].Quantity">
+                                                    @(Model.SelectedAssetIsGold
+                                                        ? Text["Opening_LotGrossQuantityLabel"]
+                                                        : Text["Opening_LotQuantityLabel"])
+                                                </label>
+                                                <input asp-for="Input.Lots[index].Quantity" inputmode="decimal"
+                                                       autocomplete="off" aria-describedby="Input_Lots_@(index)__Quantity-error" />
+                                                <span id="Input_Lots_@(index)__Quantity-error" class="field-error"
+                                                      asp-validation-for="Input.Lots[index].Quantity"></span>
+                                            </div>
+                                            <div class="field">
+                                                <label asp-for="Input.Lots[index].AcquiredOn">@Text["Opening_AcquiredOnLabel"]</label>
+                                                <input asp-for="Input.Lots[index].AcquiredOn" type="date"
+                                                       aria-describedby="acquired-help-@index Input_Lots_@(index)__AcquiredOn-error" />
+                                                <p id="acquired-help-@index" class="help">@Text["Opening_AcquiredOnHelp"]</p>
+                                                <span id="Input_Lots_@(index)__AcquiredOn-error" class="field-error"
+                                                      asp-validation-for="Input.Lots[index].AcquiredOn"></span>
+                                            </div>
+                                            <div class="field">
+                                                <label asp-for="Input.Lots[index].CostBasisStatusCode">@Text["Opening_CostStatusLabel"]</label>
+                                                <select asp-for="Input.Lots[index].CostBasisStatusCode"
+                                                        aria-describedby="cost-status-help-@index Input_Lots_@(index)__CostBasisStatusCode-error">
+                                                    <option value="">@Text["Common_SelectPrompt"]</option>
+                                                    <option value="KNOWN">@Text["State_Known"] (KNOWN)</option>
+                                                    <option value="UNKNOWN">@Text["State_Unknown"] (UNKNOWN)</option>
+                                                </select>
+                                                <p id="cost-status-help-@index" class="help">@Text["Opening_CostStatusHelp"]</p>
+                                                <span id="Input_Lots_@(index)__CostBasisStatusCode-error" class="field-error"
+                                                      asp-validation-for="Input.Lots[index].CostBasisStatusCode"></span>
+                                            </div>
+                                            <div class="field">
+                                                <label asp-for="Input.Lots[index].CostAmount">@Text["Opening_CostAmountLabel"]</label>
+                                                <input asp-for="Input.Lots[index].CostAmount" inputmode="decimal"
+                                                       autocomplete="off" aria-describedby="cost-amount-help-@index Input_Lots_@(index)__CostAmount-error" />
+                                                <p id="cost-amount-help-@index" class="help">@Text["Opening_CostAmountHelp"]</p>
+                                                <span id="Input_Lots_@(index)__CostAmount-error" class="field-error"
+                                                      asp-validation-for="Input.Lots[index].CostAmount"></span>
+                                            </div>
+                                            <div class="field">
+                                                <label asp-for="Input.Lots[index].CostCurrencyCode">@Text["Opening_CostCurrencyLabel"]</label>
+                                                <select asp-for="Input.Lots[index].CostCurrencyCode"
+                                                        aria-describedby="Input_Lots_@(index)__CostCurrencyCode-error">
+                                                    <option value="">@Text["Common_SelectPrompt"]</option>
+                                                    @foreach (var currency in Model.Choices.Currencies.Items)
+                                                    {
+                                                        <option value="@currency.Code">@currency.Name (@currency.Code)</option>
+                                                    }
+                                                </select>
+                                                <span id="Input_Lots_@(index)__CostCurrencyCode-error" class="field-error"
+                                                      asp-validation-for="Input.Lots[index].CostCurrencyCode"></span>
+                                            </div>
+                                        </div>
+
+                                        @if (Model.SelectedAssetIsGold)
+                                        {
+                                            <fieldset class="nested-fieldset flow">
+                                                <legend>@Text["Opening_GoldDetailsTitle"]</legend>
+                                                <p>@Text["Opening_GoldDetailsExplanation"]</p>
+                                                <div class="form-grid">
+                                                    <div class="field">
+                                                        <label asp-for="Input.Lots[index].FinenessChoiceCode">@Text["Opening_FinenessChoiceLabel"]</label>
+                                                        <select asp-for="Input.Lots[index].FinenessChoiceCode"
+                                                                aria-describedby="fineness-help-@index Input_Lots_@(index)__FinenessChoiceCode-error">
+                                                            <option value="">@Text["Common_SelectPrompt"]</option>
+                                                            @foreach (var fineness in Model.FinenessChoices)
+                                                            {
+                                                                <option value="@fineness.Code">@Text[fineness.ResourceKey]</option>
+                                                            }
+                                                        </select>
+                                                        <p id="fineness-help-@index" class="help">@Text["Opening_FinenessChoiceHelp"]</p>
+                                                        <span id="Input_Lots_@(index)__FinenessChoiceCode-error" class="field-error"
+                                                              asp-validation-for="Input.Lots[index].FinenessChoiceCode"></span>
+                                                    </div>
+                                                    <div class="field">
+                                                        <label asp-for="Input.Lots[index].PreciseFinenessPerMille">@Text["Opening_PreciseFinenessLabel"]</label>
+                                                        <input asp-for="Input.Lots[index].PreciseFinenessPerMille" inputmode="decimal"
+                                                               autocomplete="off" aria-describedby="precise-fineness-help-@index Input_Lots_@(index)__PreciseFinenessPerMille-error" />
+                                                        <p id="precise-fineness-help-@index" class="help">@Text["Opening_PreciseFinenessHelp"]</p>
+                                                        <span id="Input_Lots_@(index)__PreciseFinenessPerMille-error" class="field-error"
+                                                              asp-validation-for="Input.Lots[index].PreciseFinenessPerMille"></span>
+                                                    </div>
+                                                    <div class="field field--short">
+                                                        <label asp-for="Input.Lots[index].PieceCount">@Text["Opening_PieceCountLabel"]</label>
+                                                        <input asp-for="Input.Lots[index].PieceCount" type="number" min="1"
+                                                               inputmode="numeric" aria-describedby="Input_Lots_@(index)__PieceCount-error" />
+                                                        <span id="Input_Lots_@(index)__PieceCount-error" class="field-error"
+                                                              asp-validation-for="Input.Lots[index].PieceCount"></span>
+                                                    </div>
+                                                    <div class="field">
+                                                        <label asp-for="Input.Lots[index].Hallmark">@Text["Opening_HallmarkLabel"]</label>
+                                                        <input asp-for="Input.Lots[index].Hallmark" maxlength="128"
+                                                               aria-describedby="Input_Lots_@(index)__Hallmark-error" />
+                                                        <span id="Input_Lots_@(index)__Hallmark-error" class="field-error"
+                                                              asp-validation-for="Input.Lots[index].Hallmark"></span>
+                                                    </div>
+                                                    <div class="field">
+                                                        <label asp-for="Input.Lots[index].CertificateReference">@Text["Opening_CertificateLabel"]</label>
+                                                        <input asp-for="Input.Lots[index].CertificateReference" maxlength="256"
+                                                               aria-describedby="Input_Lots_@(index)__CertificateReference-error" />
+                                                        <span id="Input_Lots_@(index)__CertificateReference-error" class="field-error"
+                                                              asp-validation-for="Input.Lots[index].CertificateReference"></span>
+                                                    </div>
+                                                    <div class="field">
+                                                        <label asp-for="Input.Lots[index].Note">@Text["Opening_LotNoteLabel"]</label>
+                                                        <textarea asp-for="Input.Lots[index].Note" maxlength="1000" rows="3"
+                                                                  aria-describedby="lot-note-help-@index Input_Lots_@(index)__Note-error"></textarea>
+                                                        <p id="lot-note-help-@index" class="help">@Text["Opening_LotNoteHelp"]</p>
+                                                        <span id="Input_Lots_@(index)__Note-error" class="field-error"
+                                                              asp-validation-for="Input.Lots[index].Note"></span>
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        }
+                                    </li>
+                                }
+                            </ol>
+                        </section>
+                    }
+                }
+            </fieldset>
+
+            <fieldset class="panel flow">
+                <legend>@Text["Opening_ProvenanceTitle"]</legend>
+                <p>@Text["Opening_ProvenanceExplanation"]</p>
+                <div class="field">
+                    <label asp-for="Input.ExternalReference">@Text["Opening_ExternalReferenceLabel"]</label>
+                    <input asp-for="Input.ExternalReference" maxlength="256"
+                           aria-describedby="reference-help Input_ExternalReference-error" />
+                    <p id="reference-help" class="help">@Text["Opening_ExternalReferenceHelp"]</p>
+                    <span id="Input_ExternalReference-error" class="field-error"
+                          asp-validation-for="Input.ExternalReference"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Note">@Text["Opening_TransactionNoteLabel"]</label>
+                    <textarea asp-for="Input.Note" maxlength="2000" rows="4"
+                              aria-describedby="transaction-note-help Input_Note-error"></textarea>
+                    <p id="transaction-note-help" class="help">@Text["Opening_TransactionNoteHelp"]</p>
+                    <span id="Input_Note-error" class="field-error"
+                          asp-validation-for="Input.Note"></span>
+                </div>
+            </fieldset>
+
+            <section class="panel panel--action flow" aria-labelledby="review-action-heading">
+                <h2 id="review-action-heading">@Text["Opening_ReviewActionTitle"]</h2>
+                <p>@Text["Opening_ReviewActionExplanation"]</p>
+                <button class="button" type="submit" asp-page-handler="Review">
+                    @Text["Opening_ReviewAction"]
+                </button>
+            </section>
+
+            @if (Model.IsReview && Model.Preview is { } preview)
+            {
+                <section class="panel review-panel flow" aria-labelledby="opening-review-heading">
+                    <p class="status-mark">@Text["Opening_ReviewStatus"]</p>
+                    <h2 id="opening-review-heading">@Text["Opening_ReviewTitle"]</h2>
+                    <p>@Text["Opening_ReviewExplanation"]</p>
+
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Opening_HouseholdLabel"]</dt>
+                            <dd>@Model.Choices.Household.Name</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_PortfolioLabel"]</dt>
+                            <dd>@preview.PortfolioName (@preview.PortfolioCode)</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_AccountLabel"]</dt>
+                            <dd>@preview.AccountName (@preview.AccountCode)</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_AssetLabel"]</dt>
+                            <dd>@preview.AssetName (@preview.AssetCode)</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_BaseCurrencyLabel"]</dt>
+                            <dd><code>@preview.AssetBaseCurrencyCode</code></dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_AsOfDateLabel"]</dt>
+                            <dd>@preview.AsOfDate.ToString("dd.MM.yyyy")</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_NormalizedQuantityLabel"]</dt>
+                            <dd aria-label="@Model.PresentQuantity(preview.QuantityRawE8, preview.AssetUnit).AssistiveText">
+                                @Model.PresentQuantity(preview.QuantityRawE8, preview.AssetUnit).Text
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_AllocationTotalLabel"]</dt>
+                            <dd>
+                                @if (preview.Lots.Count == 0)
+                                {
+                                    @Text["State_NotApplicable"]
+                                }
+                                else
+                                {
+                                    @Model.PresentQuantity(preview.AllocationTotalRawE8, preview.AssetUnit).Text
+                                }
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_ReconciliationLabel"]</dt>
+                            <dd class="state-text">@Text["Opening_Reconciled"]</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Opening_AuditTimeLabel"]</dt>
+                            <dd>@Text["Opening_AuditTimeAtPost"]</dd>
+                        </div>
+                    </dl>
+
+                    @if (preview.UnlottedCostBasisStatus == CostBasisStatus.NotApplicable)
+                    {
+                        <section class="fact-card flow">
+                            <h3>@Text["Opening_CostBasisTitle"]</h3>
+                            <p class="state-text">@Text["State_NotApplicable"]</p>
+                        </section>
+                    }
+
+                    @if (preview.Lots.Count > 0)
+                    {
+                        <ol class="entry-list">
+                            @foreach (var lot in preview.Lots.OrderBy(item => item.Sequence))
+                            {
+                                <li class="entry-card flow">
+                                    <h3>@Text["Opening_LotSequenceLabel"] @(lot.Sequence + 1)</h3>
+                                    <dl class="fact-grid">
+                                        <div>
+                                            <dt>@Text["Opening_LotQuantityLabel"]</dt>
+                                            <dd>@Model.PresentQuantity(lot.QuantityRawE8, preview.AssetUnit).Text</dd>
+                                        </div>
+                                        <div>
+                                            <dt>@Text["Opening_AcquiredOnLabel"]</dt>
+                                            <dd>@(lot.AcquiredOn?.ToString("dd.MM.yyyy") ?? Text["State_Unknown"])</dd>
+                                        </div>
+                                        <div>
+                                            <dt>@Text["Opening_CostBasisTitle"]</dt>
+                                            <dd class="state-text">
+                                                @if (lot.CostBasisStatus == CostBasisStatus.Unknown)
+                                                {
+                                                    @Text["State_Unknown"]
+                                                }
+                                                else if (lot.OriginalCostBasisMinorUnits is long amount
+                                                         && lot.CostBasisCurrencyCode is string currencyCode)
+                                                {
+                                                    @Model.PresentMoney(amount, currencyCode).Text
+                                                }
+                                            </dd>
+                                        </div>
+                                        @if (lot.FinenessPartsPerMillion is int ppm)
+                                        {
+                                            <div>
+                                                <dt>@Text["Opening_FinenessReviewLabel"]</dt>
+                                                <dd>@Model.PresentFineness(ppm) (@ppm ppm)</dd>
+                                            </div>
+                                            <div>
+                                                <dt>@Text["Opening_PieceCountLabel"]</dt>
+                                                <dd>@lot.PieceCount</dd>
+                                            </div>
+                                            <div>
+                                                <dt>@Text["Opening_FineWeightLabel"]</dt>
+                                                <dd>@Model.PresentExactDecimal(lot.FineWeightGrams!.Value) g</dd>
+                                            </div>
+                                        }
+                                    </dl>
+                                    @if (lot.AcquiredOn is null && lot.CostBasisStatus == CostBasisStatus.Known)
+                                    {
+                                        <p class="muted">@Text["Opening_AggregateCostNoInference"]</p>
+                                    }
+                                </li>
+                            }
+                        </ol>
+                    }
+
+                    @if (preview.TotalFineWeightGrams is decimal fineTotal)
+                    {
+                        <p class="state-text">
+                            @Text["Opening_TotalFineWeightLabel"]:
+                            @Model.PresentExactDecimal(fineTotal) g
+                        </p>
+                    }
+
+                    <section class="fact-card flow">
+                        <h3>@Text["Opening_ProvenanceTitle"]</h3>
+                        <p><strong>@Text["Opening_TransactionNoteLabel"]:</strong> @preview.Note</p>
+                        <p><strong>@Text["Opening_ExternalReferenceLabel"]:</strong>
+                            @(preview.ExternalReference ?? Text["State_Unknown"])</p>
+                    </section>
+
+                    <ul class="plain-list" aria-label="@Text["Opening_WarningsLabel"]">
+                        @foreach (var warning in preview.WarningCodes)
+                        {
+                            <li class="callout">
+                                @(warning == "OPENING_BALANCE_KNOWN_ZERO_COST_RECORDED"
+                                    ? Text["Opening_Warning_KnownZeroCost"]
+                                    : Text["Opening_Warning_IndependentReconciliation"])
+                            </li>
+                        }
+                    </ul>
+
+                    <p class="muted">@Text["Opening_NoValuationExplanation"]</p>
+                    <button class="button" type="submit" asp-page-handler="Post"
+                            data-final-submit>
+                        @Text["Opening_PostAction"]
+                    </button>
+                    <p class="help">@Text["Opening_PostActionHelp"]</p>
+                </section>
+            }
+        </form>
+
+        @if (Model.RelatedTransactionId is Guid relatedTransactionId)
+        {
+            <section class="summary-card summary-card--warning flow">
+                <h2>@Text["Opening_ExistingOpeningTitle"]</h2>
+                <a class="card-link" asp-page="/Record/Receipt"
+                   asp-route-transactionId="@relatedTransactionId.ToString("D")">
+                    @Text["Opening_OpenExistingReceipt"]
+                </a>
+            </section>
+        }
+    }
+</article>

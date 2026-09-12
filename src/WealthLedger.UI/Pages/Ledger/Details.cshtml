@@ -388,6 +388,39 @@
                                     <dd aria-label="@lot.CreatedAt.AssistiveText">@lot.CreatedAt.Text</dd>
                                 </div>
                             </dl>
+                            @if (lot.PhysicalGoldDetail is { } gold)
+                            {
+                                <section class="nested-fieldset flow" aria-label="@Text["Detail_PhysicalGoldTitle"]">
+                                    <h4>@Text["Detail_PhysicalGoldTitle"]</h4>
+                                    <dl class="fact-grid">
+                                        <div>
+                                            <dt>@Text["Opening_FinenessReviewLabel"]</dt>
+                                            <dd>@gold.FinenessPerMille (@gold.FinenessPartsPerMillion ppm)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>@Text["Opening_PieceCountLabel"]</dt>
+                                            <dd>@gold.PieceCount</dd>
+                                        </div>
+                                        <div>
+                                            <dt>@Text["Opening_FineWeightLabel"]</dt>
+                                            <dd>@gold.FineWeightGrams</dd>
+                                        </div>
+                                        @if (gold.Hallmark is not null)
+                                        {
+                                            <div><dt>@Text["Opening_HallmarkLabel"]</dt><dd>@gold.Hallmark</dd></div>
+                                        }
+                                        @if (gold.CertificateReference is not null)
+                                        {
+                                            <div><dt>@Text["Opening_CertificateLabel"]</dt><dd>@gold.CertificateReference</dd></div>
+                                        }
+                                        @if (gold.Note is not null)
+                                        {
+                                            <div><dt>@Text["Opening_LotNoteLabel"]</dt><dd>@gold.Note</dd></div>
+                                        }
+                                    </dl>
+                                    <p class="muted">@Text["Detail_PhysicalGoldDerivedExplanation"]</p>
+                                </section>
+                            }
                             <details class="technical-details">
                                 <summary>@Text["Common_TechnicalDetails"]</summary>
                                 <dl class="fact-grid">

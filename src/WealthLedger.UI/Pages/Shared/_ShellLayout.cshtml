@@ -34,6 +34,10 @@
                    aria-current="@(activeNavigation == "Ledger" ? "page" : null)">
                     @Text["Shell_Navigation_Ledger"]
                 </a>
+                <a asp-page="/Record/OpeningBalance"
+                   aria-current="@(activeNavigation == "Record" ? "page" : null)">
+                    @Text["Shell_Navigation_Record"]
+                </a>
                 <a asp-page="/Settings/Index"
                    aria-current="@(activeNavigation == "Settings" ? "page" : null)">
                     @Text["Shell_Navigation_Settings"]

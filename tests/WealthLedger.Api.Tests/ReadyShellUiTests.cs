@@ -8,7 +8,7 @@ namespace WealthLedger.Api.Tests;
 public sealed partial class ReadyShellUiTests
 {
     [Fact]
-    public async Task ReadyShell_ExposesOnlyImplementedReadOnlyDestinations()
+    public async Task ReadyShell_ExposesImplementedReadAndOpeningWriteDestinations()
     {
         using var factory = new WealthLedgerApiFactory();
         using var client = CreateClient(factory);
@@ -36,6 +36,21 @@ public sealed partial class ReadyShellUiTests
             Assert.DoesNotContain(" at WealthLedger", html, StringComparison.OrdinalIgnoreCase);
         }
 
+        using var openingGet = await client.GetAsync(
+            "/record/opening-balance");
+        using var openingPostWithoutToken = await client.PostAsync(
+            "/record/opening-balance?handler=Review",
+            new FormUrlEncodedContent([]));
+        var openingHtml = WebUtility.HtmlDecode(
+            await openingGet.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, openingGet.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            openingPostWithoutToken.StatusCode);
+        Assert.Contains("__RequestVerificationToken", openingHtml);
+        Assert.Contains("Açılış bakiyesi kaydet", openingHtml);
+
         using var shellResponse = await client.GetAsync("/");
         var shell = await shellResponse.Content.ReadAsStringAsync();
         var cookies = shellResponse.Headers.TryGetValues(
@@ -46,8 +61,12 @@ public sealed partial class ReadyShellUiTests
 
         Assert.Contains("href=\"/\"", shell, StringComparison.Ordinal);
         Assert.Contains("href=\"/ledger\"", shell, StringComparison.Ordinal);
+        Assert.Contains(
+            "href=\"/record/opening-balance\"",
+            shell,
+            StringComparison.Ordinal);
         Assert.Contains("href=\"/settings\"", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain(">Record<", shell, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Kaydet", shell, StringComparison.Ordinal);
         Assert.DoesNotContain(">Assets<", shell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(">Plan<", shell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<form", shell, StringComparison.OrdinalIgnoreCase);

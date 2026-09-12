@@ -17,17 +17,21 @@ public sealed class DetailsModel : PageModel
     private readonly ReadyHouseholdResolver _householdResolver;
     private readonly GetLedgerTransactionExplanationUseCase _getExplanation;
     private readonly ValuePresenter _values;
+    private readonly PresentationCulture _presentationCulture;
 
     public DetailsModel(
         ReadyHouseholdResolver householdResolver,
         GetLedgerTransactionExplanationUseCase getExplanation,
-        ValuePresenter values)
+        ValuePresenter values,
+        PresentationCulture presentationCulture)
     {
         _householdResolver = householdResolver
             ?? throw new ArgumentNullException(nameof(householdResolver));
         _getExplanation = getExplanation
             ?? throw new ArgumentNullException(nameof(getExplanation));
         _values = values ?? throw new ArgumentNullException(nameof(values));
+        _presentationCulture = presentationCulture
+            ?? throw new ArgumentNullException(nameof(presentationCulture));
     }
 
     public bool InvalidIdentifier { get; private set; }
@@ -235,7 +239,25 @@ public sealed class DetailsModel : PageModel
                 : _values.BusinessDate(item.AcquiredOn.Value),
             _values.StableCode(item.CostBasisStatus),
             PresentCostBasis(item, currencies),
-            _values.UtcTimestamp(item.CreatedAtUtc));
+            _values.UtcTimestamp(item.CreatedAtUtc),
+            item.PhysicalGoldDetail is null
+                ? null
+                : PresentPhysicalGold(item.PhysicalGoldDetail));
+
+    private PhysicalGoldLotDisplay PresentPhysicalGold(
+        Application.CoreLedger.LedgerTransactionPhysicalGoldDetail detail)
+        => new(
+            detail.FinenessPartsPerMillion,
+            ExactDecimalText.Format(
+                detail.FinenessPartsPerMillion / 1_000m,
+                _presentationCulture.Culture) + " ‰",
+            detail.PieceCount,
+            detail.Hallmark,
+            detail.CertificateReference,
+            detail.Note,
+            ExactDecimalText.Format(
+                detail.FineWeightGrams,
+                _presentationCulture.Culture) + " g");
 
     private DisplayValue PresentCostBasis(
         Application.CoreLedger.LedgerTransactionCreatedLotDetail item,
@@ -366,7 +388,17 @@ public sealed record CreatedLotDisplay(
     DisplayValue AcquiredOn,
     DisplayValue CostBasisStatus,
     DisplayValue CostBasisAmount,
-    DisplayValue CreatedAt);
+    DisplayValue CreatedAt,
+    PhysicalGoldLotDisplay? PhysicalGoldDetail);
+
+public sealed record PhysicalGoldLotDisplay(
+    int FinenessPartsPerMillion,
+    string FinenessPerMille,
+    int PieceCount,
+    string? Hallmark,
+    string? CertificateReference,
+    string? Note,
+    string FineWeightGrams);
 
 public sealed record LotAllocationDisplay(
     Guid AllocationId,

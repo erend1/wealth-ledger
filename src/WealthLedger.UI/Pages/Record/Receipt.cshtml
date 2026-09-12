@@ -1,0 +1,272 @@
+@page "/record/opening-balance/{transactionId}"
+@model WealthLedger.UI.Pages.Record.ReceiptModel
+@inject UiText Text
+@using WealthLedger.Domain.Lots
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["OpeningReceipt_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="receipt-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["OpeningReceipt_Eyebrow"]</p>
+        <h1 id="receipt-heading">@Text["OpeningReceipt_Title"]</h1>
+        <p class="lede">@Text["OpeningReceipt_Introduction"]</p>
+    </header>
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["OpeningReceipt_InvalidTitle"]</h2>
+            <p>@Text["OpeningReceipt_InvalidExplanation"]</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.ReceiptNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["OpeningReceipt_NotFoundTitle"]</h2>
+            <p>@Text["OpeningReceipt_NotFoundExplanation"]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable || Model.Verification is null || Model.Explanation is null
+             || Model.Entry is null || Model.EntryContext is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["OpeningReceipt_LoadErrorTitle"]</h2>
+            <p>@Text["OpeningReceipt_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        var verification = Model.Verification;
+        var transaction = verification.Transaction;
+        var entry = Model.Entry;
+        var context = Model.EntryContext;
+
+        <section class="summary-card panel--success flow" role="status">
+            <p class="status-mark">
+                @(Model.IsReversed
+                    ? Text["OpeningReceipt_ReversedStatus"]
+                    : Text["OpeningReceipt_PostedStatus"])
+            </p>
+            <h2>@Text["OpeningReceipt_PersistedTitle"]</h2>
+            <p>@Text["OpeningReceipt_PersistedExplanation"]</p>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Ledger_TransactionIdLabel"]</dt>
+                    <dd><code class="technical-id">@transaction.TransactionId</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_HouseholdLabel"]</dt>
+                    <dd>@Model.Explanation.CurrentContext.Household.Name</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_PortfolioLabel"]</dt>
+                    <dd>@context.Portfolio.Name (@context.Portfolio.Code)</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AccountLabel"]</dt>
+                    <dd>@context.Account.Name (@context.Account.Code)</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AssetLabel"]</dt>
+                    <dd>@context.Asset.Name (@context.Asset.Code)</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_BaseCurrencyLabel"]</dt>
+                    <dd><code>@context.Asset.BaseCurrencyCode</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AsOfDateLabel"]</dt>
+                    <dd>@Model.PresentDate(transaction.ExecutionDate!.Value).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["OpeningReceipt_OpeningEffectLabel"]</dt>
+                    <dd aria-label="@Model.PresentQuantity(entry.QuantityDeltaRawE8).AssistiveText">
+                        @Model.PresentQuantity(entry.QuantityDeltaRawE8).Text
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["OpeningReceipt_PostedAtLabel"]</dt>
+                    <dd aria-label="@Model.PresentTimestamp(transaction.PostedAtUtc!.Value).AssistiveText">
+                        @Model.PresentTimestamp(transaction.PostedAtUtc.Value).Text
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="verification-heading">
+            <h2 id="verification-heading">@Text["OpeningReceipt_VerificationTitle"]</h2>
+            <p>@Text["OpeningReceipt_VerificationExplanation"]</p>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["OpeningReceipt_PersistedQuantityLabel"]</dt>
+                    <dd>@Model.PresentQuantity(verification.PersistedQuantityRawE8).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AllocationTotalLabel"]</dt>
+                    <dd>
+                        @(transaction.CreatedLots.Count == 0
+                            ? Text["State_NotApplicable"]
+                            : Model.PresentQuantity(verification.AllocationTotalRawE8).Text)
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_ReconciliationLabel"]</dt>
+                    <dd class="state-text">
+                        @(verification.AllocationsReconcile
+                            ? Text["Opening_Reconciled"]
+                            : Text["OpeningReceipt_NotReconciled"])
+                    </dd>
+                </div>
+                <div>
+                    <dt>@Text["OpeningReceipt_CurrentPositionLabel"]</dt>
+                    <dd>@Model.PresentQuantity(verification.CurrentPositionRawE8).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["OpeningReceipt_PositionSourceCountLabel"]</dt>
+                    <dd>@verification.PositionSourceEntryCount</dd>
+                </div>
+                <div>
+                    <dt>@Text["OpeningReceipt_OpeningMatchLabel"]</dt>
+                    <dd class="state-text">
+                        @(verification.CurrentPositionEqualsOpeningQuantity
+                            ? Text["OpeningReceipt_OpeningMatchYes"]
+                            : Text["OpeningReceipt_OpeningMatchChanged"])
+                    </dd>
+                </div>
+            </dl>
+            @if (verification.HasAdditionalEffectiveHistory)
+            {
+                <p class="callout">@Text["OpeningReceipt_AdditionalHistoryWarning"]</p>
+            }
+            <p class="callout">@Text["OpeningReceipt_IndependentReconciliationWarning"]</p>
+        </section>
+
+        @if (transaction.CreatedLots.Count > 0)
+        {
+            <section class="flow" aria-labelledby="receipt-lots-heading">
+                <h2 id="receipt-lots-heading">@Text["OpeningReceipt_LotsTitle"]</h2>
+                <ol class="entry-list">
+                    @for (var index = 0; index < transaction.CreatedLots.Count; index++)
+                    {
+                        var lot = transaction.CreatedLots[index];
+                        var allocation = Model.AllocationFor(lot.AssetLotId);
+                        <li class="entry-card flow">
+                            <h3>@Text["Opening_LotSequenceLabel"] @(index + 1)</h3>
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Opening_LotQuantityLabel"]</dt>
+                                    <dd>@Model.PresentQuantity(allocation.QuantityDeltaRawE8).Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Opening_AcquiredOnLabel"]</dt>
+                                    <dd>
+                                        @(lot.AcquiredOn is DateOnly acquiredOn
+                                            ? Model.PresentDate(acquiredOn).Text
+                                            : Text["State_Unknown"])
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Opening_CostBasisTitle"]</dt>
+                                    <dd class="state-text">
+                                        @if (lot.CostBasisStatus == CostBasisStatus.Unknown)
+                                        {
+                                            @Text["State_Unknown"]
+                                        }
+                                        else if (lot.OriginalCostBasisMinorUnits is long amount
+                                                 && lot.CostBasisCurrencyCode is string currencyCode)
+                                        {
+                                            @Model.PresentMoney(amount, currencyCode).Text
+                                        }
+                                        else
+                                        {
+                                            @Text["State_NotApplicable"]
+                                        }
+                                    </dd>
+                                </div>
+                                @if (lot.PhysicalGoldDetail is { } gold)
+                                {
+                                    <div>
+                                        <dt>@Text["Opening_FinenessReviewLabel"]</dt>
+                                        <dd>@Model.PresentFineness(gold.FinenessPartsPerMillion) (@gold.FinenessPartsPerMillion ppm)</dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Opening_PieceCountLabel"]</dt>
+                                        <dd>@gold.PieceCount</dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Opening_FineWeightLabel"]</dt>
+                                        <dd>@Model.PresentExactDecimal(gold.FineWeightGrams) g</dd>
+                                    </div>
+                                    @if (gold.Hallmark is not null)
+                                    {
+                                        <div><dt>@Text["Opening_HallmarkLabel"]</dt><dd>@gold.Hallmark</dd></div>
+                                    }
+                                    @if (gold.CertificateReference is not null)
+                                    {
+                                        <div><dt>@Text["Opening_CertificateLabel"]</dt><dd>@gold.CertificateReference</dd></div>
+                                    }
+                                }
+                            </dl>
+                            <details class="technical-details">
+                                <summary>@Text["Common_TechnicalDetails"]</summary>
+                                <code class="technical-id">@lot.AssetLotId</code>
+                            </details>
+                        </li>
+                    }
+                </ol>
+                @if (Model.TotalFineWeightGrams is decimal totalFineWeight)
+                {
+                    <p class="state-text">
+                        @Text["Opening_TotalFineWeightLabel"]:
+                        @Model.PresentExactDecimal(totalFineWeight) g
+                    </p>
+                }
+            </section>
+        }
+
+        <section class="summary-card flow" aria-labelledby="receipt-source-heading">
+            <h2 id="receipt-source-heading">@Text["Opening_ProvenanceTitle"]</h2>
+            <p><strong>@Text["Opening_TransactionNoteLabel"]:</strong> @transaction.Note</p>
+            <p><strong>@Text["Opening_ExternalReferenceLabel"]:</strong>
+                @(transaction.ExternalReference ?? Text["State_Unknown"])</p>
+        </section>
+
+        <section class="summary-card flow" aria-labelledby="receipt-actions-heading">
+            <h2 id="receipt-actions-heading">@Text["OpeningReceipt_ActionsTitle"]</h2>
+            <p>@Text["OpeningReceipt_ImmutableExplanation"]</p>
+            <div class="action-row">
+                <a class="card-link" asp-page="/Ledger/Details"
+                   asp-route-transactionId="@transaction.TransactionId.ToString("D")">
+                    @Text["OpeningReceipt_TransactionDetailLink"]
+                </a>
+                @if (!Model.IsReversed)
+                {
+                    <a class="card-link" asp-page="/Record/Reverse"
+                       asp-route-transactionId="@transaction.TransactionId.ToString("D")">
+                        @Text["OpeningReceipt_ReverseLink"]
+                    </a>
+                }
+                else if (transaction.ReversedByTransactionId is Guid reversalId)
+                {
+                    <a class="card-link" asp-page="/Ledger/Details"
+                       asp-route-transactionId="@reversalId.ToString("D")">
+                        @Text["OpeningReceipt_ReversalDetailLink"]
+                    </a>
+                }
+                <a class="card-link" asp-page="/Record/OpeningBalance">
+                    @Text["OpeningReceipt_StartAnotherLink"]
+                </a>
+            </div>
+        </section>
+    }
+</article>
