@@ -55,7 +55,16 @@ namespace WealthLedger.Application.CoreLedger
         long? OriginalCostBasisMinorUnits,
         string? CostBasisCurrencyCode,
         CostBasisStatus CostBasisStatus,
-        DateTimeOffset CreatedAtUtc);
+        DateTimeOffset CreatedAtUtc,
+        LedgerTransactionPhysicalGoldDetail? PhysicalGoldDetail = null);
+
+    public sealed record LedgerTransactionPhysicalGoldDetail(
+        int FinenessPartsPerMillion,
+        int PieceCount,
+        string? Hallmark,
+        string? CertificateReference,
+        string? Note,
+        decimal FineWeightGrams);
 
     public sealed record LedgerTransactionLotAllocationDetail(
         Guid AllocationId,

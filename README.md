@@ -28,9 +28,9 @@ See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint a
 | [docs/PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md) | Durable product outcomes and boundaries |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Intended delivery order, never proof of implementation |
 | [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Concise verified repository checkpoint |
-| [docs/UX_MVP.md](docs/UX_MVP.md) | Proposed broader interaction model and verified M006 subset |
+| [docs/UX_MVP.md](docs/UX_MVP.md) | Proposed broader interaction model and verified M006/M007 subsets |
 | [docs/DATA_CAPTURE.md](docs/DATA_CAPTURE.md) | Source facts each financial workflow should preserve |
-| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements and implemented M004/M006 operating boundaries |
+| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements and implemented M004-M007 operating boundaries |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Canonical database, backup, restore, migration, and recovery guide |
 | [docs/milestones/README.md](docs/milestones/README.md) | Milestone statuses, template, agent prompts, and definition of done |
 | [docs/decisions/README.md](docs/decisions/README.md) | Accepted architectural decisions |
@@ -120,8 +120,8 @@ startup and never promotes itself dynamically:
    operation.
 4. After the completion page, restart once more and open
    `http://127.0.0.1:54876/`. `Ready` exposes Today, recent Ledger and
-   transaction explanations, and read-only Settings. Setup routes now return
-   404.
+   transaction explanations, read-only Settings, and the dedicated M007 opening-
+   balance workflow under Record. Setup routes now return 404.
 
 An unsafe path, incompatible or migration-required database, failed integrity
 check, partial workspace, or other non-recoverable startup classification shows
@@ -137,12 +137,52 @@ remote-access security design.
 
 ### Synthetic screenshots and traces
 
-M006 adds no screenshot/export feature and its automated browser suite creates
-no screenshot or trace baseline. If capturing an image or trace for a review,
+M006/M007 add no screenshot/export feature and the automated browser suite
+creates no screenshot or trace baseline. If capturing an image or trace for a review,
 use only an isolated synthetic database and backup directory. Inspect the
 artifact before sharing or committing it, and do not include household/master
 names, notes, references, exact financial values, resolved real paths, cookies,
 request bodies, cursor payloads, SQL, connection strings, or stack traces.
+
+## Controlled opening-balance cutover
+
+In Ready, open `http://127.0.0.1:54876/record/opening-balance`. M007 records one
+household/portfolio/account/asset/as-of scope per command for base cash, foreign
+currency, fund units, equity shares, or physical-gold gross weight. It uses a
+non-mutating review followed by an explicit final post and a persisted receipt.
+
+Cash/Currency creates no lot and shows historical cost as Not applicable.
+Fund/Equity/PhysicalGold requires complete opening lots and exact allocation;
+lot cost is Known only with supporting amount/currency or remains Unknown.
+Physical-gold input captures gross weight, fineness, pieces, and optional
+provenance while deriving fine weight. Current value is never substituted for
+historical cost.
+
+The same page can narrowly create a missing Currency, Institution, Account, or
+Asset, but offers no generic master-data edit/delete UI. A second effective
+opening in the same exact scope is rejected. Correct an opening from its receipt
+through a separate immutable reversal, then submit a separately reviewed
+replacement.
+
+Programmatic callers use the same Application behavior through these Ready-only
+JSON adapters:
+
+```text
+POST /api/ledger/opening-balances/preview
+POST /api/ledger/opening-balances
+GET /api/households/{householdId}/ledger/opening-balances/{transactionId}/verification
+PUT /api/opening-balance-reference-data/currencies/{currencyCode}
+PUT /api/opening-balance-reference-data/institutions/{institutionCode}
+PUT /api/households/{householdId}/opening-balance-reference-data/accounts/{accountCode}
+PUT /api/opening-balance-reference-data/assets/{assetCode}
+```
+
+The posting request requires exactly one `Idempotency-Key` header. JSON
+financial values use integer raw E8/minor-unit representations; the human UI
+accepts exact localized decimals and performs deliberate checked conversion.
+Created responses link to stable transaction and verification readback. See the
+[M007 contract](docs/milestones/M007_opening_balance_cutover.md) for request,
+validation, conflict, receipt, and lot/fineness details.
 
 ## Read-only navigation API
 
@@ -210,8 +250,8 @@ Run the full test suite:
 dotnet test WealthLedger.slnx --no-restore
 ```
 
-The verified M006 checkpoint contains 580 passing tests: Domain 83,
-Application 122, Infrastructure 172, UI 63, API/UI host 114, Operations 23, and
+The verified M007 checkpoint contains 676 passing tests: Domain 98,
+Application 156, Infrastructure 195, UI 71, API/UI host 130, Operations 23, and
 Playwright browser 3. Run the browser project directly when iterating on UI
 journeys:
 

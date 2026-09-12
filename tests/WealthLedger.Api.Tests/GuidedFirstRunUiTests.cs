@@ -229,7 +229,7 @@ public sealed partial class GuidedFirstRunUiTests
 
         await using var context = factory.CreateDbContext();
         Assert.Equal(
-            5,
+            6,
             (await context.Database
                 .GetAppliedMigrationsAsync())
             .Count());
@@ -909,6 +909,9 @@ public sealed partial class GuidedFirstRunUiTests
                      ("/", HttpStatusCode.OK),
                      ("/ledger", HttpStatusCode.OK),
                      ("/ledger/not-a-guid", HttpStatusCode.BadRequest),
+                     ("/record/opening-balance", HttpStatusCode.OK),
+                     ("/record/opening-balance/not-a-guid", HttpStatusCode.BadRequest),
+                     ("/record/opening-balance/not-a-guid/reverse", HttpStatusCode.BadRequest),
                      ("/settings", HttpStatusCode.OK),
                      ("/settings/master-data", HttpStatusCode.OK),
                      ("/settings/data-safety", HttpStatusCode.OK)

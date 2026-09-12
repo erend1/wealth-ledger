@@ -1,6 +1,6 @@
 # WealthLedger Database Design
 
-Status: Canonical implemented persistence design through M005
+Status: Canonical implemented persistence design through M007
 
 Target: EF Core with SQLite
 
@@ -9,8 +9,10 @@ Migrations:
 - `20260827072019_002_CommandReceipt`
 - `20260831113310_003_ReversalDependencySemantics`
 - `20260902112549_004_LedgerNavigationQueries`
+- `20260903075104_005_WorkspaceIdentity`
+- `20260910101810_006_OpeningBalanceCutoverGuards`
 
-Last distilled: 2026-09-02
+Last distilled: 2026-09-11
 
 ## Design goals
 
@@ -338,7 +340,8 @@ The exact save order must allow a complete valid aggregate and its lot effects t
 Some invariants are better enforced in Application code and tested against the database:
 
 - semantic shape of every transaction type;
-- exact sum of all allocations for one entry;
+- exact sum of all allocations for one entry, with the M007 posting trigger
+  independently enforcing complete opening allocation for Optional assets;
 - lot balance never becoming negative across history;
 - acquisition reversal eligibility is evaluated in Application and independently
   re-enforced by the SQLite posting trigger;
@@ -399,6 +402,60 @@ production EF read store. On the M003 schema, SQLite selects
 and no temporary sort. The migration `Down` removes only the M005 index; real-
 SQLite up/down tests preserve all seeded rows.
 
+### M006 workspace identity
+
+Migration `20260903075104_005_WorkspaceIdentity` creates one non-financial,
+single-row `WorkspaceIdentity` table outside the EF model. SQLite generates a
+random opaque UUID and UTC creation timestamp when the migration is applied.
+No ledger or master row references it.
+
+Backup creation records the identity and package verification compares the
+manifest value with the snapshot value. A verified package counts as protection
+for a live database only when the two identities match. The identity survives
+backup, isolated restore, active replacement, and a live-path move; a package
+from before migration 005 remains verifiable and restorable but has unknown
+lineage and does not satisfy Ready protection.
+
+### M007 opening-balance cutover guards
+
+Migration `20260910101810_006_OpeningBalanceCutoverGuards` first validates any
+existing Posted opening history, then adds:
+
+```text
+IX_TransactionEntry_OpeningBalanceScope
+    (PortfolioId ASC, AccountId ASC, AssetId ASC, TransactionId ASC)
+
+TR_LedgerTransaction_ValidateOpeningBalanceBeforePosting
+```
+
+The trigger runs on the Draft-to-Posted transition for `OPENING_BALANCE` and
+rejects an invalid graph before it can become effective. It requires one
+positive Principal entry, an execution/as-of date, a non-empty note, and no
+order date, settlement date, unit price, cash-flow detail, or transaction cost.
+It validates active and household-consistent references plus the accepted
+asset/account combinations.
+
+Cash and Currency must use `CURRENCY_UNIT` with `NONE` lot tracking and have no
+lot or allocation; Cash uses the household base currency while Currency must
+use a different currency. Fund and Equity accept `OPTIONAL` or `REQUIRED`, and
+PhysicalGold accepts `REQUIRED`; all three must create opening-owned lots whose
+positive allocations reconcile exactly to the entry. Opening lots use only
+Known or Unknown cost, acquisition dates cannot follow the as-of date, and
+every physical-gold lot requires its detail row.
+
+The same trigger is the concurrency authority for two semantic rules: one
+effective opening per exact household/portfolio/account/asset scope, and no
+opening over other effective Posted history in that scope. A Posted reversal
+neutralizes its original for those predicates. Stable SQLite abort codes allow
+Infrastructure to distinguish an existing opening, prior effective history,
+and a malformed opening without exposing SQL or stored values.
+
+The transaction, entry, all new lots/details/allocations, command receipt, and
+final Posted transition share one explicit SQLite transaction. Direct-SQL,
+independent-connection race, rollback, up/down, and older-schema migration tests
+exercise the trigger and index. The `Down` path removes only the M007 trigger
+and scope index; it does not erase Posted facts.
+
 ## Indexes
 
 Beyond PK/unique indexes, evaluate query-driven indexes for:
@@ -406,6 +463,8 @@ Beyond PK/unique indexes, evaluate query-driven indexes for:
 - LedgerTransaction by HouseholdId, StatusCode, ExecutionDate;
 - LedgerTransaction by HouseholdId, StatusCode, PostedAtUtc descending, and Id
   descending for verified M005 recent navigation;
+- TransactionEntry by PortfolioId, AccountId, AssetId, and TransactionId for
+  M007 semantic opening eligibility;
 - TransactionEntry by TransactionId;
 - TransactionEntry by PortfolioId, AssetId;
 - TransactionEntry by AccountId, AssetId;
@@ -448,8 +507,15 @@ Their eventual schemas must reference the ledger rather than duplicating it and 
 - create master data, contribution, fund purchase, lot, and derive the position after a database round trip;
 - transfer a lot-tracked asset between accounts without changing global lot quantity or cost basis;
 - sell across two lots using FIFO and derive remaining quantities;
-- import an opening balance with Unknown cost;
-- store a physical-gold lot and derive fine-gold quantity;
+- record cash and foreign-currency openings without lots or acquisition cost;
+- record fully reconciled fund/equity openings with mixed Known and Unknown
+  cost and optional acquisition dates;
+- store physical-gold opening lots with gross weight, fineness and piece count,
+  then derive exact fine-gold quantity;
+- reject an opening over effective history and a second effective opening,
+  including independent-connection races and direct SQL;
+- permit a corrected opening only after the original receives a Posted
+  reversal;
 - reverse a posted purchase and prove original plus reversal nets to zero;
 - reject a second reversal;
 - reject mutation/deletion of posted facts;

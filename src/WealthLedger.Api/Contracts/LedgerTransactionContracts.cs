@@ -52,7 +52,16 @@ public sealed record LedgerTransactionCreatedLotResponse(
     long? OriginalCostBasisMinorUnits,
     string? CostBasisCurrencyCode,
     string CostBasisStatusCode,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    LedgerTransactionPhysicalGoldResponse? PhysicalGoldDetail);
+
+public sealed record LedgerTransactionPhysicalGoldResponse(
+    int FinenessPartsPerMillion,
+    int PieceCount,
+    string? Hallmark,
+    string? CertificateReference,
+    string? Note,
+    string FineWeightGramsExact);
 
 public sealed record LedgerTransactionLotAllocationResponse(
     Guid AllocationId,

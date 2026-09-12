@@ -2,7 +2,7 @@
 
 Status: Proposed canonical capture requirements
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-09-11
 
 ## Purpose
 
@@ -170,18 +170,52 @@ lineage. It does not create income, return, or a new acquisition price.
 
 ## Opening balance
 
-Capture:
+M007 implements one explicit opening command for one household, portfolio,
+account, asset, and as-of date. Capture:
 
-- as-of date;
+- opening as-of date, which becomes the transaction ExecutionDate;
 - account, portfolio, asset, and quantity;
-- lot breakdown where required;
-- known historical acquisition date and cost only when evidenced;
+- a positive exact currency amount, fund units, equity shares, or physical-gold
+  gross weight;
+- one or more exactly reconciled lots for funds, equities, and physical gold,
+  including assets whose stored lot-tracking mode is Optional;
+- known historical acquisition date only when evidenced, otherwise no date;
+- Known historical total lot cost and currency only when evidenced;
 - explicit Unknown cost when evidence is absent;
-- physical-gold details for each distinct lot;
-- statement, inventory count, or other provenance.
+- physical-gold fineness, positive piece count, and optional hallmark,
+  certificate reference, and lot note for each distinct lot;
+- a required explanatory source note and an optional external reference.
+
+Cash in the household base currency and foreign currency create no acquisition
+lot. Their cost basis is NotApplicable; they do not create a contribution,
+balancing counter-entry, or cash-flow classification.
+
+For funds and equities, exact source lots may mix Known and Unknown cost. A
+broker-supported aggregate total cost with unknown acquisition dates is one
+aggregate lot with a null date and Known total cost, not an inferred unit
+price. No opening entry carries UnitPrice.
+
+Physical-gold pieces share one lot only when the selected product, fineness,
+date knowledge/value, cost status and supported total, hallmark, certificate,
+and provenance genuinely describe one evidence group. Gross weight is the
+authoritative quantity. The UI maps labelled karat/fineness choices or an exact
+0.001-to-1000 per-mille value to integer ppm and derives fine weight; the user
+does not enter or persist fine weight separately.
+
+The as-of date, optional historical lot acquisition date, and current UTC
+posting timestamp are different facts. An acquisition date cannot follow the
+as-of date, the as-of date cannot precede a known account opening date or lie in
+the future, and the caller never supplies the audit timestamp.
 
 Opening market value, when entered for inception analysis, remains a dated
-valuation observation and must not masquerade as historical cost.
+valuation observation in a later workflow and must not masquerade as historical
+cost. M007 neither asks for nor stores current value, gain/loss, or performance.
+
+After review and posting, read the persisted transaction and derived position.
+An incorrect opening is corrected with a separate reversal and a new opening;
+never edit or delete the original. M010 will add evidence objects and broader
+reconciliation. Until then, the note/reference identifies external evidence but
+does not prove that an independent reconciliation occurred.
 
 ## Adjustment
 
@@ -311,4 +345,3 @@ at least one of:
 
 The application should support references without copying sensitive source
 documents into source control or agent context.
-

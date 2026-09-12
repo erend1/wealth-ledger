@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
+using WealthLedger.Domain.Portfolios;
 using WealthLedger.Infrastructure.Persistence;
 using WealthLedger.Infrastructure.Persistence.Rows;
 
@@ -273,7 +274,8 @@ public sealed class LotIntegrityTriggerTests
             alternateLot = await CreateAndPostOpeningLotAsync(
                 context,
                 CoreLedgerTestData.FundAssetId,
-                quantityE8: 100);
+                quantityE8: 100,
+                transactionType: TransactionType.Adjustment);
 
             context.LedgerTransactions.Add(
                 CoreLedgerTestData.CreateDraftTransaction(
@@ -521,7 +523,7 @@ public sealed class LotIntegrityTriggerTests
             context.LedgerTransactions.Add(
                 CoreLedgerTestData.CreateDraftTransaction(
                     transactionId,
-                    TransactionType.OpeningBalance));
+                    TransactionType.Adjustment));
             context.TransactionEntries.Add(
                 CoreLedgerTestData.CreateEntry(
                     entryId,
@@ -1277,17 +1279,35 @@ public sealed class LotIntegrityTriggerTests
         WealthLedgerDbContext context,
         Guid assetId,
         long quantityE8,
-        bool includePhysicalGoldDetail = false)
+        bool includePhysicalGoldDetail = false,
+        TransactionType transactionType = TransactionType.OpeningBalance)
     {
         var transactionId = Guid.NewGuid();
         var entryId = Guid.NewGuid();
         var lotId = Guid.NewGuid();
         var allocationId = Guid.NewGuid();
+        Guid? accountId = null;
+
+        if (assetId == CoreLedgerTestData.GoldAssetId)
+        {
+            accountId = Guid.NewGuid();
+            context.Accounts.Add(new AccountRow
+            {
+                Id = accountId.Value,
+                HouseholdId = CoreLedgerTestData.HouseholdId,
+                InstitutionId = null,
+                Code = $"SYNTHETIC_VAULT_{accountId.Value:N}",
+                Name = "Synthetic Physical Vault",
+                Type = AccountType.PhysicalVault,
+                IsActive = true,
+                OpenedOn = CoreLedgerTestData.ExecutionDate
+            });
+        }
 
         context.LedgerTransactions.Add(
             CoreLedgerTestData.CreateDraftTransaction(
                 transactionId,
-                TransactionType.OpeningBalance));
+                transactionType));
 
         context.TransactionEntries.Add(
             CoreLedgerTestData.CreateEntry(
@@ -1296,7 +1316,8 @@ public sealed class LotIntegrityTriggerTests
                 0,
                 assetId,
                 quantityE8,
-                EntryRole.Principal));
+                EntryRole.Principal,
+                accountId: accountId));
 
         context.AssetLots.Add(new AssetLotRow
         {

@@ -223,6 +223,7 @@ label {
 }
 
 input:not([type="checkbox"]),
+textarea,
 select {
     width: 100%;
     min-height: 2.75rem;
@@ -232,6 +233,10 @@ select {
     background: #ffffff;
     color: var(--ink);
     font: inherit;
+}
+
+textarea {
+    resize: vertical;
 }
 
 .check-field {

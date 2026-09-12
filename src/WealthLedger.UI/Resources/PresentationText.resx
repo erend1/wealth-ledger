@@ -1266,4 +1266,281 @@
   <data name="Detail_NoReversal" xml:space="preserve">
     <value>Bu işlem için kaydedilmiş bir ters kayıt ilişkisi yok.</value>
   </data>
+  <data name="State_Known" xml:space="preserve">
+    <value>Biliniyor</value>
+  </data>
+  <data name="Common_SelectPrompt" xml:space="preserve">
+    <value>Seçiniz</value>
+  </data>
+  <data name="Opening_Eyebrow" xml:space="preserve">
+    <value>Kayıt</value>
+  </data>
+  <data name="Opening_Title" xml:space="preserve">
+    <value>Açılış bakiyesi kaydet</value>
+  </data>
+  <data name="Opening_Introduction" xml:space="preserve">
+    <value>Geçmişte yapılmış bir alım uydurmadan, bugün bildiğiniz başlangıç varlığını kaynak gerçekleriyle kaydedin.</value>
+  </data>
+  <data name="Opening_LoadErrorTitle" xml:space="preserve">
+    <value>Kayıt seçenekleri yüklenemedi</value>
+  </data>
+  <data name="Opening_LoadErrorExplanation" xml:space="preserve">
+    <value>Yerel veri güvenle okunamadı. Hiçbir finansal kayıt oluşturulmadı; daha sonra yeniden deneyin.</value>
+  </data>
+  <data name="Opening_ReferenceCreatedTitle" xml:space="preserve">
+    <value>Referans veri hazır</value>
+  </data>
+  <data name="Opening_Notice_CurrencyCreated" xml:space="preserve">
+    <value>Para birimi oluşturuldu. Bu işlem henüz bir bakiye oluşturmadı.</value>
+  </data>
+  <data name="Opening_Notice_CurrencyEquivalent" xml:space="preserve">
+    <value>Aynı özelliklere sahip para birimi zaten vardı ve yeniden kullanıldı. Bakiye değişmedi.</value>
+  </data>
+  <data name="Opening_Notice_InstitutionCreated" xml:space="preserve">
+    <value>Kurum oluşturuldu. Bu işlem henüz bir bakiye oluşturmadı.</value>
+  </data>
+  <data name="Opening_Notice_InstitutionEquivalent" xml:space="preserve">
+    <value>Aynı özelliklere sahip kurum zaten vardı ve yeniden kullanıldı. Bakiye değişmedi.</value>
+  </data>
+  <data name="Opening_Notice_AccountCreated" xml:space="preserve">
+    <value>Hesap oluşturuldu ve aşağıda seçildi. Bu işlem henüz bir bakiye oluşturmadı.</value>
+  </data>
+  <data name="Opening_Notice_AccountEquivalent" xml:space="preserve">
+    <value>Aynı özelliklere sahip hesap zaten vardı ve aşağıda seçildi. Bakiye değişmedi.</value>
+  </data>
+  <data name="Opening_Notice_AssetCreated" xml:space="preserve">
+    <value>Varlık oluşturuldu ve aşağıda seçildi. Bu işlem henüz bir bakiye oluşturmadı.</value>
+  </data>
+  <data name="Opening_Notice_AssetEquivalent" xml:space="preserve">
+    <value>Aynı özelliklere sahip varlık zaten vardı ve aşağıda seçildi. Bakiye değişmedi.</value>
+  </data>
+  <data name="Opening_ChoicesTruncatedTitle" xml:space="preserve">
+    <value>Bazı seçenekler bu sayfada görünmüyor</value>
+  </data>
+  <data name="Opening_ChoicesTruncatedExplanation" xml:space="preserve">
+    <value>Bir referans listesi 100 kaydı aşıyor. Görünmeyen kaydı rastgele seçmeyin; bu açılışı kaydetmeden önce kapsamı gözden geçirin.</value>
+  </data>
+  <data name="Opening_MissingReferenceTitle" xml:space="preserve">
+    <value>Eksik para birimi, kurum, hesap veya varlık oluştur</value>
+  </data>
+  <data name="Opening_MissingReferenceExplanation" xml:space="preserve">
+    <value>Bu dar kapsamlı işlemler yalnızca açılış için gereken referans veriyi oluşturur. Pozisyon, işlem veya maliyet kaydetmez; düzenleme ya da silme sunmaz.</value>
+  </data>
+  <data name="Opening_CreateCurrencyTitle" xml:space="preserve"><value>Para birimi</value></data>
+  <data name="Opening_CreateInstitutionTitle" xml:space="preserve"><value>Kurum</value></data>
+  <data name="Opening_CreateAccountTitle" xml:space="preserve"><value>Hesap</value></data>
+  <data name="Opening_CreateAssetTitle" xml:space="preserve"><value>Varlık</value></data>
+  <data name="Opening_CreateCurrencyAction" xml:space="preserve"><value>Para birimini oluştur</value></data>
+  <data name="Opening_CreateInstitutionAction" xml:space="preserve"><value>Kurumu oluştur</value></data>
+  <data name="Opening_CreateAccountAction" xml:space="preserve"><value>Hesabı oluştur ve kullan</value></data>
+  <data name="Opening_CreateAssetAction" xml:space="preserve"><value>Varlığı oluştur ve kullan</value></data>
+  <data name="Opening_CurrencyCodeLabel" xml:space="preserve"><value>ISO para birimi kodu</value></data>
+  <data name="Opening_StableCodeLabel" xml:space="preserve"><value>Sabit kod</value></data>
+  <data name="Opening_NameLabel" xml:space="preserve"><value>Ad</value></data>
+  <data name="Opening_MinorUnitDigitsLabel" xml:space="preserve"><value>Ondalık basamak sayısı</value></data>
+  <data name="Opening_MinorUnitDigitsHelp" xml:space="preserve"><value>Para biriminin resmî küçük birim hassasiyeti; örneğin TRY için 2.</value></data>
+  <data name="Opening_InstitutionTypeLabel" xml:space="preserve"><value>Kurum türü</value></data>
+  <data name="Opening_AccountTypeLabel" xml:space="preserve"><value>Hesap türü</value></data>
+  <data name="Opening_InstitutionLabel" xml:space="preserve"><value>Kurum</value></data>
+  <data name="Opening_InstitutionHelp" xml:space="preserve"><value>Yatırım ve emeklilik hesaplarında zorunludur; nakit kasa ve fiziksel kasa için uygulanmayabilir.</value></data>
+  <data name="Opening_AccountOpenedOnLabel" xml:space="preserve"><value>Hesap açılış tarihi</value></data>
+  <data name="Opening_AssetTypeLabel" xml:space="preserve"><value>Varlık türü</value></data>
+  <data name="Opening_BaseCurrencyLabel" xml:space="preserve"><value>Baz para birimi</value></data>
+  <data name="Opening_LotTrackingModeLabel" xml:space="preserve"><value>Lot izleme biçimi</value></data>
+  <data name="Opening_LotTrackingModeHelp" xml:space="preserve"><value>Nakit ve döviz için NONE; fon ve hisse için OPTIONAL veya REQUIRED; fiziksel altın için REQUIRED seçilir.</value></data>
+  <data name="Opening_IdentifyTitle" xml:space="preserve"><value>1. Kapsamı belirleyin</value></data>
+  <data name="Opening_IdentifyExplanation" xml:space="preserve"><value>Bir açılış kaydı tek hane, portföy, hesap, varlık ve tarih içindir. Hazır çalışma alanında tek hane bulunduğu için hane güvenle sabitlenmiştir.</value></data>
+  <data name="Opening_HouseholdLabel" xml:space="preserve"><value>Hane</value></data>
+  <data name="Opening_HouseholdCurrencyLabel" xml:space="preserve"><value>Hane baz para birimi</value></data>
+  <data name="Opening_PortfolioLabel" xml:space="preserve"><value>Portföy</value></data>
+  <data name="Opening_AccountLabel" xml:space="preserve"><value>Hesap</value></data>
+  <data name="Opening_AssetLabel" xml:space="preserve"><value>Varlık</value></data>
+  <data name="Opening_AssetChangeHelp" xml:space="preserve"><value>Varlığı değiştirdikten sonra “Varlık seçimini uygula” düğmesi miktar, lot, maliyet ve altın alanlarını güvenli biçimde temizler.</value></data>
+  <data name="Opening_ApplyAssetAction" xml:space="preserve"><value>Varlık seçimini uygula</value></data>
+  <data name="Opening_AsOfDateLabel" xml:space="preserve"><value>Açılışın geçerli olduğu tarih</value></data>
+  <data name="Opening_AsOfDateHelp" xml:space="preserve"><value>Bu, pozisyonun başlangıç anını anlatan işlem tarihidir. Lot edinim tarihi ve sistemin kayıt zamanı bundan ayrıdır.</value></data>
+  <data name="Opening_SourceFactsTitle" xml:space="preserve"><value>2. Kaynak gerçeklerini girin</value></data>
+  <data name="Opening_SelectAssetFirst" xml:space="preserve"><value>Kaynak alanlarını görmek için geçerli bir varlık seçin.</value></data>
+  <data name="Opening_SelectedAssetTypeLabel" xml:space="preserve"><value>Varlık türü</value></data>
+  <data name="Opening_SelectedAssetUnitLabel" xml:space="preserve"><value>Yetkili miktar birimi</value></data>
+  <data name="Opening_SelectedLotModeLabel" xml:space="preserve"><value>Lot izleme</value></data>
+  <data name="Opening_CashQuantityLabel" xml:space="preserve"><value>Açılış para tutarı</value></data>
+  <data name="Opening_GrossQuantityLabel" xml:space="preserve"><value>Toplam brüt ağırlık (gram)</value></data>
+  <data name="Opening_QuantityLabel" xml:space="preserve"><value>Toplam açılış miktarı</value></data>
+  <data name="Opening_CashQuantityHelp" xml:space="preserve"><value>Seçilen para biriminin küçük birim hassasiyetinde pozitif bir tutar girin; örneğin 12345,67.</value></data>
+  <data name="Opening_QuantityHelp" xml:space="preserve"><value>Pozitif miktarı en fazla sekiz ondalık basamakla girin. Nokta veya virgül ondalık ayırıcı kabul edilir.</value></data>
+  <data name="Opening_CostBasisTitle" xml:space="preserve"><value>Tarihsel maliyet</value></data>
+  <data name="Opening_CashNoLotExplanation" xml:space="preserve"><value>Nakit ve döviz için edinim lotu ya da tarihsel maliyet uygulanmaz. Bu kayıt katkı veya dengeleme girişi uydurmaz.</value></data>
+  <data name="Opening_LotsTitle" xml:space="preserve"><value>Açılış lotları</value></data>
+  <data name="Opening_LotsExplanation" xml:space="preserve"><value>Lot miktarlarının toplamı, toplam açılış miktarıyla tam eşleşmelidir. Farklı kanıt, tarih, maliyet veya kökene sahip varlıkları ayırın.</value></data>
+  <data name="Opening_AddLotAction" xml:space="preserve"><value>Lot ekle</value></data>
+  <data name="Opening_RemoveLotAction" xml:space="preserve"><value>Lotu kaldır</value></data>
+  <data name="Opening_LotSequenceLabel" xml:space="preserve"><value>Lot</value></data>
+  <data name="Opening_LotQuantityLabel" xml:space="preserve"><value>Lot miktarı</value></data>
+  <data name="Opening_LotGrossQuantityLabel" xml:space="preserve"><value>Lot brüt ağırlığı (gram)</value></data>
+  <data name="Opening_AcquiredOnLabel" xml:space="preserve"><value>Tarihsel edinim tarihi</value></data>
+  <data name="Opening_AcquiredOnHelp" xml:space="preserve"><value>Yalnız kanıtlanıyorsa girin; bilinmiyorsa boş bırakın. Açılış tarihi bunun yerine kullanılmaz.</value></data>
+  <data name="Opening_CostStatusLabel" xml:space="preserve"><value>Maliyet kanıtı durumu</value></data>
+  <data name="Opening_CostStatusHelp" xml:space="preserve"><value>Kanıt varsa Biliniyor; yoksa Bilinmiyor seçin. Güncel piyasa değerini tarihsel maliyet olarak girmeyin.</value></data>
+  <data name="Opening_CostAmountLabel" xml:space="preserve"><value>Toplam tarihsel lot maliyeti</value></data>
+  <data name="Opening_CostAmountHelp" xml:space="preserve"><value>Yalnız Biliniyor seçildiğinde girilir. Bu toplamdan birim fiyat türetilmez.</value></data>
+  <data name="Opening_CostCurrencyLabel" xml:space="preserve"><value>Maliyet para birimi</value></data>
+  <data name="Opening_GoldDetailsTitle" xml:space="preserve"><value>Fiziksel altın özellikleri</value></data>
+  <data name="Opening_GoldDetailsExplanation" xml:space="preserve"><value>Brüt gram yetkili miktardır. Saf altın gramı ayar üzerinden hesaplanır; ayrıca girilmez ve bakiye olarak saklanmaz.</value></data>
+  <data name="Opening_FinenessChoiceLabel" xml:space="preserve"><value>Karat / ayar seçimi</value></data>
+  <data name="Opening_FinenessChoiceHelp" xml:space="preserve"><value>Etiketteki kesin ayarı seçin. Rastgele karatı 24'e bölerek ayar türetilmez.</value></data>
+  <data name="Opening_Fineness_24K" xml:space="preserve"><value>24K / 999,9 ‰ — 999900 ppm</value></data>
+  <data name="Opening_Fineness_22K" xml:space="preserve"><value>22K / 916 ‰ — 916000 ppm</value></data>
+  <data name="Opening_Fineness_18K" xml:space="preserve"><value>18K / 750 ‰ — 750000 ppm</value></data>
+  <data name="Opening_Fineness_14K" xml:space="preserve"><value>14K / 585 ‰ — 585000 ppm</value></data>
+  <data name="Opening_Fineness_8K" xml:space="preserve"><value>8K / 333 ‰ — 333000 ppm</value></data>
+  <data name="Opening_Fineness_Precise" xml:space="preserve"><value>Kesin ayarı per-mille olarak gir</value></data>
+  <data name="Opening_PreciseFinenessLabel" xml:space="preserve"><value>Kesin ayar (‰)</value></data>
+  <data name="Opening_PreciseFinenessHelp" xml:space="preserve"><value>Yalnız kesin ayar seçeneğinde 0,001 ile 1000 arasında, en fazla üç ondalık basamakla girin.</value></data>
+  <data name="Opening_PieceCountLabel" xml:space="preserve"><value>Parça adedi</value></data>
+  <data name="Opening_HallmarkLabel" xml:space="preserve"><value>Damga / ayar işareti</value></data>
+  <data name="Opening_CertificateLabel" xml:space="preserve"><value>Sertifika veya envanter referansı</value></data>
+  <data name="Opening_LotNoteLabel" xml:space="preserve"><value>Lot notu</value></data>
+  <data name="Opening_LotNoteHelp" xml:space="preserve"><value>Aynı lotta gruplanan parçaların gerçekten aynı kanıt ve köken grubunda olduğunu anlatın.</value></data>
+  <data name="Opening_ProvenanceTitle" xml:space="preserve"><value>3. Kaynağı açıklayın</value></data>
+  <data name="Opening_ProvenanceExplanation" xml:space="preserve"><value>Kaydın hangi anonim ekstre, sayım veya envanter gerçeğine dayandığını belirtin. Belge yükleme M010 kapsamındadır.</value></data>
+  <data name="Opening_ExternalReferenceLabel" xml:space="preserve"><value>Dış referans</value></data>
+  <data name="Opening_ExternalReferenceHelp" xml:space="preserve"><value>İsteğe bağlı metin referansı; gerçek hesap veya sertifika numarası yerine yalnızca uygun, gizlilik güvenli bir tanım kullanın.</value></data>
+  <data name="Opening_TransactionNoteLabel" xml:space="preserve"><value>Açılış kaydı notu</value></data>
+  <data name="Opening_TransactionNoteHelp" xml:space="preserve"><value>Zorunludur. Kaynağı, kapsamı ve bilinmeyen tarihsel gerçekleri açıkça anlatın.</value></data>
+  <data name="Opening_ReviewActionTitle" xml:space="preserve"><value>4. Yazmadan önce inceleyin</value></data>
+  <data name="Opening_ReviewActionExplanation" xml:space="preserve"><value>İnceleme değerleri normalize eder ve kuralları denetler; veritabanına işlem, lot veya bakiye yazmaz.</value></data>
+  <data name="Opening_ReviewAction" xml:space="preserve"><value>Açılışı incele</value></data>
+  <data name="Opening_ReviewStatus" xml:space="preserve"><value>Henüz kaydedilmedi</value></data>
+  <data name="Opening_ReviewTitle" xml:space="preserve"><value>Normalize edilmiş açılış incelemesi</value></data>
+  <data name="Opening_ReviewExplanation" xml:space="preserve"><value>Aşağıdaki kaynak gerçeklerini doğrulayın. Son düğme kalıcı ve değiştirilemez bir Posted ledger işlemi oluşturur.</value></data>
+  <data name="Opening_NormalizedQuantityLabel" xml:space="preserve"><value>Normalize edilmiş toplam miktar</value></data>
+  <data name="Opening_AllocationTotalLabel" xml:space="preserve"><value>Lot tahsis toplamı</value></data>
+  <data name="Opening_ReconciliationLabel" xml:space="preserve"><value>Lot eşleşmesi</value></data>
+  <data name="Opening_Reconciled" xml:space="preserve"><value>Tam olarak eşleşiyor</value></data>
+  <data name="Opening_AuditTimeLabel" xml:space="preserve"><value>Sistem kayıt zamanı</value></data>
+  <data name="Opening_AuditTimeAtPost" xml:space="preserve"><value>Son kaydetme eyleminde UTC olarak üretilecek</value></data>
+  <data name="Opening_AggregateCostNoInference" xml:space="preserve"><value>Toplam lot maliyeti kaydedilir; bilinmeyen edinim tarihi veya birim fiyat bundan türetilmez.</value></data>
+  <data name="Opening_FinenessReviewLabel" xml:space="preserve"><value>Kesin ayar</value></data>
+  <data name="Opening_FineWeightLabel" xml:space="preserve"><value>Hesaplanan saf altın ağırlığı</value></data>
+  <data name="Opening_TotalFineWeightLabel" xml:space="preserve"><value>Toplam hesaplanan saf altın ağırlığı</value></data>
+  <data name="Opening_WarningsLabel" xml:space="preserve"><value>İnceleme uyarıları</value></data>
+  <data name="Opening_Warning_IndependentReconciliation" xml:space="preserve"><value>Bu kayıt bağımsız ekstre veya fiziksel envanter ile karşılaştırılmış sayılmaz; kaydettikten sonra ayrıca mutabakat yapın.</value></data>
+  <data name="Opening_Warning_KnownZeroCost" xml:space="preserve"><value>En az bir lot için Biliniyor durumunda sıfır maliyet kaydedilecek. Bunun gerçekten desteklenen tarihsel gerçek olduğunu doğrulayın.</value></data>
+  <data name="Opening_NoValuationExplanation" xml:space="preserve"><value>Bu inceleme güncel değer, kâr/zarar, getiri, dağılım veya uydurulmuş edinim birim fiyatı göstermez.</value></data>
+  <data name="Opening_PostAction" xml:space="preserve"><value>İncelenen açılışı kalıcı olarak kaydet</value></data>
+  <data name="Opening_PostActionHelp" xml:space="preserve"><value>Tarayıcı yenilemesi ve çift gönderim aynı komut anahtarıyla güvenlidir. Hata olursa yeni anahtar üretmeden aynı formu yeniden deneyin.</value></data>
+  <data name="Opening_ExistingOpeningTitle" xml:space="preserve"><value>Bu kapsam için mevcut açılış bulundu</value></data>
+  <data name="Opening_OpenExistingReceipt" xml:space="preserve"><value>Mevcut açılış makbuzunu aç</value></data>
+  <data name="Opening_Validation_ContextUnavailable" xml:space="preserve"><value>Hazır hane kapsamı doğrulanamadı.</value></data>
+  <data name="Opening_Validation_ChoiceRequired" xml:space="preserve"><value>Geçerli bir seçim yapın.</value></data>
+  <data name="Opening_Validation_ChoiceUnavailable" xml:space="preserve"><value>Seçilen kayıt artık kullanılamıyor; güncel seçeneklerden yeniden seçin.</value></data>
+  <data name="Opening_Validation_Date" xml:space="preserve"><value>Geçerli bir tarih girin.</value></data>
+  <data name="Opening_Validation_Required" xml:space="preserve"><value>Bu alan zorunludur.</value></data>
+  <data name="Opening_Validation_Text" xml:space="preserve"><value>Metin çok uzun veya desteklenmeyen kontrol karakteri içeriyor.</value></data>
+  <data name="Opening_Validation_Quantity" xml:space="preserve"><value>Pozitif, taşmayan ve en fazla sekiz ondalık basamaklı bir miktar girin.</value></data>
+  <data name="Opening_Validation_CurrencyMetadata" xml:space="preserve"><value>Seçilen varlığın para birimi hassasiyeti doğrulanamadı.</value></data>
+  <data name="Opening_Validation_CurrencyPrecision" xml:space="preserve"><value>Tutar, seçilen para biriminin ondalık basamak hassasiyetini aşıyor.</value></data>
+  <data name="Opening_Validation_LotsForbidden" xml:space="preserve"><value>Nakit veya döviz açılışı lot içeremez. Varlık seçimini uygulayarak eski lot alanlarını temizleyin.</value></data>
+  <data name="Opening_Validation_LotsRequired" xml:space="preserve"><value>Seçilen varlık için en az bir lot gereklidir.</value></data>
+  <data name="Opening_Validation_LotTotalMismatch" xml:space="preserve"><value>Lot miktarlarının toplamı, toplam açılış miktarıyla tam eşleşmelidir.</value></data>
+  <data name="Opening_Validation_TooManyLots" xml:space="preserve"><value>Tek açılışta en fazla 50 lot girilebilir.</value></data>
+  <data name="Opening_Validation_AcquiredAfterAsOf" xml:space="preserve"><value>Lot edinim tarihi açılış tarihinden sonra olamaz.</value></data>
+  <data name="Opening_Validation_CostStatusRequired" xml:space="preserve"><value>Maliyetin Biliniyor veya Bilinmiyor olduğunu açıkça seçin.</value></data>
+  <data name="Opening_Validation_UnknownCostHasAmount" xml:space="preserve"><value>Bilinmiyor maliyet tutar veya para birimi taşıyamaz; bu alanları boşaltın.</value></data>
+  <data name="Opening_Validation_CostCurrency" xml:space="preserve"><value>Bilinen maliyet için geçerli bir para birimi seçin.</value></data>
+  <data name="Opening_Validation_CostAmount" xml:space="preserve"><value>Para birimi hassasiyetine uyan, negatif olmayan ve taşmayan bir toplam maliyet girin.</value></data>
+  <data name="Opening_Validation_FinenessChoice" xml:space="preserve"><value>Geçerli bir karat / ayar seçeneği seçin.</value></data>
+  <data name="Opening_Validation_PreciseFinenessPresetConflict" xml:space="preserve"><value>Hazır ayar seçiliyken kesin per-mille alanını boş bırakın.</value></data>
+  <data name="Opening_Validation_PreciseFineness" xml:space="preserve"><value>Kesin ayarı 0,001–1000 aralığında ve en fazla üç ondalık basamakla girin; değer yuvarlanmaz.</value></data>
+  <data name="Opening_Validation_PieceCount" xml:space="preserve"><value>Pozitif bir tam parça adedi girin.</value></data>
+  <data name="Opening_Validation_GoldDetail" xml:space="preserve"><value>Fiziksel altın lotu için ayar ve parça bilgilerini eksiksiz girin.</value></data>
+  <data name="Opening_Validation_GoldFieldsForbidden" xml:space="preserve"><value>Altın özellikleri yalnız fiziksel altın lotunda kullanılabilir. Varlık seçimini uygulayarak eski alanları temizleyin.</value></data>
+  <data name="Opening_Validation_IdempotencyKey" xml:space="preserve"><value>Güvenli gönderim anahtarı eksik veya bozulmuş. Bu sayfayı yeniden açın.</value></data>
+  <data name="Opening_Validation_CurrencyCode" xml:space="preserve"><value>Para birimi kodu tam üç ASCII harf olmalıdır.</value></data>
+  <data name="Opening_Validation_MinorUnitDigits" xml:space="preserve"><value>Ondalık basamak sayısı 0 ile 8 arasında bir tam sayı olmalıdır.</value></data>
+  <data name="Opening_Validation_StableCode" xml:space="preserve"><value>Sabit kod 1–64 karakter olmalı ve yalnız A–Z, 0–9, alt çizgi veya tire içermelidir.</value></data>
+  <data name="Opening_Validation_InstitutionRequired" xml:space="preserve"><value>Yatırım ve emeklilik hesabı için kurum seçin.</value></data>
+  <data name="Opening_Validation_AssetLotMode" xml:space="preserve"><value>Lot izleme biçimi varlık türüyle uyumlu değil.</value></data>
+  <data name="Opening_Error_AlreadyExists" xml:space="preserve"><value>Bu hane, portföy, hesap ve varlık için etkin bir açılış zaten var. Düzeltme gerekiyorsa önce mevcut kaydı ters kaydedin.</value></data>
+  <data name="Opening_Error_ScopeHasHistory" xml:space="preserve"><value>Bu kapsamda başka etkin ledger geçmişi var; üzerine açılış eklenemez.</value></data>
+  <data name="Opening_Error_LotTotalMismatch" xml:space="preserve"><value>Lot miktarları toplam açılış miktarıyla tam eşleşmiyor.</value></data>
+  <data name="Opening_Error_DuplicateLot" xml:space="preserve"><value>Ekonomik olarak ayırt edilemeyen iki lot var; gerçekten aynı gruptalarsa tek lotta birleştirin.</value></data>
+  <data name="Opening_Error_AsOfFuture" xml:space="preserve"><value>Açılış tarihi çalışma saat dilimindeki bugünden ileri olamaz.</value></data>
+  <data name="Opening_Error_AcquiredAfterAsOf" xml:space="preserve"><value>Bir lotun edinim tarihi açılış tarihinden sonra.</value></data>
+  <data name="Opening_Error_ReferenceConflict" xml:space="preserve"><value>Aynı sabit kod farklı veya pasif özelliklerle zaten kullanılıyor; mevcut kayıt değiştirilmedi.</value></data>
+  <data name="Opening_Error_ReferenceNotFound" xml:space="preserve"><value>Seçilen referanslardan biri bulunamadı; seçenekleri yenileyip tekrar seçin.</value></data>
+  <data name="Opening_Error_ReferenceInactive" xml:space="preserve"><value>Seçilen referanslardan biri artık etkin değil.</value></data>
+  <data name="Opening_Error_AccountAssetMismatch" xml:space="preserve"><value>Hesap ile varlık türü uyumlu değil. Örneğin fiziksel altın fiziksel kasa, fon ve hisse yatırım hesabı ister.</value></data>
+  <data name="Opening_Error_Quantity" xml:space="preserve"><value>Miktar pozitif, tam dönüştürülebilir veya para birimi hassasiyetine uygun değil.</value></data>
+  <data name="Opening_Error_CostBasis" xml:space="preserve"><value>Tarihsel maliyet durumu, tutarı veya para birimi birbiriyle uyumlu değil.</value></data>
+  <data name="Opening_Error_GoldDetail" xml:space="preserve"><value>Fiziksel altın ayarı veya parça bilgileri eksik ya da geçersiz.</value></data>
+  <data name="Opening_Error_IdempotencyConflict" xml:space="preserve"><value>Bu güvenli gönderim anahtarı daha önce farklı içerikle kullanılmış. Hiçbir yeni işlem oluşturulmadı.</value></data>
+  <data name="Opening_Error_InvalidInput" xml:space="preserve"><value>Açılış kaynak gerçekleri geçerli değil. İşaretlenen alanları gözden geçirin.</value></data>
+  <data name="Opening_Error_Persistence" xml:space="preserve"><value>Kalıcı kayıt, mevcut ledger geçmişiyle çakıştı. Kısmi kayıt oluşturulmadı; aynı form ve anahtarla güvenle yeniden deneyebilirsiniz.</value></data>
+  <data name="Opening_Error_ReferenceInvalid" xml:space="preserve"><value>Referans veri alanları geçerli değil; işaretlenen değerleri gözden geçirin.</value></data>
+  <data name="Shell_Navigation_Record" xml:space="preserve"><value>Kaydet</value></data>
+  <data name="OpeningReceipt_Eyebrow" xml:space="preserve"><value>Kalıcı ledger makbuzu</value></data>
+  <data name="OpeningReceipt_Title" xml:space="preserve"><value>Açılış bakiyesi makbuzu</value></data>
+  <data name="OpeningReceipt_Introduction" xml:space="preserve"><value>Bu sayfa her yenilendiğinde kalıcı ledger gerçeklerini yeniden okur ve güncel pozisyonu işlem geçmişinden tekrar türetir.</value></data>
+  <data name="OpeningReceipt_InvalidTitle" xml:space="preserve"><value>Geçersiz işlem adresi</value></data>
+  <data name="OpeningReceipt_InvalidExplanation" xml:space="preserve"><value>İşlem kimliği geçerli değil. Ledger sayfasından güvenli bir bağlantı açın.</value></data>
+  <data name="OpeningReceipt_NotFoundTitle" xml:space="preserve"><value>Açılış bakiyesi bulunamadı</value></data>
+  <data name="OpeningReceipt_NotFoundExplanation" xml:space="preserve"><value>Bu haneye ait Posted bir açılış bakiyesi bu kimlikle bulunamadı.</value></data>
+  <data name="OpeningReceipt_LoadErrorTitle" xml:space="preserve"><value>Makbuz güvenle okunamadı</value></data>
+  <data name="OpeningReceipt_LoadErrorExplanation" xml:space="preserve"><value>Kalıcı işlem ve güncel gösterim bağlamı birlikte doğrulanamadı. Bu okuma hatası yeni bir kayıt oluşturmaz.</value></data>
+  <data name="OpeningReceipt_PostedStatus" xml:space="preserve"><value>Posted — etkin</value></data>
+  <data name="OpeningReceipt_ReversedStatus" xml:space="preserve"><value>Posted — ayrı bir ters kayıtla etkisizleştirildi</value></data>
+  <data name="OpeningReceipt_PersistedTitle" xml:space="preserve"><value>Açılış kalıcı ledger geçmişinde</value></data>
+  <data name="OpeningReceipt_PersistedExplanation" xml:space="preserve"><value>İşlem kimliği, açılış etkisinin kalıcı kimliğidir. Kayıt değiştirilemez veya silinemez.</value></data>
+  <data name="OpeningReceipt_OpeningEffectLabel" xml:space="preserve"><value>Posted açılış etkisi</value></data>
+  <data name="OpeningReceipt_PostedAtLabel" xml:space="preserve"><value>Posted kayıt zamanı</value></data>
+  <data name="OpeningReceipt_VerificationTitle" xml:space="preserve"><value>Kalıcı okuma ve türetilmiş pozisyon kontrolü</value></data>
+  <data name="OpeningReceipt_VerificationExplanation" xml:space="preserve"><value>Miktar ve lot tahsisleri kalıcı işlemden okunur; güncel pozisyon ayrı bir bakiye tablosundan değil tüm etkin Posted girişlerin toplamından türetilir.</value></data>
+  <data name="OpeningReceipt_PersistedQuantityLabel" xml:space="preserve"><value>Kalıcı giriş miktarı</value></data>
+  <data name="OpeningReceipt_NotReconciled" xml:space="preserve"><value>Eşleşmiyor</value></data>
+  <data name="OpeningReceipt_CurrentPositionLabel" xml:space="preserve"><value>Şu an türetilen pozisyon</value></data>
+  <data name="OpeningReceipt_PositionSourceCountLabel" xml:space="preserve"><value>Pozisyonu oluşturan etkin giriş sayısı</value></data>
+  <data name="OpeningReceipt_OpeningMatchLabel" xml:space="preserve"><value>Güncel pozisyon ile ilk açılış etkisi</value></data>
+  <data name="OpeningReceipt_OpeningMatchYes" xml:space="preserve"><value>Şimdilik tam eşleşiyor</value></data>
+  <data name="OpeningReceipt_OpeningMatchChanged" xml:space="preserve"><value>Sonraki ledger geçmişi nedeniyle artık eşleşmiyor</value></data>
+  <data name="OpeningReceipt_AdditionalHistoryWarning" xml:space="preserve"><value>Açılıştan sonra bu kapsamı etkileyen başka bir Posted giriş var. Bu nedenle güncel pozisyonun açılış miktarından farklı olması veri bozulması anlamına gelmez.</value></data>
+  <data name="OpeningReceipt_IndependentReconciliationWarning" xml:space="preserve"><value>Bu teknik doğrulama bağımsız mutabakat değildir. Pozisyonu özgün ekstre veya fiziksel envanter kaydıyla ayrıca karşılaştırın ve kanıtı saklayın.</value></data>
+  <data name="OpeningReceipt_LotsTitle" xml:space="preserve"><value>Kalıcı edinim lotları</value></data>
+  <data name="OpeningReceipt_ActionsTitle" xml:space="preserve"><value>İnceleme ve düzeltme</value></data>
+  <data name="OpeningReceipt_ImmutableExplanation" xml:space="preserve"><value>Bir hata varsa bu işlemi düzenlemeyin veya silmeyin. Uygunluk önizlemesini açın, ayrı ters kaydı oluşturun ve sonra yeni bir düzeltilmiş açılış kaydedin.</value></data>
+  <data name="OpeningReceipt_TransactionDetailLink" xml:space="preserve"><value>Tam işlem ayrıntısını aç</value></data>
+  <data name="OpeningReceipt_ReverseLink" xml:space="preserve"><value>Bu açılışı ters kaydet</value></data>
+  <data name="OpeningReceipt_ReversalDetailLink" xml:space="preserve"><value>Ters kayıt işlemini aç</value></data>
+  <data name="OpeningReceipt_StartAnotherLink" xml:space="preserve"><value>Başka bir açılış başlat</value></data>
+  <data name="OpeningReverse_Eyebrow" xml:space="preserve"><value>Değiştirilemez düzeltme</value></data>
+  <data name="OpeningReverse_Title" xml:space="preserve"><value>Açılış bakiyesini ters kaydet</value></data>
+  <data name="OpeningReverse_Introduction" xml:space="preserve"><value>Özgün açılış yerinde ve Posted kalır. Ayrı ters kayıt, aynı giriş ve lot tahsislerini zıt işaretle etkisizleştirir.</value></data>
+  <data name="OpeningReverse_LoadErrorTitle" xml:space="preserve"><value>Ters kayıt uygunluğu okunamadı</value></data>
+  <data name="OpeningReverse_LoadErrorExplanation" xml:space="preserve"><value>İşlem ve bağımlılık geçmişi birlikte doğrulanamadı. Hiçbir ters kayıt oluşturulmadı.</value></data>
+  <data name="OpeningReverse_TargetTitle" xml:space="preserve"><value>Düzeltilecek açılış</value></data>
+  <data name="OpeningReverse_BackToReceipt" xml:space="preserve"><value>Açılış makbuzuna dön</value></data>
+  <data name="OpeningReverse_EligibilityTitle" xml:space="preserve"><value>Güncel ters kayıt uygunluğu</value></data>
+  <data name="OpeningReverse_Eligible" xml:space="preserve"><value>Uygun — zıt etkiler güvenle oluşturulabilir.</value></data>
+  <data name="OpeningReverse_AlreadyReversed" xml:space="preserve"><value>Bu açılış zaten ayrı bir Posted ters kayıtla etkisizleştirilmiş.</value></data>
+  <data name="OpeningReverse_BlockedByDependencies" xml:space="preserve"><value>Sonraki lot kullanımları bu açılışın ters kaydını engelliyor.</value></data>
+  <data name="OpeningReverse_NotPosted" xml:space="preserve"><value>Yalnız Posted işlem ters kaydedilebilir.</value></data>
+  <data name="OpeningReverse_TargetIsReversal" xml:space="preserve"><value>Bir ters kayıt işlemi doğrudan tekrar ters kaydedilemez.</value></data>
+  <data name="OpeningReverse_UnsupportedShape" xml:space="preserve"><value>Kalıcı işlem mevcut alan kurallarıyla güvenle ters kaydedilemiyor.</value></data>
+  <data name="OpeningReverse_OpenExistingReversal" xml:space="preserve"><value>Mevcut ters kayıt işlemini aç</value></data>
+  <data name="OpeningReverse_BlockingExplanation" xml:space="preserve"><value>Önce aşağıdaki bağımlı işlemler kendi denetlenmiş akışlarıyla ters kaydedilmelidir:</value></data>
+  <data name="OpeningReverse_BlockingTransactionLink" xml:space="preserve"><value>Engelleyen işlemi aç</value></data>
+  <data name="OpeningReverse_InverseTitle" xml:space="preserve"><value>Oluşturulacak zıt etkiler</value></data>
+  <data name="OpeningReverse_InverseExplanation" xml:space="preserve"><value>Bu önizleme yeni ters kayıt girişlerini gösterir; özgün açılışı değiştirmez. Negatif işaret, mevcut pozisyon ve lot miktarından düşülecek etkiyi anlatır.</value></data>
+  <data name="OpeningReverse_InverseAllocationsTitle" xml:space="preserve"><value>Aynı lotlara uygulanacak zıt tahsisler</value></data>
+  <data name="OpeningReverse_ActionTitle" xml:space="preserve"><value>Ters kaydı açıkça onaylayın</value></data>
+  <data name="OpeningReverse_ActionExplanation" xml:space="preserve"><value>Bu eylem özgün kaydı silmez. Yeni, kalıcı bir Reversal işlemi oluşturur; ardından düzeltilmiş açılışı ayrı bir incelemeyle girebilirsiniz.</value></data>
+  <data name="OpeningReverse_ReasonLabel" xml:space="preserve"><value>Düzeltme nedeni</value></data>
+  <data name="OpeningReverse_ReasonHelp" xml:space="preserve"><value>Neyin yanlış olduğunu ve neden yeni bir açılış gerektiğini açıkça yazın.</value></data>
+  <data name="OpeningReverse_PostAction" xml:space="preserve"><value>Kalıcı ters kaydı oluştur</value></data>
+  <data name="OpeningReverse_Validation_ReasonRequired" xml:space="preserve"><value>Ters kayıt nedeni zorunludur.</value></data>
+  <data name="OpeningReverse_Validation_ReasonInvalid" xml:space="preserve"><value>Neden en fazla 2000 karakter olmalı ve kontrol karakteri içermemelidir.</value></data>
+  <data name="OpeningReverse_Error_Persistence" xml:space="preserve"><value>Ters kayıt kalıcı geçmişle çakıştı. Kısmi işlem oluşturulmadı; sayfayı yenileyip güncel uygunluğu kontrol edin.</value></data>
+  <data name="Detail_PhysicalGoldTitle" xml:space="preserve"><value>Fiziksel altın lot ayrıntıları</value></data>
+  <data name="Detail_PhysicalGoldDerivedExplanation" xml:space="preserve"><value>Saf altın ağırlığı, kalıcı brüt miktar ve ppm ayarından türetilir; ayrı bir yetkili bakiye değildir.</value></data>
 </root>

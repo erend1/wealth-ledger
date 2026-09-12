@@ -116,7 +116,19 @@ internal static class ApiContractMapper
                             lot.OriginalCostBasisMinorUnits,
                             lot.CostBasisCurrencyCode,
                             ToCode(lot.CostBasisStatus),
-                            lot.CreatedAtUtc))
+                            lot.CreatedAtUtc,
+                            lot.PhysicalGoldDetail is null
+                                ? null
+                                : new LedgerTransactionPhysicalGoldResponse(
+                                    lot.PhysicalGoldDetail
+                                        .FinenessPartsPerMillion,
+                                    lot.PhysicalGoldDetail.PieceCount,
+                                    lot.PhysicalGoldDetail.Hallmark,
+                                    lot.PhysicalGoldDetail
+                                        .CertificateReference,
+                                    lot.PhysicalGoldDetail.Note,
+                                    OpeningBalanceContractMapper.FormatExact(
+                                        lot.PhysicalGoldDetail.FineWeightGrams)!)))
                 .ToArray(),
 
             detail.LotAllocations

@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Domain.Ledger;
+using WealthLedger.Domain.Lots;
+using WealthLedger.Domain.ValueObjects;
 
 namespace WealthLedger.Infrastructure.Persistence
 {
@@ -119,15 +121,22 @@ namespace WealthLedger.Infrastructure.Persistence
             var createdLots =
                 entryIds.Length == 0
                     ? []
-                    : await _dbContext.AssetLots
-                        .AsNoTracking()
-                        .Where(
-                            x => entryIds.Contains(
-                                x.OpeningTransactionEntryId))
-                        .OrderBy(x => x.CreatedAtUtc)
-                        .ThenBy(x => x.Id)
-                        .ToListAsync(
-                            cancellationToken);
+                    : await (
+                            from lot in _dbContext.AssetLots.AsNoTracking()
+                            join gold in _dbContext.PhysicalGoldLotDetails
+                                    .AsNoTracking()
+                                on lot.Id equals gold.AssetLotId
+                                into lotGoldDetails
+                            from gold in lotGoldDetails.DefaultIfEmpty()
+                            where entryIds.Contains(
+                                lot.OpeningTransactionEntryId)
+                            orderby lot.CreatedAtUtc, lot.Id
+                            select new
+                            {
+                                Lot = lot,
+                                Gold = gold
+                            })
+                        .ToListAsync(cancellationToken);
 
             return new LedgerTransactionDetail(
                 transaction.Id,
@@ -187,18 +196,65 @@ namespace WealthLedger.Infrastructure.Persistence
                     .Select(
                         x =>
                             new LedgerTransactionCreatedLotDetail(
-                                x.Id,
-                                x.AssetId,
-                                x.OpeningTransactionEntryId,
-                                x.AcquiredOn,
-                                x.OriginalCostBasisMinor,
-                                x.CostBasisCurrencyCode,
-                                x.CostBasisStatus,
+                                x.Lot.Id,
+                                x.Lot.AssetId,
+                                x.Lot.OpeningTransactionEntryId,
+                                x.Lot.AcquiredOn,
+                                x.Lot.OriginalCostBasisMinor,
+                                x.Lot.CostBasisCurrencyCode,
+                                x.Lot.CostBasisStatus,
                                 ToDateTimeOffset(
-                                    x.CreatedAtUtc)))
+                                    x.Lot.CreatedAtUtc),
+                                MapPhysicalGoldDetail(
+                                    x.Lot.Id,
+                                    x.Lot.OpeningTransactionEntryId,
+                                    x.Gold,
+                                    lotAllocations)))
                     .ToArray(),
 
                 lotAllocations);
+        }
+
+        private static LedgerTransactionPhysicalGoldDetail?
+            MapPhysicalGoldDetail(
+                Guid assetLotId,
+                Guid openingTransactionEntryId,
+                Rows.PhysicalGoldLotDetailRow? row,
+                IReadOnlyList<LedgerTransactionLotAllocationDetail> allocations)
+        {
+            if (row is null)
+            {
+                return null;
+            }
+
+            var openingAllocation = allocations.SingleOrDefault(
+                allocation => allocation.AssetLotId == assetLotId
+                    && allocation.TransactionEntryId
+                        == openingTransactionEntryId);
+
+            if (openingAllocation is null
+                || openingAllocation.QuantityDeltaRawE8 <= 0)
+            {
+                throw new CoreLedgerPersistenceException(
+                    "A physical-gold lot has no positive opening allocation.");
+            }
+
+            var detail = new PhysicalGoldLotDetail(
+                new Fineness(row.ActualFinenessPpm),
+                row.PieceCount,
+                row.Hallmark,
+                row.CertificateReference,
+                row.Note);
+
+            return new LedgerTransactionPhysicalGoldDetail(
+                detail.Fineness.Ppm,
+                detail.PieceCount,
+                detail.Hallmark,
+                detail.CertificateReference,
+                detail.Note,
+                detail.CalculateFineWeightGrams(
+                    Quantity.FromRaw(
+                        openingAllocation.QuantityDeltaRawE8)));
         }
 
         private static DateTimeOffset ToDateTimeOffset(

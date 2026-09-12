@@ -15,6 +15,7 @@ public sealed class CriticalJourneysTests
                 JavaScriptEnabled: true,
                 KeyboardOnly: false,
                 EmulateAccessibilityPreferences: false,
+                ExerciseOpeningCutover: false,
                 ViewportWidth: 1280,
                 ViewportHeight: 800));
 
@@ -25,6 +26,7 @@ public sealed class CriticalJourneysTests
                 JavaScriptEnabled: false,
                 KeyboardOnly: false,
                 EmulateAccessibilityPreferences: true,
+                ExerciseOpeningCutover: true,
                 ViewportWidth: 390,
                 ViewportHeight: 844));
 
@@ -35,6 +37,7 @@ public sealed class CriticalJourneysTests
                 JavaScriptEnabled: true,
                 KeyboardOnly: true,
                 EmulateAccessibilityPreferences: false,
+                ExerciseOpeningCutover: false,
                 ViewportWidth: 1280,
                 ViewportHeight: 800));
 
@@ -122,6 +125,11 @@ public sealed class CriticalJourneysTests
                     workspace.BackupDirectory,
                     "*.wlbackup",
                     SearchOption.TopDirectoryOnly));
+            Assert.Empty(
+                Directory.EnumerateFiles(
+                    workspace.BrowserArtifactsDirectory,
+                    "*",
+                    SearchOption.AllDirectories));
 
             var hostOutput = string.Join(
                 Environment.NewLine,
@@ -136,6 +144,8 @@ public sealed class CriticalJourneysTests
                 StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("Browser Test Household", hostOutput);
             Assert.DoesNotContain("BROWSER-JOURNEY-REFERENCE", hostOutput);
+            Assert.DoesNotContain("BROWSER-OPENING-REFERENCE", hostOutput);
+            Assert.DoesNotContain("Synthetic browser opening", hostOutput);
             Assert.DoesNotContain(
                 "Data Source=",
                 hostOutput,
@@ -364,6 +374,16 @@ public sealed class CriticalJourneysTests
         JourneyOptions options)
     {
         var baseAddress = await workspace.StartHostAsync();
+
+        if (options.ExerciseOpeningCutover)
+        {
+            baseAddress = await RunOpeningCutoverAsync(
+                page,
+                workspace,
+                baseAddress,
+                options);
+        }
+
         var transactionId = await SeedContributionAsync(baseAddress);
 
         await GoToAsync(page, baseAddress, "/");
@@ -434,6 +454,405 @@ public sealed class CriticalJourneysTests
         await workspace.StopHostAsync();
     }
 
+    private static async Task<Uri> RunOpeningCutoverAsync(
+        IPage page,
+        BrowserTestWorkspace workspace,
+        Uri baseAddress,
+        JourneyOptions options)
+    {
+        await GoToAsync(page, baseAddress, "/record/opening-balance");
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        Assert.Equal(
+            1,
+            await page.Locator(
+                ".primary-nav a[href=\"/record/opening-balance\"][aria-current=\"page\"]")
+                .CountAsync());
+
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AssetId"),
+            "TRY_NAKIT");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Varlık seçimini uygula",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#Input_Quantity").FillAsync("12345,67");
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-OPENING-REFERENCE-CASH");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser opening for cash evidence.");
+        var cashReceipt = await ReviewAndPostOpeningAsync(page);
+        Assert.Contains(
+            "12.345,67 para birimi",
+            await page.Locator("main").InnerTextAsync());
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Başka bir açılış başlat",
+                    Exact = true
+                })
+            .ClickAsync();
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AssetId"),
+            "ILK_FON");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Varlık seçimini uygula",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Lot ekle",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#Input_Quantity").FillAsync("123,456789");
+        await page.Locator("#Input_Lots_0__Quantity").FillAsync("100,000001");
+        await page.Locator("#Input_Lots_0__CostBasisStatusCode")
+            .SelectOptionAsync("UNKNOWN");
+        await page.Locator("#Input_Lots_1__Quantity").FillAsync("23,456787");
+        await page.Locator("#Input_Lots_1__CostBasisStatusCode")
+            .SelectOptionAsync("UNKNOWN");
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-OPENING-REFERENCE-FUND");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser opening for two fund lots.");
+
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Açılışı incele",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator(".validation-summary").WaitForAsync();
+        Assert.Contains(
+            "tam eşleşmelidir",
+            await page.Locator(".validation-summary").InnerTextAsync());
+        Assert.Equal(
+            "#Input_Lots",
+            await page.Locator(".validation-summary a").GetAttributeAsync("href"));
+        Assert.Equal(1, await page.Locator("#Input_Lots").CountAsync());
+        Assert.Equal(0, await page.Locator("#opening-review-heading").CountAsync());
+
+        await page.Locator("#Input_Lots_1__Quantity").FillAsync("23,456788");
+        var fundReceipt = await ReviewAndPostOpeningAsync(page);
+        Assert.Contains(
+            "123,456789 fon birimi",
+            await page.Locator("main").InnerTextAsync());
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Başka bir açılış başlat",
+                    Exact = true
+                })
+            .ClickAsync();
+        await OpenReferenceCreateAsync(page);
+        await page.Locator("#AssetInput_Code").FillAsync("BROWSER_EQUITY");
+        await page.Locator("#AssetInput_Name").FillAsync("Browser Test Equity");
+        await page.Locator("#AssetInput_TypeCode").SelectOptionAsync("EQUITY");
+        await page.Locator("#AssetInput_BaseCurrencyCode").SelectOptionAsync("TRY");
+        await page.Locator("#AssetInput_LotTrackingModeCode")
+            .SelectOptionAsync("REQUIRED");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Varlığı oluştur ve kullan",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#Input_Quantity").FillAsync("17");
+        await page.Locator("#Input_Lots_0__Quantity").FillAsync("17");
+        await page.Locator("#Input_Lots_0__CostBasisStatusCode")
+            .SelectOptionAsync("UNKNOWN");
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-OPENING-REFERENCE-EQUITY");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser opening for equity evidence.");
+        var equityReceipt = await ReviewAndPostOpeningAsync(page);
+        Assert.Contains(
+            "17 pay",
+            await page.Locator("main").InnerTextAsync());
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Başka bir açılış başlat",
+                    Exact = true
+                })
+            .ClickAsync();
+        await OpenReferenceCreateAsync(page);
+        await page.Locator("#AccountInput_Code").FillAsync("BROWSER_VAULT");
+        await page.Locator("#AccountInput_Name").FillAsync("Browser Test Vault");
+        await page.Locator("#AccountInput_TypeCode")
+            .SelectOptionAsync("PHYSICAL_VAULT");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Hesabı oluştur ve kullan",
+                    Exact = true
+                })
+            .ClickAsync();
+        await OpenReferenceCreateAsync(page);
+        await page.Locator("#AssetInput_Code").FillAsync("BROWSER_GOLD");
+        await page.Locator("#AssetInput_Name").FillAsync("Browser Test Gold");
+        await page.Locator("#AssetInput_TypeCode")
+            .SelectOptionAsync("PHYSICAL_GOLD");
+        await page.Locator("#AssetInput_BaseCurrencyCode").SelectOptionAsync("TRY");
+        await page.Locator("#AssetInput_LotTrackingModeCode")
+            .SelectOptionAsync("REQUIRED");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Varlığı oluştur ve kullan",
+                    Exact = true
+                })
+            .ClickAsync();
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AccountId"),
+            "BROWSER_VAULT");
+        await page.Locator("#Input_Quantity").FillAsync("25,25");
+        await page.Locator("#Input_Lots_0__Quantity").FillAsync("25,25");
+        await page.Locator("#Input_Lots_0__CostBasisStatusCode")
+            .SelectOptionAsync("UNKNOWN");
+        await page.Locator("#Input_Lots_0__FinenessChoiceCode")
+            .SelectOptionAsync("22K_916");
+        await page.Locator("#Input_Lots_0__PieceCount").FillAsync("2");
+        await page.Locator("#Input_Lots_0__Hallmark")
+            .FillAsync("BROWSER-916");
+        await page.Locator("#Input_Lots_0__Note")
+            .FillAsync("Two synthetic matching browser bracelets.");
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-OPENING-REFERENCE-GOLD");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser opening for physical inventory.");
+        var goldReceipt = await ReviewAndPostOpeningAsync(page);
+        Assert.Contains(
+            "23,129 g",
+            await page.Locator("main").InnerTextAsync());
+
+        await GoToAsync(page, baseAddress, equityReceipt);
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Bu açılışı ters kaydet",
+                    Exact = true
+                })
+            .ClickAsync();
+        Assert.Contains(
+            "Uygun — zıt etkiler",
+            await page.Locator("main").InnerTextAsync());
+        await page.Locator("#Input_Reason")
+            .FillAsync("Synthetic browser correction for equity evidence.");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Kalıcı ters kaydı oluştur",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#receipt-heading").WaitForAsync();
+
+        using (var readbackClient = new HttpClient { BaseAddress = baseAddress })
+        {
+            var equityTransactionId = Guid.Parse(
+                equityReceipt.Split('/').Last());
+            var detail = await readbackClient.GetFromJsonAsync<
+                LedgerTransactionResponse>(
+                $"/api/ledger/transactions/{equityTransactionId:D}");
+            Assert.NotNull(detail);
+            Assert.NotNull(detail.ReversedByTransactionId);
+        }
+
+        await page.ReloadAsync(
+            new PageReloadOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+        Assert.Equal(
+            1,
+            await page.GetByRole(
+                    AriaRole.Link,
+                    new PageGetByRoleOptions
+                    {
+                        Name = "Ters kayıt işlemini aç",
+                        Exact = true
+                    })
+                .CountAsync());
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Başka bir açılış başlat",
+                    Exact = true
+                })
+            .ClickAsync();
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AssetId"),
+            "BROWSER_EQUITY");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Varlık seçimini uygula",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#Input_Quantity").FillAsync("18");
+        await page.Locator("#Input_Lots_0__Quantity").FillAsync("18");
+        await page.Locator("#Input_Lots_0__CostBasisStatusCode")
+            .SelectOptionAsync("UNKNOWN");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser corrected equity opening.");
+        var correctedEquityReceipt = await ReviewAndPostOpeningAsync(page);
+        Assert.Contains("18 pay", await page.Locator("main").InnerTextAsync());
+
+        await page.ReloadAsync(
+            new PageReloadOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+        Assert.Equal(
+            correctedEquityReceipt,
+            new Uri(page.Url).AbsolutePath);
+        Assert.Equal(1, await page.Locator("#receipt-heading").CountAsync());
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Tam işlem ayrıntısını aç",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.GoBackAsync(
+            new PageGoBackOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+        Assert.Equal(
+            correctedEquityReceipt,
+            new Uri(page.Url).AbsolutePath);
+
+        await workspace.StopHostAsync();
+        baseAddress = await workspace.StartHostAsync();
+
+        foreach (var receiptPath in new[]
+                 {
+                     cashReceipt,
+                     fundReceipt,
+                     goldReceipt,
+                     correctedEquityReceipt
+                 })
+        {
+            await GoToAsync(page, baseAddress, receiptPath);
+            Assert.Equal(1, await page.Locator("#receipt-heading").CountAsync());
+        }
+
+        return baseAddress;
+    }
+
+    private static async Task<string> ReviewAndPostOpeningAsync(IPage page)
+    {
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Açılışı incele",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#opening-review-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        if (await page.Locator("#opening-review-heading").CountAsync() != 1)
+        {
+            var validation = await page.Locator(".validation-summary")
+                .AllInnerTextsAsync();
+            throw new InvalidOperationException(
+                "Opening review failed: " + string.Join(" | ", validation));
+        }
+
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "İncelenen açılışı kalıcı olarak kaydet",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#receipt-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        if (await page.Locator("#receipt-heading").CountAsync() != 1)
+        {
+            var validation = await page.Locator(".validation-summary")
+                .AllInnerTextsAsync();
+            throw new InvalidOperationException(
+                "Opening post failed: " + string.Join(" | ", validation));
+        }
+
+        return new Uri(page.Url).AbsolutePath;
+    }
+
+    private static async Task OpenReferenceCreateAsync(IPage page)
+    {
+        var details = page.Locator("details.reference-create");
+
+        if (await details.GetAttributeAsync("open") is null)
+        {
+            await details.Locator("summary").ClickAsync();
+        }
+    }
+
+    private static async Task SelectOptionContainingAsync(
+        ILocator select,
+        string expectedText)
+    {
+        var options = select.Locator("option");
+        var count = await options.CountAsync();
+
+        for (var index = 0; index < count; index++)
+        {
+            var option = options.Nth(index);
+            var text = await option.InnerTextAsync();
+
+            if (!text.Contains(expectedText, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var value = await option.GetAttributeAsync("value");
+            Assert.False(string.IsNullOrWhiteSpace(value));
+            await select.SelectOptionAsync(value);
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"No option containing '{expectedText}' was available.");
+    }
+
     private static async Task<Guid> SeedContributionAsync(Uri baseAddress)
     {
         using var client = new HttpClient
@@ -451,7 +870,12 @@ public sealed class CriticalJourneysTests
         var accounts = await client.GetFromJsonAsync<
             NavigationPageResponse<AccountNavigationResponse>>(
             $"/api/households/{household.HouseholdId:D}/accounts?pageSize=100");
-        var account = Assert.Single(accounts!.Items);
+        var account = Assert.Single(
+            accounts!.Items,
+            item => string.Equals(
+                item.Code,
+                "ANA_HESAP",
+                StringComparison.Ordinal));
         var assets = await client.GetFromJsonAsync<
             NavigationPageResponse<AssetNavigationResponse>>(
             "/api/assets?pageSize=100");
@@ -622,6 +1046,7 @@ public sealed class CriticalJourneysTests
         bool JavaScriptEnabled,
         bool KeyboardOnly,
         bool EmulateAccessibilityPreferences,
+        bool ExerciseOpeningCutover,
         int ViewportWidth,
         int ViewportHeight);
 }

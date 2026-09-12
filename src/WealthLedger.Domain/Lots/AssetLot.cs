@@ -160,6 +160,13 @@ namespace WealthLedger.Domain.Lots
                     "Physical gold details can be attached only to physical gold lots.");
             }
 
+            if (asset.Type == AssetType.PhysicalGold
+                && physicalGoldDetail is null)
+            {
+                throw new DomainRuleViolationException(
+                    "A physical gold lot must contain physical gold details.");
+            }
+
             Id = id;
             AssetId = asset.Id;
             OpeningTransactionEntryId = openingEntry.Id;

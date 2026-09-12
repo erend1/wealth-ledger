@@ -4,6 +4,7 @@ using WealthLedger.Api.Startup;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
+using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Positions;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure;
@@ -45,6 +46,14 @@ builder.Services.AddScoped<ListAccountsUseCase>();
 builder.Services.AddScoped<ListCurrenciesUseCase>();
 builder.Services.AddScoped<ListAssetsUseCase>();
 builder.Services.AddScoped<ListRecentLedgerTransactionsUseCase>();
+builder.Services.AddScoped<ListOpeningBalanceChoicesUseCase>();
+builder.Services.AddScoped<CreateOpeningBalanceCurrencyUseCase>();
+builder.Services.AddScoped<CreateOpeningBalanceInstitutionUseCase>();
+builder.Services.AddScoped<CreateOpeningBalanceAccountUseCase>();
+builder.Services.AddScoped<CreateOpeningBalanceAssetUseCase>();
+builder.Services.AddScoped<PreviewOpeningBalanceUseCase>();
+builder.Services.AddScoped<RecordOpeningBalanceUseCase>();
+builder.Services.AddScoped<GetOpeningBalanceVerificationUseCase>();
 
 var app = builder.Build();
 
@@ -119,6 +128,7 @@ switch (startupSelection.Mode)
         app.MapLedgerEndpoints();
         app.MapNavigationEndpoints();
         app.MapPositionEndpoints();
+        app.MapOpeningBalanceEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:

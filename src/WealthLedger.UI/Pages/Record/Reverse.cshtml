@@ -1,0 +1,170 @@
+@page "/record/opening-balance/{transactionId}/reverse"
+@model WealthLedger.UI.Pages.Record.ReverseModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["OpeningReverse_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="reverse-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["OpeningReverse_Eyebrow"]</p>
+        <h1 id="reverse-heading">@Text["OpeningReverse_Title"]</h1>
+        <p class="lede">@Text["OpeningReverse_Introduction"]</p>
+    </header>
+
+    <partial name="_ValidationSummary" />
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["OpeningReceipt_InvalidTitle"]</h2>
+            <p>@Text["OpeningReceipt_InvalidExplanation"]</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.OpeningNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["OpeningReceipt_NotFoundTitle"]</h2>
+            <p>@Text["OpeningReceipt_NotFoundExplanation"]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable || Model.Verification is null
+             || Model.Explanation is null || Model.Preview is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["OpeningReverse_LoadErrorTitle"]</h2>
+            <p>@Text["OpeningReverse_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        var transaction = Model.Verification.Transaction;
+        var context = Model.Explanation.CurrentContext.Entries.Single();
+        var preview = Model.Preview;
+
+        <section class="summary-card flow" aria-labelledby="reverse-target-heading">
+            <h2 id="reverse-target-heading">@Text["OpeningReverse_TargetTitle"]</h2>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Ledger_TransactionIdLabel"]</dt>
+                    <dd><code class="technical-id">@transaction.TransactionId</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_PortfolioLabel"]</dt>
+                    <dd>@context.Portfolio.Name (@context.Portfolio.Code)</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AccountLabel"]</dt>
+                    <dd>@context.Account.Name (@context.Account.Code)</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AssetLabel"]</dt>
+                    <dd>@context.Asset.Name (@context.Asset.Code)</dd>
+                </div>
+                <div>
+                    <dt>@Text["Opening_AsOfDateLabel"]</dt>
+                    <dd>@transaction.ExecutionDate!.Value.ToString("dd.MM.yyyy")</dd>
+                </div>
+            </dl>
+            <a class="card-link" asp-page="/Record/Receipt"
+               asp-route-transactionId="@transaction.TransactionId.ToString("D")">
+                @Text["OpeningReverse_BackToReceipt"]
+            </a>
+        </section>
+
+        <section class="summary-card @(preview.CanReverse ? "" : "summary-card--warning") flow"
+                 aria-labelledby="reverse-eligibility-heading">
+            <h2 id="reverse-eligibility-heading">@Text["OpeningReverse_EligibilityTitle"]</h2>
+            <p class="state-text">@Text[WealthLedger.UI.Pages.Record.ReverseModel.EligibilityResourceKey(preview.EligibilityCode)]</p>
+
+            @if (preview.ExistingReversalTransactionId is Guid existingReversalId)
+            {
+                <a class="card-link" asp-page="/Ledger/Details"
+                   asp-route-transactionId="@existingReversalId.ToString("D")">
+                    @Text["OpeningReverse_OpenExistingReversal"]
+                </a>
+            }
+
+            @if (preview.BlockingTransactionIds.Count > 0)
+            {
+                <p>@Text["OpeningReverse_BlockingExplanation"]</p>
+                <ul class="plain-list">
+                    @foreach (var blockingId in preview.BlockingTransactionIds)
+                    {
+                        <li>
+                            <a class="card-link" asp-page="/Ledger/Details"
+                               asp-route-transactionId="@blockingId.ToString("D")">
+                                @Text["OpeningReverse_BlockingTransactionLink"]
+                                <code class="technical-id">@blockingId</code>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="inverse-heading">
+            <h2 id="inverse-heading">@Text["OpeningReverse_InverseTitle"]</h2>
+            <p>@Text["OpeningReverse_InverseExplanation"]</p>
+            <ol class="entry-list">
+                @foreach (var entry in preview.InverseEntries.OrderBy(item => item.Sequence))
+                {
+                    <li class="entry-card flow">
+                        <h3>@Text["Detail_EntrySequenceLabel"] @entry.Sequence</h3>
+                        <p aria-label="@Model.PresentQuantity(entry.QuantityDelta.RawE8).AssistiveText">
+                            @Model.PresentQuantity(entry.QuantityDelta.RawE8).Text
+                        </p>
+                    </li>
+                }
+            </ol>
+
+            @if (preview.InverseLotAllocations.Count > 0)
+            {
+                <h3>@Text["OpeningReverse_InverseAllocationsTitle"]</h3>
+                <ol class="entry-list">
+                    @foreach (var allocation in preview.InverseLotAllocations)
+                    {
+                        <li class="entry-card flow">
+                            <p aria-label="@Model.PresentQuantity(allocation.QuantityDelta.RawE8).AssistiveText">
+                                @Model.PresentQuantity(allocation.QuantityDelta.RawE8).Text
+                            </p>
+                            <details class="technical-details">
+                                <summary>@Text["Common_TechnicalDetails"]</summary>
+                                <code class="technical-id">@allocation.AssetLotId</code>
+                            </details>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+
+        @if (preview.CanReverse)
+        {
+            <form method="post" class="panel panel--action flow" novalidate>
+                <input asp-for="Input.IdempotencyKey" type="hidden" />
+                <h2>@Text["OpeningReverse_ActionTitle"]</h2>
+                <p>@Text["OpeningReverse_ActionExplanation"]</p>
+                <div class="field">
+                    <label asp-for="Input.Reason">@Text["OpeningReverse_ReasonLabel"]</label>
+                    <textarea asp-for="Input.Reason" maxlength="2000" rows="4"
+                              aria-describedby="reverse-reason-help Input_Reason-error"></textarea>
+                    <p id="reverse-reason-help" class="help">@Text["OpeningReverse_ReasonHelp"]</p>
+                    <span id="Input_Reason-error" class="field-error"
+                          asp-validation-for="Input.Reason"></span>
+                </div>
+                <button class="button" type="submit" data-final-submit>
+                    @Text["OpeningReverse_PostAction"]
+                </button>
+            </form>
+        }
+    }
+</article>

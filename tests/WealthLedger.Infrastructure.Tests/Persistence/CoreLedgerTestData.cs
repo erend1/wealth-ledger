@@ -205,6 +205,9 @@ internal static class CoreLedgerTestData
             Type = type,
             Status = TransactionStatus.Draft,
             ExecutionDate = executionDate ?? ExecutionDate,
+            Note = type == TransactionType.OpeningBalance
+                ? "Synthetic opening source."
+                : null,
             ReversalOfTransactionId = reversalOfTransactionId,
             CreatedAtUtc = CreatedAtUtc
         };

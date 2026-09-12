@@ -1,8 +1,8 @@
 # WealthLedger Local Data Operations
 
-Status: Canonical M004 operator guide
+Status: Canonical local-data operator guide through M007
 
-Last verified: 2026-09-02
+Last verified: 2026-09-11
 
 ## Safety boundary
 
@@ -78,10 +78,11 @@ creates a unique stage, applies the accepted migration chain, validates it, and
 only then publishes the authoritative file. It never recreates an existing
 database.
 
-One-time master-data setup remains a separate, default-off API action. After
-database initialization, start the loopback API with `Setup:Enabled=true`, call
-the documented setup endpoint once, stop it, and restart without that flag.
-Automatic startup migration is not supported.
+After database initialization, the loopback browser first run enters
+`WorkspaceUninitialized` and can create the bounded core master graph. The
+legacy JSON setup action is mapped in that mode only when `Setup:Enabled=true`;
+normal browser setup does not require that flag. Stop and restart after each
+startup-mode completion. Automatic startup migration is not supported.
 
 ## Create and verify a backup
 
@@ -293,6 +294,53 @@ prints a connection string, SQL, stack trace, request body, or ledger value.
 M004 supplies tested local recovery mechanics. It does not make one workstation
 or one plaintext package an adequate sole record of real household assets.
 
+## Operate an M007 opening cutover
+
+Only a `Ready` host maps `/record/opening-balance` and the opening-balance JSON
+routes. Ready means the configured database is compatible and intact, core
+masters are complete, and at least one independently verified backup is proved
+to belong to that workspace. The M004 separation and encryption confirmations
+remain operator attestations; Ready does not turn a plaintext learning backup
+into adequate real-data protection.
+
+Before an entry session:
+
+1. stop if the host reports any mode other than Ready;
+2. inspect Settings/Data safety and the exact `status` result;
+3. verify the active and backup paths and their external protection;
+4. retain the source statement or physical inventory record; and
+5. create a fresh backup when the current generation is not an acceptable
+   recovery point.
+
+In the browser, Record opens one dedicated opening command for one Account,
+Portfolio, Asset, and as-of date. Narrow Currency, Institution, Account, or
+Asset creation commits only that master fact. Review is non-mutating. The final
+post creates one immutable transaction and receipt; a successful refresh or
+same-key retry resolves the same result. Use the receipt and transaction detail
+to compare the entered quantity and lot totals with the ledger-derived position.
+
+Never enter current market value as historical acquisition cost. Unknown cost
+stays Unknown. Cash/Currency has no acquisition lot; fund/equity/gold openings
+must reconcile all lots exactly, and fine-gold weight is derived from gross
+weight and fineness.
+
+If an opening is wrong, do not edit the database or restore merely to remove the
+mistake. Use the opening receipt's reversal path. A downstream lot allocation
+must first be reversed through its own supported workflow. After the exact
+reversal posts and the scoped position returns to zero, create a separately
+reviewed replacement with a new key.
+
+After a meaningful cutover session, stop the host, create and independently
+verify a new immutable backup, and perform an isolated restore drill on the
+accepted cadence. M007 verification did exactly this against retained synthetic
+roots outside the repository, then started a fresh Ready process over the
+staged copy and read back the ledger, corrected position, receipt, and physical-
+gold derivation without replacing the active database.
+
+This procedure does not satisfy independent evidence reconciliation. M010 and
+the remaining ROADMAP real-data gate still apply, so M007 completion is not a
+recommendation to make WealthLedger the sole real household record.
+
 ## Synthetic verification workflow
 
 The process tests execute the same commands against unique temporary paths and
@@ -308,9 +356,20 @@ dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.cs
 dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.csproj --no-restore --filter FullyQualifiedName~OperationsCli_ReplacementRequiresConfirmationAndPreservesEvidence --verbosity minimal
 
 dotnet test tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj --no-restore --filter FullyQualifiedName~Migration_FromM001BacksUpFullChainAndPreservesData --verbosity minimal
+
+dotnet test WealthLedger.slnx --no-restore --verbosity minimal
+dotnet format WealthLedger.slnx --verify-no-changes --no-restore --verbosity minimal
+dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj --startup-project src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj --context WealthLedgerDbContext --no-build
 ```
 
 These checks cover initialize, status, consistent package creation, independent
 verification, isolated staging, restore validation, verified pre-migration and
 pre-restore paths, confirmed replacement, restart/readback, and preservation of
 recovery evidence without using real household data.
+
+The verified M007 checkpoint contains 676 passing tests and six migrations.
+Its three Playwright journeys use unique explicit database/backup roots, block
+external requests, cover the restart-delimited first run plus opening
+review/post/receipt/reversal/replacement, and produce no screenshot or trace by
+default. The retained human learning lab is not test-owned and is never deleted
+automatically.

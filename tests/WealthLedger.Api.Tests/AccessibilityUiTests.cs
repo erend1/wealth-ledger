@@ -18,6 +18,7 @@ public sealed partial class AccessibilityUiTests
                          "/",
                          "/ledger",
                          $"/ledger/{fixture.PurchaseTransactionId:D}",
+                         "/record/opening-balance",
                          "/settings",
                          "/settings/master-data",
                          "/settings/data-safety"
@@ -120,6 +121,14 @@ public sealed partial class AccessibilityUiTests
                 }
             }
         }
+
+        using (var factory = new WealthLedgerApiFactory())
+        {
+            using var client = CreateClient(factory);
+            await AssertFormControlsAsync(
+                client,
+                "/record/opening-balance");
+        }
     }
 
     [Fact]
@@ -199,6 +208,54 @@ public sealed partial class AccessibilityUiTests
         using var factory = new WealthLedgerApiFactory(mode);
         using var client = CreateClient(factory);
         await AssertAccessibleDocumentAsync(client, path);
+    }
+
+    private static async Task AssertFormControlsAsync(
+        HttpClient client,
+        string path)
+    {
+        using var response = await client.GetAsync(path);
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        foreach (Match control in FormControlPattern().Matches(html))
+        {
+            var attributes = control.Groups["attributes"].Value;
+
+            if (string.Equals(
+                    Attribute(attributes, "type"),
+                    "hidden",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var id = Attribute(attributes, "id");
+            Assert.False(
+                string.IsNullOrWhiteSpace(id),
+                $"An input on {path} has no id: {control.Value}");
+            Assert.Matches(
+                $"<label\\b[^>]*\\bfor=\"{Regex.Escape(id!)}\"[^>]*>",
+                html);
+
+            var describedBy = Attribute(attributes, "aria-describedby");
+
+            if (describedBy is null)
+            {
+                continue;
+            }
+
+            foreach (var descriptionId in describedBy.Split(
+                         ' ',
+                         StringSplitOptions.RemoveEmptyEntries))
+            {
+                Assert.Contains(
+                    $"id=\"{descriptionId}\"",
+                    html,
+                    StringComparison.Ordinal);
+            }
+        }
     }
 
     private static async Task AssertAccessibleDocumentAsync(

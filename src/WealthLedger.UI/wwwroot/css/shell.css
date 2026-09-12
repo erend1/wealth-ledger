@@ -66,10 +66,64 @@
 
 .dashboard-grid,
 .settings-links,
-.master-grid {
+.master-grid,
+.reference-create__grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
     gap: 1rem;
+}
+
+fieldset.panel,
+.nested-fieldset {
+    min-width: 0;
+}
+
+fieldset.panel > legend,
+.nested-fieldset > legend {
+    padding-inline: 0.35rem;
+    font-size: clamp(1.15rem, 3vw, 1.5rem);
+    font-weight: 750;
+}
+
+.nested-fieldset {
+    padding: 1rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: var(--radius);
+}
+
+.button--secondary {
+    border: 0.0625rem solid var(--accent);
+    background: var(--surface);
+    color: var(--accent-dark);
+}
+
+.button--secondary:hover {
+    background: var(--success-bg);
+}
+
+.button--danger {
+    border: 0.0625rem solid var(--danger);
+    background: var(--surface);
+    color: var(--danger);
+}
+
+.button--danger:hover {
+    background: #fff2f1;
+}
+
+.reference-create__grid {
+    margin-block-start: 1rem;
+}
+
+.review-panel {
+    border-width: 0.15rem;
+    border-color: var(--accent);
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
 }
 
 .summary-card,
