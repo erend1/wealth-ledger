@@ -78,12 +78,15 @@ M004 recovery smoke passed.
 was accepted on 2026-09-10 after the human owners approved all fifteen
 Recommended decisions exactly as written. M007 was verified on 2026-09-11 after
 its Domain, Application, SQLite, API, Razor UI, real-browser, privacy, backup,
-and restore evidence passed. No milestone is currently In Progress.
+and restore evidence passed. M008 is now In Progress.
 
 [`M008: Complete Investment-Fund Lifecycle`](milestones/M008_complete_investment_fund_lifecycle.md)
-is Proposed as of 2026-09-12. Its eighteen Recommended decisions and Proposed
-ADR-009 require explicit human review before implementation. The proposal adds
-no product behavior and does not change the M007 verified checkpoint.
+was accepted on 2026-09-12 after the human owner approved all eighteen
+Recommended decisions and ADR-009, with four technical amendments and three
+explicit resolutions recorded in the milestone's acceptance record. ADR-009
+records the accepted deterministic realized-cost method. M008 is In Progress;
+it has not yet changed the M007 verified checkpoint or added any verified
+product behavior.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the

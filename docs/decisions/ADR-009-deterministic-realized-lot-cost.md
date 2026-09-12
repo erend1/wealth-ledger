@@ -1,8 +1,15 @@
 # ADR-009: Derive Realized Lot Cost with Deterministic Cumulative Apportionment
 
-- Status: Proposed
-- Decision date: Pending M008 human acceptance
+- Status: Accepted
+- Decision date: 2026-09-12
 - Related milestone: M008 Complete Investment-Fund Lifecycle
+
+Accepted with M008 on 2026-09-12. The human owner explicitly accepted the
+reversal/residue consequence described under "Reversal and correction
+consequence": exact conservation of the original Known cost is preferred over
+per-sale stability, so a reversal may redistribute up to a minor unit of derived
+cost among the remaining effective sales. One amendment was made on acceptance,
+recorded under "Cumulative apportionment".
 
 ## Context
 
@@ -92,6 +99,12 @@ The multiplication and division use arbitrary-width integer arithmetic, or an
 equivalent implementation proven not to overflow. Rounding operates on the
 integer quotient and remainder and is tested explicitly; binary floating point
 and ad hoc SQLite multiplication are forbidden.
+
+**Amended on acceptance.** `Int128` is an accepted overflow-safe implementation
+of that intermediate and is preferred over `BigInteger` for this calculation.
+`C` and `D(i)` are both bounded by `Int64`, so `C * D(i)` cannot exceed about
+8.5e37 while `Int128` holds about 1.7e38. Midpoint-to-even is decided by
+comparing `2 * remainder` against `Q`, which stays inside the same bound.
 
 The method guarantees:
 
@@ -230,5 +243,6 @@ M008 tests must cover:
 - corrupt over-disposal and NotApplicable Fund cost failing closed; and
 - deterministic results after restart and independent query reconstruction.
 
-If human review chooses a different rounding, reversal, or completeness policy,
-this ADR remains Proposed and M008 must be amended before implementation.
+Human review accepted the rounding, reversal, and completeness policy described
+above on 2026-09-12. A later change to any of the three requires a superseding
+ADR rather than an edit to this one.
