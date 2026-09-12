@@ -434,5 +434,98 @@ namespace WealthLedger.Domain.Tests.Lots
                     CreatedAt,
                     detail));
         }
+
+        [Fact]
+        public void PhysicalGoldLot_WithoutPhysicalGoldDetails_CannotBeCreated()
+        {
+            var gold =
+                Asset.Create(
+                    Guid.NewGuid(),
+                    "GOLD_BAR_SYNTHETIC",
+                    "Synthetic Gold Bar",
+                    AssetType.PhysicalGold,
+                    AssetUnit.GrossGram,
+                    CurrencyCode.TRY,
+                    LotTrackingMode.Required);
+
+            var openingEntry =
+                CreateEntry(
+                    gold.Id,
+                    10m);
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => AssetLot.Create(
+                    Guid.NewGuid(),
+                    gold,
+                    openingEntry,
+                    Quantity.FromDecimal(10m),
+                    null,
+                    CostBasis.Unknown(),
+                    CreatedAt));
+        }
+
+        [Fact]
+        public void PhysicalGoldDetail_DerivesExactFineWeightFromGrossWeight()
+        {
+            var detail =
+                new PhysicalGoldLotDetail(
+                    new Fineness(916_000),
+                    pieceCount: 2);
+
+            var fineWeight =
+                detail.CalculateFineWeightGrams(
+                    Quantity.FromDecimal(25.25m));
+
+            Assert.Equal(
+                23.129m,
+                fineWeight);
+        }
+
+        [Fact]
+        public void PhysicalGoldDetail_DerivesFourteenDigitFineWeightExactly()
+        {
+            var detail =
+                new PhysicalGoldLotDetail(
+                    new Fineness(1),
+                    pieceCount: 1);
+
+            var fineWeight =
+                detail.CalculateFineWeightGrams(
+                    Quantity.FromRaw(1));
+
+            Assert.Equal(
+                0.00000000000001m,
+                fineWeight);
+        }
+
+        [Fact]
+        public void PhysicalGoldDetail_DerivesMaximumGrossWeightWithoutOverflow()
+        {
+            var detail =
+                new PhysicalGoldLotDetail(
+                    new Fineness(Fineness.MaximumPpm),
+                    pieceCount: 1);
+
+            var fineWeight =
+                detail.CalculateFineWeightGrams(
+                    Quantity.FromRaw(long.MaxValue));
+
+            Assert.Equal(
+                92_233_720_368.54775807m,
+                fineWeight);
+        }
+
+        [Fact]
+        public void PhysicalGoldDetail_RejectsZeroGrossWeight()
+        {
+            var detail =
+                new PhysicalGoldLotDetail(
+                    new Fineness(916_000),
+                    pieceCount: 1);
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => detail.CalculateFineWeightGrams(
+                    Quantity.Zero));
+        }
     }
 }

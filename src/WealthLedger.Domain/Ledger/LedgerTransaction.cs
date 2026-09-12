@@ -850,6 +850,38 @@ namespace WealthLedger.Domain.Ledger
         {
             EnsureNoCashFlowDetail();
 
+            if (_entries.Count != 1)
+            {
+                throw new DomainRuleViolationException(
+                    "An opening balance must contain exactly one entry.");
+            }
+
+            if (OrderDate is not null
+                || SettlementDate is not null)
+            {
+                throw new DomainRuleViolationException(
+                    "An opening balance can contain only an execution date.");
+            }
+
+            if (Note is null)
+            {
+                throw new DomainRuleViolationException(
+                    "An opening balance must contain a source note.");
+            }
+
+            if (ContainsControlCharacter(Note)
+                || ContainsControlCharacter(ExternalReference))
+            {
+                throw new DomainRuleViolationException(
+                    "Opening balance source text cannot contain control characters.");
+            }
+
+            if (_costs.Count != 0)
+            {
+                throw new DomainRuleViolationException(
+                    "An opening balance cannot contain transaction cost components.");
+            }
+
             if (_entries.Any(x =>
                     x.Role != EntryRole.Principal))
             {
@@ -988,6 +1020,10 @@ namespace WealthLedger.Domain.Ledger
 
             return normalized;
         }
+
+        private static bool ContainsControlCharacter(string? value)
+            => value is not null
+                && value.Any(char.IsControl);
 
         private static void EnsureNonEmpty(
             Guid value,

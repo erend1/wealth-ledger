@@ -49,6 +49,24 @@ namespace WealthLedger.Domain.Lots
                 nameof(note));
         }
 
+        public decimal CalculateFineWeightGrams(Quantity grossWeight)
+        {
+            if (grossWeight.RawE8 == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(grossWeight),
+                    "Gross weight must be greater than zero.");
+            }
+
+            var numerator = checked(
+                (decimal)grossWeight.RawE8
+                * Fineness.Ppm);
+
+            return numerator
+                / Quantity.Scale
+                / Fineness.MaximumPpm;
+        }
+
         private static string? Normalize(
             string? value,
             int maximumLength,

@@ -294,7 +294,8 @@ namespace WealthLedger.Domain.Tests.Ledger
                     HouseholdId,
                     TransactionType.OpeningBalance,
                     CreatedAt,
-                    executionDate: ExecutionDate);
+                    executionDate: ExecutionDate,
+                    note: "Synthetic physical inventory opening.");
 
             transaction.AddEntry(
                 PortfolioId,
@@ -319,7 +320,8 @@ namespace WealthLedger.Domain.Tests.Ledger
                     HouseholdId,
                     TransactionType.OpeningBalance,
                     CreatedAt,
-                    executionDate: ExecutionDate);
+                    executionDate: ExecutionDate,
+                    note: "Synthetic statement opening.");
 
             transaction.AddEntry(
                 PortfolioId,
@@ -330,6 +332,80 @@ namespace WealthLedger.Domain.Tests.Ledger
                 UnitPrice.FromDecimal(
                     5000m,
                     CurrencyCode.TRY));
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => transaction.Post(PostedAt));
+        }
+
+        [Fact]
+        public void OpeningBalance_WithMoreThanOneEntry_CannotBePosted()
+        {
+            var transaction = CreateValidOpeningBalance();
+
+            transaction.AddEntry(
+                PortfolioId,
+                AccountId,
+                Guid.NewGuid(),
+                QuantityDelta.FromDecimal(1m),
+                EntryRole.Principal);
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => transaction.Post(PostedAt));
+        }
+
+        [Fact]
+        public void OpeningBalance_WithTransactionCost_CannotBePosted()
+        {
+            var transaction = CreateValidOpeningBalance();
+
+            transaction.AddCost(
+                CostType.Commission,
+                CostTreatment.IncludedInConsideration,
+                Money.FromMinorUnits(
+                    100,
+                    CurrencyCode.TRY));
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => transaction.Post(PostedAt));
+        }
+
+        [Fact]
+        public void OpeningBalance_WithoutSourceNote_CannotBePosted()
+        {
+            var transaction = CreateValidOpeningBalance(note: null);
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => transaction.Post(PostedAt));
+        }
+
+        [Fact]
+        public void OpeningBalance_WithControlCharacterInSourceText_CannotBePosted()
+        {
+            var transaction =
+                CreateValidOpeningBalance(
+                    externalReference: "SYNTHETIC\nREFERENCE");
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => transaction.Post(PostedAt));
+        }
+
+        [Fact]
+        public void OpeningBalance_WithOrderDate_CannotBePosted()
+        {
+            var transaction =
+                CreateValidOpeningBalance(
+                    orderDate: ExecutionDate);
+
+            Assert.Throws<DomainRuleViolationException>(
+                () => transaction.Post(PostedAt));
+        }
+
+        [Fact]
+        public void OpeningBalance_WithSettlementDate_CannotBePosted()
+        {
+            var transaction =
+                CreateValidOpeningBalance(
+                    settlementDate: ExecutionDate);
 
             Assert.Throws<DomainRuleViolationException>(
                 () => transaction.Post(PostedAt));
@@ -371,6 +447,34 @@ namespace WealthLedger.Domain.Tests.Ledger
 
             transaction.AttachCashFlowDetail(
                 CashFlowCategory.Salary);
+
+            return transaction;
+        }
+
+        private static LedgerTransaction CreateValidOpeningBalance(
+            string? note = "Synthetic statement opening.",
+            string? externalReference = null,
+            DateOnly? orderDate = null,
+            DateOnly? settlementDate = null)
+        {
+            var transaction =
+                LedgerTransaction.CreateDraft(
+                    Guid.NewGuid(),
+                    HouseholdId,
+                    TransactionType.OpeningBalance,
+                    CreatedAt,
+                    orderDate,
+                    ExecutionDate,
+                    settlementDate,
+                    externalReference,
+                    note);
+
+            transaction.AddEntry(
+                PortfolioId,
+                AccountId,
+                Guid.NewGuid(),
+                QuantityDelta.FromDecimal(100m),
+                EntryRole.Principal);
 
             return transaction;
         }
