@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Infrastructure.Persistence.Rows;
@@ -177,6 +178,46 @@ public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore, ILedgerSubmi
 
             throw new CoreLedgerPersistenceException(
                 "The ledger submission collided with another writer but no committed receipt could be recovered.",
+                exception);
+        }
+        catch (Exception exception)
+            when (
+                transaction.Type == TransactionType.OpeningBalance
+                && TryGetOpeningBalanceConflictCode(
+                    exception,
+                    out _))
+        {
+            _dbContext.ChangeTracker.Clear();
+            TryGetOpeningBalanceConflictCode(
+                exception,
+                out var errorCode);
+
+            Guid? relatedTransactionId = null;
+
+            if (errorCode == OpeningBalanceErrorCodes.AlreadyExists)
+            {
+                var entry = transaction.Entries.Single();
+                var history =
+                    await new EfCoreOpeningBalanceEffectiveHistoryReadStore(
+                            _dbContext)
+                        .ReadAsync(
+                            new OpeningBalanceScope(
+                                transaction.HouseholdId,
+                                entry.PortfolioId,
+                                entry.AccountId,
+                                entry.AssetId),
+                            cancellationToken);
+                relatedTransactionId =
+                    history.EffectiveOpeningTransactionId;
+            }
+
+            throw new OpeningBalanceException(
+                OpeningBalanceErrorCategory.Conflict,
+                errorCode!,
+                errorCode == OpeningBalanceErrorCodes.AlreadyExists
+                    ? "An effective opening balance already exists for this scope."
+                    : "The selected scope already contains effective ledger history.",
+                relatedTransactionId,
                 exception);
         }
         catch (Exception exception)
@@ -399,6 +440,42 @@ public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore, ILedgerSubmi
         return sqliteException.SqliteErrorCode == 19
             && sqliteException.SqliteExtendedErrorCode
                 is 1555 or 2067;
+    }
+
+    private static bool TryGetOpeningBalanceConflictCode(
+        Exception exception,
+        out string? errorCode)
+    {
+        for (Exception? current = exception;
+             current is not null;
+             current = current.InnerException)
+        {
+            if (current is not SqliteException sqliteException
+                || sqliteException.SqliteErrorCode != 19)
+            {
+                continue;
+            }
+
+            if (sqliteException.Message.Contains(
+                    "WL_M007_ALREADY_EXISTS",
+                    StringComparison.Ordinal))
+            {
+                errorCode = OpeningBalanceErrorCodes.AlreadyExists;
+                return true;
+            }
+
+            if (sqliteException.Message.Contains(
+                    "WL_M007_SCOPE_HAS_EFFECTIVE_HISTORY",
+                    StringComparison.Ordinal))
+            {
+                errorCode =
+                    OpeningBalanceErrorCodes.ScopeHasEffectiveHistory;
+                return true;
+            }
+        }
+
+        errorCode = null;
+        return false;
     }
 
     private static void MarkPosted(
