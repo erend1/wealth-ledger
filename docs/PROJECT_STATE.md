@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-09-11
+As of: 2026-09-12
 
 Status source: verified against the repository, the generated EF model, local
 .NET/SQLite test runs, real-process lifecycle smoke tests, and local Chromium
@@ -79,6 +79,11 @@ was accepted on 2026-09-10 after the human owners approved all fifteen
 Recommended decisions exactly as written. M007 was verified on 2026-09-11 after
 its Domain, Application, SQLite, API, Razor UI, real-browser, privacy, backup,
 and restore evidence passed. No milestone is currently In Progress.
+
+[`M008: Complete Investment-Fund Lifecycle`](milestones/M008_complete_investment_fund_lifecycle.md)
+is Proposed as of 2026-09-12. Its eighteen Recommended decisions and Proposed
+ADR-009 require explicit human review before implementation. The proposal adds
+no product behavior and does not change the M007 verified checkpoint.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
@@ -687,10 +692,10 @@ M006 was verified on 2026-09-08.
 
 ## Next delivery candidate
 
-M007 is Verified and no milestone is In Progress. M008 is the next planned
-roadmap item, but its ROADMAP entry is not implementation authority. Do not
-begin the normal investment-fund lifecycle until a bounded milestone contract
-is reviewed and explicitly accepted.
+M007 is Verified and no milestone is In Progress. M008 and ADR-009 are the next
+Proposed delivery contract and cross-cutting decision. Do not begin the normal
+investment-fund lifecycle until their decisions are reviewed and explicitly
+accepted or amended by the human owners.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
@@ -703,7 +708,9 @@ Do not start live market data, provider-specific integration, optimization, AI/L
   own accepted milestone and ADR before any non-loopback binding.
 - Application-level database or package encryption beyond M004's accepted
   OS/device-encryption reliance remains deferred to a separate ADR.
-- Partial cost-basis rounding allocation if a concrete use case exposes a gap.
+- M008 now exposes the partial lot-cost allocation, correction, and
+  completeness gap. ADR-009 proposes deterministic cumulative apportionment;
+  the decision remains open until explicit human acceptance.
 - SQLite concurrency beyond M004's single-machine ownership boundary and the
   scoped database collisions handled by M002/M003/M007.
 
