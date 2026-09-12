@@ -3,6 +3,7 @@ using WealthLedger.Application.Common;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
+using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Common;
 
@@ -28,6 +29,15 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
             {
                 ["code"] = failure.Value.ErrorCode
             };
+
+        if (extensions is not null
+            && exception is OpeningBalanceException
+            {
+                RelatedTransactionId: Guid relatedTransactionId
+            })
+        {
+            extensions["relatedTransactionId"] = relatedTransactionId;
+        }
 
         await Results.Problem(
                 statusCode: failure.Value.StatusCode,
@@ -75,6 +85,32 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
                 "Position scope not found",
                 "The requested position scope does not exist.",
                 PositionScopeNotFoundException.ErrorCode),
+            OpeningBalanceException openingBalanceException =>
+                new ApiFailure(
+                    openingBalanceException.Category switch
+                    {
+                        OpeningBalanceErrorCategory.NotFound =>
+                            StatusCodes.Status404NotFound,
+                        OpeningBalanceErrorCategory.Conflict =>
+                            StatusCodes.Status409Conflict,
+                        OpeningBalanceErrorCategory.Validation =>
+                            StatusCodes.Status422UnprocessableEntity,
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(openingBalanceException.Category))
+                    },
+                    openingBalanceException.Category switch
+                    {
+                        OpeningBalanceErrorCategory.NotFound =>
+                            "Opening balance not found",
+                        OpeningBalanceErrorCategory.Conflict =>
+                            "Opening balance conflict",
+                        OpeningBalanceErrorCategory.Validation =>
+                            "Opening balance validation failed",
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(openingBalanceException.Category))
+                    },
+                    openingBalanceException.Message,
+                    openingBalanceException.ErrorCode),
             NavigationPersistenceException => new ApiFailure(
                 StatusCodes.Status409Conflict,
                 "Navigation data unavailable",
