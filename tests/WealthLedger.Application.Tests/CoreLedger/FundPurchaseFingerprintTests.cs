@@ -35,6 +35,47 @@ namespace WealthLedger.Application.Tests.CoreLedger
                 fingerprint.Value);
         }
 
+        /*
+         * Pins version 1 through the explicit version path rather than
+         * through ComputeCurrent.
+         *
+         * ComputeCurrent follows the newest version. This test must keep
+         * passing unchanged after the fund-purchase fingerprint advances to
+         * version 2, because an existing version-1 receipt is replayed by
+         * recomputing version 1 from the same command. If version 1 ever
+         * hashed the moving CurrentVersion constant, every legitimate legacy
+         * retry would turn into an idempotency conflict instead.
+         */
+        [Fact]
+        public void ComputeV1_KnownCommand_IsIndependentOfCurrentVersion()
+        {
+            var command =
+                CreateCommand(
+                    externalReference:
+                        " fund-purchase-aug ",
+                    note:
+                        " August fund purchase ");
+
+            var fingerprint =
+                RecordFundPurchaseCommandFingerprint
+                    .Compute(
+                        command,
+                        "SHA256",
+                        version: 1);
+
+            Assert.Equal(
+                "SHA256",
+                fingerprint.AlgorithmCode);
+
+            Assert.Equal(
+                1,
+                fingerprint.Version);
+
+            Assert.Equal(
+                "31d0a2f1c449387a3aeec86b0848acbff2051213ccbab15a545fad394d0aaeb0",
+                fingerprint.Value);
+        }
+
         [Fact]
         public void ComputeCurrent_WhitespaceText_EqualsNormalizedText()
         {

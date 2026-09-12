@@ -11,6 +11,9 @@ namespace WealthLedger.Application.CoreLedger
         internal const string CurrentAlgorithmCode = "SHA256";
         internal const int CurrentVersion = 1;
 
+        // Version 1 hashes this literal, never CurrentVersion.
+        private const int Version1 = 1;
+
         internal static CommandFingerprint ComputeCurrent(
             RecordContributionCommand command)
         {
@@ -60,7 +63,7 @@ namespace WealthLedger.Application.CoreLedger
 
                 writer.WriteNumber(
                     "version",
-                    CurrentVersion);
+                    Version1);
 
                 writer.WriteString(
                     "operation",
@@ -124,7 +127,7 @@ namespace WealthLedger.Application.CoreLedger
 
             return new CommandFingerprint(
                 CurrentAlgorithmCode,
-                CurrentVersion,
+                Version1,
                 Convert
                     .ToHexString(hash)
                     .ToLowerInvariant());
