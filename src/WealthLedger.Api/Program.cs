@@ -139,6 +139,7 @@ switch (startupSelection.Mode)
         app.MapNavigationEndpoints();
         app.MapPositionEndpoints();
         app.MapOpeningBalanceEndpoints();
+        app.MapFundTradeEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:

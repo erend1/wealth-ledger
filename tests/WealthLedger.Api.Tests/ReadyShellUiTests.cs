@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using WealthLedger.Api.Contracts;
@@ -182,7 +182,12 @@ public sealed partial class ReadyShellUiTests
         Assert.Contains("2,50 TRY", purchaseHtml);
         Assert.Contains("123,45 TRY", purchaseHtml);
         Assert.Contains("COMMISSION", purchaseHtml);
-        Assert.Contains("ADDITIONAL_CASH_OUTFLOW", purchaseHtml);
+
+        // The seeded commission sits inside the consideration. An additional
+        // outflow would need a matching fee entry, which M008 enforces and
+        // which its own suites cover; this fixture exists to prove the
+        // explanation page renders a cost component at all.
+        Assert.Contains("INCLUDED_IN_CONSIDERATION", purchaseHtml);
         Assert.Contains("KNOWN", purchaseHtml);
         Assert.Contains(
             fixture.CostId.ToString("D"),

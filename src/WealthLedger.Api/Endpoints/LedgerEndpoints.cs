@@ -1,4 +1,4 @@
-using WealthLedger.Api.Contracts;
+﻿using WealthLedger.Api.Contracts;
 using WealthLedger.Api.Mapping;
 using WealthLedger.Application.CoreLedger;
 
@@ -117,7 +117,10 @@ internal static class LedgerEndpoints
                 $"/api/ledger/transactions/{result.TransactionId}",
                 new RecordFundPurchaseResponse(
                     result.TransactionId,
-                    result.AssetLotId));
+                    result.AssetLotId,
+                    FundTradeEndpoints.BuildVerificationLocation(
+                        request.HouseholdId,
+                        result.TransactionId)));
         }
         catch (IdempotencyConflictException exception)
         {

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.Positions;
 using WealthLedger.Domain.Ledger;
@@ -31,6 +31,11 @@ public sealed class CoreLedgerVerticalSliceTests
         {
             var referenceData = new EfCoreLedgerReferenceData(writeContext);
             var postingStore = new EfCoreLedgerPostingStore(writeContext);
+
+            // A fund trade validates against the richer reference snapshot
+            // and commits through the fund-trade posting port.
+            var fundReferences =
+                new EfCoreOpeningBalanceReferenceStore(writeContext);
             var timeProvider = new FixedTimeProvider(RecordedAtUtc);
 
             var contribution = new RecordContributionUseCase(
@@ -51,7 +56,8 @@ public sealed class CoreLedgerVerticalSliceTests
                     CoreLedgerTestData.ExecutionDate));
 
             var purchase = new RecordFundPurchaseUseCase(
-                referenceData,
+                fundReferences,
+                postingStore,
                 postingStore,
                 timeProvider);
             purchaseResult = await purchase.ExecuteAsync(
@@ -69,7 +75,9 @@ public sealed class CoreLedgerVerticalSliceTests
                     Money.FromMinorUnits(
                         3_000_000,
                         CurrencyCode.TRY),
-                    CoreLedgerTestData.ExecutionDate));
+                    CoreLedgerTestData.ExecutionDate,
+                    ExternalReference: "VERTICAL-SLICE-PURCHASE",
+                    Note: "Synthetic vertical slice purchase."));
 
             var ignoredDraftId = Guid.NewGuid();
             writeContext.LedgerTransactions.Add(

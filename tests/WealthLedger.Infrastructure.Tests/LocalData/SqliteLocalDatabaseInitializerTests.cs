@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Infrastructure.LocalData;
 
@@ -36,7 +36,7 @@ public sealed class SqliteLocalDatabaseInitializerTests : IDisposable
 
         Assert.True(result.Succeeded);
         Assert.Equal(Path.GetFullPath(_databasePath), result.Value!.DatabasePath);
-        Assert.Equal(6, result.Value.AppliedMigrations.Count);
+        Assert.Equal(7, result.Value.AppliedMigrations.Count);
         Assert.Equal(Now, result.Value.CompletedAtUtc);
         Assert.True(File.Exists(_databasePath));
         Assert.True(restarted.Succeeded);
