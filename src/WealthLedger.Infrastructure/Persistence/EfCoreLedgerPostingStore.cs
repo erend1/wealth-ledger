@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
@@ -8,7 +9,10 @@ using WealthLedger.Infrastructure.Persistence.Rows;
 
 namespace WealthLedger.Infrastructure.Persistence;
 
-public sealed class EfCoreLedgerPostingStore : ILedgerPostingStore, ILedgerSubmissionStore
+public sealed partial class EfCoreLedgerPostingStore
+    : ILedgerPostingStore,
+      ILedgerSubmissionStore,
+      IFundTradePostingStore
 {
     private sealed record PreparedLedgerGraph(
         LedgerTransactionRow Transaction,
