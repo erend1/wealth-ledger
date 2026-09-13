@@ -131,6 +131,12 @@ public sealed class RecordFundSaleUseCase
                 validated,
                 recordedAtUtc);
 
+        /*
+         * Domain validation runs before persistence sees the graph, so an
+         * invalid sale shape fails here rather than at the database guard.
+         */
+        transaction.Post(recordedAtUtc);
+
         var fingerprint =
             RecordFundSaleCommandFingerprint.ComputeCurrent(
                 command,
