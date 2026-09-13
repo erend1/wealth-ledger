@@ -8,6 +8,11 @@ namespace WealthLedger.Application.Tests.CoreLedger
 {
     public sealed class FundPurchaseFingerprintTests
     {
+        /*
+         * Pins the current version, which is now 2. The separate version-1
+         * test below pins the older payload, so both the newest form and the
+         * replay form are protected against accidental change.
+         */
         [Fact]
         public void ComputeCurrent_KnownCommand_MatchesGoldenFingerprint()
         {
@@ -27,11 +32,11 @@ namespace WealthLedger.Application.Tests.CoreLedger
                 fingerprint.AlgorithmCode);
 
             Assert.Equal(
-                1,
+                2,
                 fingerprint.Version);
 
             Assert.Equal(
-                "31d0a2f1c449387a3aeec86b0848acbff2051213ccbab15a545fad394d0aaeb0",
+                "1ff158beb0e7b9dbf368b8db8114a29146b4a01e3e6abbb55c0df5609d2bc347",
                 fingerprint.Value);
         }
 

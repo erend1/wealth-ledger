@@ -75,8 +75,7 @@ public sealed record FundSaleCommitResult(
     LedgerSubmissionReceipt? Receipt);
 
 /// <summary>
-/// Posts a fund sale atomically, re-checking the reviewed plan inside the
-/// write transaction.
+/// Posts a fund trade atomically.
 /// </summary>
 /// <remarks>
 /// Plan freshness cannot be enforced by a database trigger, because the
@@ -88,8 +87,23 @@ public sealed record FundSaleCommitResult(
 /// preview, so neither a direct API caller nor a concurrent write can slip
 /// past it.
 /// </remarks>
-public interface IFundSalePostingStore
+public interface IFundTradePostingStore
 {
+    /// <summary>
+    /// Posts a purchase with its single new acquisition lot.
+    /// </summary>
+    Task<FundSaleCommitResult> TryCommitPurchaseAsync(
+        LedgerSubmissionReceipt receipt,
+        LedgerTransaction transaction,
+        AssetLot newLot,
+        FundTradeScope scope,
+        bool hasExplanatoryNote,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Posts a sale, re-checking the reviewed plan and scoped availability
+    /// inside the write transaction before writing anything.
+    /// </summary>
     Task<FundSaleCommitResult> TryCommitSaleAsync(
         LedgerSubmissionReceipt receipt,
         LedgerTransaction transaction,

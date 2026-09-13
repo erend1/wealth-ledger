@@ -1,4 +1,6 @@
 using WealthLedger.Application.Common;
+using WealthLedger.Application.FundTrades;
+using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
@@ -7,6 +9,19 @@ using WealthLedger.Domain.ValueObjects;
 
 namespace WealthLedger.Application.CoreLedger;
 
+/// <summary>
+/// A completed fund purchase.
+/// </summary>
+/// <remarks>
+/// The version-1 shape is preserved exactly and extended additively, so an
+/// existing caller keeps working: <see cref="AccountId"/> remains the fund
+/// account, and an omitted <see cref="CashAccountId"/> keeps both legs in
+/// that same account.
+///
+/// Transport compatibility is not the same as validation compatibility. A new
+/// first submission must still satisfy the accepted provenance, date, currency
+/// and cost rules even in the legacy shape.
+/// </remarks>
 public sealed record RecordFundPurchaseCommand(
     Guid HouseholdId,
     Guid PortfolioId,
@@ -18,27 +33,62 @@ public sealed record RecordFundPurchaseCommand(
     Money CashConsideration,
     DateOnly ExecutionDate,
     string? ExternalReference = null,
-    string? Note = null);
+    string? Note = null,
+    Guid? CashAccountId = null,
+    DateOnly? OrderDate = null,
+    DateOnly? SettlementDate = null,
+    IReadOnlyList<FundTradeCostInput>? Costs = null)
+{
+    /// <summary>
+    /// The account whose cash position changes.
+    /// </summary>
+    public Guid ResolvedCashAccountId
+        => CashAccountId ?? AccountId;
+
+    /// <summary>
+    /// True when every field added after version 1 still holds its legacy
+    /// default, so the command means exactly what version 1 meant.
+    /// </summary>
+    internal bool HasOnlyLegacyFacts
+        => CashAccountId is null
+            && OrderDate is null
+            && SettlementDate is null
+            && (Costs is null || Costs.Count == 0);
+}
 
 public sealed record RecordFundPurchaseResult(
     Guid TransactionId,
     Guid AssetLotId);
 
+/// <summary>
+/// Records a completed fund purchase exactly once.
+/// </summary>
+/// <remarks>
+/// Receipt lookup happens before any current-state validation, so an
+/// equivalent retry returns the original result even after the world has
+/// moved on. Only a first submission is validated against current references.
+/// </remarks>
 public sealed class RecordFundPurchaseUseCase
 {
-    private readonly ILedgerReferenceData _referenceData;
+    private const int MaximumIdempotencyKeyLength = 256;
+
+    private readonly IOpeningBalanceReferenceReadStore _referenceStore;
     private readonly ILedgerSubmissionStore _submissionStore;
+    private readonly IFundTradePostingStore _postingStore;
     private readonly TimeProvider _timeProvider;
 
     public RecordFundPurchaseUseCase(
-        ILedgerReferenceData referenceData,
+        IOpeningBalanceReferenceReadStore referenceStore,
         ILedgerSubmissionStore submissionStore,
+        IFundTradePostingStore postingStore,
         TimeProvider timeProvider)
     {
-        _referenceData = referenceData
-            ?? throw new ArgumentNullException(nameof(referenceData));
+        _referenceStore = referenceStore
+            ?? throw new ArgumentNullException(nameof(referenceStore));
         _submissionStore = submissionStore
             ?? throw new ArgumentNullException(nameof(submissionStore));
+        _postingStore = postingStore
+            ?? throw new ArgumentNullException(nameof(postingStore));
         _timeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
     }
@@ -48,48 +98,19 @@ public sealed class RecordFundPurchaseUseCase
         RecordFundPurchaseCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
+        ValidateIdempotencyKey(idempotencyKey);
         ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(command.ExecutedUnitPrice);
-        ArgumentNullException.ThrowIfNull(command.CashConsideration);
 
-        EnsureNonEmpty(command.HouseholdId, nameof(command.HouseholdId));
-        EnsureNonEmpty(command.PortfolioId, nameof(command.PortfolioId));
-        EnsureNonEmpty(command.AccountId, nameof(command.AccountId));
-        EnsureNonEmpty(command.FundAssetId, nameof(command.FundAssetId));
-        EnsureNonEmpty(command.CashAssetId, nameof(command.CashAssetId));
-
-        if (command.FundAssetId == command.CashAssetId)
+        if (command.HouseholdId == Guid.Empty)
         {
-            throw new ApplicationRuleViolationException(
-                "The purchased fund and cash consideration assets must differ.");
+            throw new ArgumentException(
+                "Household ID cannot be empty.",
+                nameof(command));
         }
-
-        if (command.FundQuantity.RawE8 == 0)
-        {
-            throw new ApplicationRuleViolationException(
-                "A fund purchase quantity must be positive.");
-        }
-
-        if (command.CashConsideration.MinorUnits <= 0)
-        {
-            throw new ApplicationRuleViolationException(
-                "Fund purchase cash consideration must be positive.");
-        }
-
-        if (command.ExecutedUnitPrice.Currency
-            != command.CashConsideration.Currency)
-        {
-            throw new ApplicationRuleViolationException(
-                "Executed unit price and cash consideration must use the same currency.");
-        }
-
-        var normalizedCommand = RecordFundPurchaseCommandCanonicalizer
-            .Normalize(command);
 
         var scope =
             new LedgerSubmissionScope(
-                normalizedCommand.HouseholdId,
+                command.HouseholdId,
                 LedgerOperationCodes.RecordFundPurchase,
                 idempotencyKey);
 
@@ -102,140 +123,110 @@ public sealed class RecordFundPurchaseUseCase
         {
             return ResolveReceipt(
                 scope,
-                normalizedCommand,
+                command,
                 existingReceipt);
         }
 
-        var location = await _referenceData.FindLocationAsync(
-            normalizedCommand.PortfolioId,
-            normalizedCommand.AccountId,
-            cancellationToken);
-
-        ValidateLocation(
-            location,
-            normalizedCommand.HouseholdId,
-            normalizedCommand.PortfolioId,
-            normalizedCommand.AccountId);
-
-        var fundAsset = await _referenceData.FindAssetAsync(
-            normalizedCommand.FundAssetId,
-            cancellationToken);
-
-        ValidateFundAsset(fundAsset, normalizedCommand.FundAssetId);
-
-        var cashAsset = await _referenceData.FindAssetAsync(
-            normalizedCommand.CashAssetId,
-            cancellationToken);
-
-        ValidateCashAsset(
-            cashAsset,
-            normalizedCommand.CashAssetId,
-            normalizedCommand.CashConsideration.Currency);
-
-        var currency = await _referenceData.FindCurrencyAsync(
-            normalizedCommand.CashConsideration.Currency,
-            cancellationToken);
-
-        if (currency is null)
-        {
-            throw new ApplicationRuleViolationException(
-                $"Currency '{normalizedCommand.CashConsideration.Currency}' does not exist.");
-        }
-
-        var considerationRawE8 = CurrencyAmountConverter.ToQuantityRawE8(
-            normalizedCommand.CashConsideration,
-            currency);
-
-        var fingerprint = RecordFundPurchaseCommandFingerprint
-            .ComputeCurrent(normalizedCommand);
-
         var recordedAtUtc = _timeProvider.GetUtcNow();
 
-        var transaction =
-            LedgerTransaction.CreateDraft(
-                Guid.NewGuid(),
-                normalizedCommand.HouseholdId,
+        var tradeScope =
+            new FundTradeScope(
+                command.HouseholdId,
+                command.PortfolioId,
+                command.AccountId,
+                command.ResolvedCashAccountId,
+                command.FundAssetId,
+                command.CashAssetId);
+
+        var validated =
+            await FundTradeEvaluator.EvaluateAsync(
                 TransactionType.Buy,
+                tradeScope,
+                command.FundQuantity,
+                command.ExecutedUnitPrice,
+                command.CashConsideration,
+                command.ExecutionDate,
+                command.OrderDate,
+                command.SettlementDate,
+                command.Costs,
+                command.ExternalReference,
+                command.Note,
                 recordedAtUtc,
-                executionDate:
-                    normalizedCommand.ExecutionDate,
-                externalReference:
-                    normalizedCommand.ExternalReference,
-                note:
-                    normalizedCommand.Note);
+                _timeProvider.LocalTimeZone,
+                _referenceStore,
+                cancellationToken);
 
-        var principalEntry =
-            transaction.AddEntry(
-                normalizedCommand.PortfolioId,
-                normalizedCommand.AccountId,
-                normalizedCommand.FundAssetId,
-                QuantityDelta.FromRaw(
-                    normalizedCommand
-                        .FundQuantity.RawE8),
-                EntryRole.Principal,
-                normalizedCommand.ExecutedUnitPrice);
-
-        transaction.AddEntry(
-            normalizedCommand.PortfolioId,
-            normalizedCommand.AccountId,
-            normalizedCommand.CashAssetId,
-            QuantityDelta.FromRaw(
-                checked(-considerationRawE8)),
-            EntryRole.Consideration);
+        var (transaction, principal) =
+            FundTradeBuilder.BuildTransaction(
+                validated,
+                recordedAtUtc);
 
         var assetLot =
-            AssetLot.Create(
-                Guid.NewGuid(),
-                fundAsset!,
-                principalEntry,
-                normalizedCommand.FundQuantity,
-                normalizedCommand.ExecutionDate,
-                CostBasis.Known(
-                    normalizedCommand
-                        .CashConsideration),
+            FundTradeBuilder.BuildAcquisitionLot(
+                validated,
+                principal,
                 recordedAtUtc);
 
         transaction.Post(recordedAtUtc);
+
+        var fingerprint =
+            RecordFundPurchaseCommandFingerprint
+                .ComputeCurrent(command);
 
         var receipt =
             new LedgerSubmissionReceipt(
                 scope,
                 fingerprint,
                 transaction.Id,
-                AssetLotId:
-                    assetLot.Id,
-                CreatedAtUtc:
-                    recordedAtUtc);
+                AssetLotId: assetLot.Id,
+                CreatedAtUtc: recordedAtUtc);
 
-        var commitResult =
-            await _submissionStore.TryCommitAsync(
+        var commit =
+            await _postingStore.TryCommitPurchaseAsync(
                 receipt,
                 transaction,
-                [assetLot],
+                assetLot,
+                tradeScope,
+                hasExplanatoryNote:
+                    !string.IsNullOrEmpty(validated.Note),
                 cancellationToken);
 
-        if (commitResult.WasCommitted)
+        switch (commit.Status)
         {
-            if (commitResult.Receipt != receipt)
-            {
-                throw new InvalidOperationException(
-                    "The submission store returned an inconsistent committed receipt.");
-            }
+            case FundSaleCommitStatus.Committed:
+                return new RecordFundPurchaseResult(
+                    transaction.Id,
+                    assetLot.Id);
 
-            return new RecordFundPurchaseResult(
-                transaction.Id,
-                assetLot.Id);
+            case FundSaleCommitStatus.AlreadyRecorded:
+                return ResolveReceipt(
+                    scope,
+                    command,
+                    commit.Receipt!);
+
+            case FundSaleCommitStatus.NegativeCashNoteRequired:
+                throw FundTradeException.Invalid(
+                    FundTradeErrorCodes.NegativeCashNoteRequired,
+                    "Explain the funding gap in the note before recording a purchase that overdraws the derived cash position.");
+
+            default:
+                throw FundTradeException.Conflict(
+                    FundTradeErrorCodes.PersistenceConflict,
+                    "The fund purchase could not be recorded.");
         }
-
-        return ResolveReceipt(
-            scope,
-            normalizedCommand,
-            commitResult.Receipt);
     }
 
+    /// <summary>
+    /// Replays an existing receipt at the version it was written with.
+    /// </summary>
+    /// <remarks>
+    /// A version-1 receipt is only equivalent to a command that still carries
+    /// nothing but version-1 facts; the fingerprint computation enforces that
+    /// rather than quietly ignoring the newer fields.
+    /// </remarks>
     private static RecordFundPurchaseResult ResolveReceipt(
         LedgerSubmissionScope expectedScope,
-        RecordFundPurchaseCommand normalizedCommand,
+        RecordFundPurchaseCommand command,
         LedgerSubmissionReceipt receipt)
     {
         if (receipt.Scope != expectedScope)
@@ -253,12 +244,11 @@ public sealed class RecordFundPurchaseUseCase
 
         var replayFingerprint =
             RecordFundPurchaseCommandFingerprint.Compute(
-                normalizedCommand,
+                command,
                 receipt.Fingerprint.AlgorithmCode,
                 receipt.Fingerprint.Version);
 
-        if (replayFingerprint
-            != receipt.Fingerprint)
+        if (replayFingerprint != receipt.Fingerprint)
         {
             throw new IdempotencyConflictException();
         }
@@ -268,113 +258,16 @@ public sealed class RecordFundPurchaseUseCase
             assetLotId);
     }
 
-    private static void ValidateLocation(
-        LedgerLocationReference? location,
-        Guid householdId,
-        Guid portfolioId,
-        Guid accountId)
+    private static void ValidateIdempotencyKey(string idempotencyKey)
     {
-        if (location is null)
-        {
-            throw new ApplicationRuleViolationException(
-                "The portfolio/account location does not exist.");
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
 
-        if (location.PortfolioId != portfolioId
-            || location.AccountId != accountId)
-        {
-            throw new ApplicationRuleViolationException(
-                "The resolved portfolio/account location does not match the request.");
-        }
-
-        if (location.PortfolioHouseholdId != householdId
-            || location.AccountHouseholdId != householdId)
-        {
-            throw new ApplicationRuleViolationException(
-                "The portfolio, account and transaction must belong to the same household.");
-        }
-
-        if (location.PortfolioStatus != PortfolioStatus.Active
-            || !location.AccountIsActive)
-        {
-            throw new ApplicationRuleViolationException(
-                "The portfolio and account must be active.");
-        }
-    }
-
-    private static void ValidateFundAsset(
-        Asset? fundAsset,
-        Guid fundAssetId)
-    {
-        if (fundAsset is null || !fundAsset.IsActive)
-        {
-            throw new ApplicationRuleViolationException(
-                "The fund asset must exist and be active.");
-        }
-
-        if (fundAsset.Id != fundAssetId)
-        {
-            throw new ApplicationRuleViolationException(
-                "The resolved fund asset does not match the request.");
-        }
-
-        if (fundAsset.Type != AssetType.Fund)
-        {
-            throw new ApplicationRuleViolationException(
-                "The purchase principal asset must be a fund.");
-        }
-
-        if (fundAsset.LotTrackingMode == LotTrackingMode.None)
-        {
-            throw new ApplicationRuleViolationException(
-                "The purchased fund must use lot tracking.");
-        }
-    }
-
-    private static void ValidateCashAsset(
-        Asset? cashAsset,
-        Guid cashAssetId,
-        CurrencyCode currency)
-    {
-        if (cashAsset is null || !cashAsset.IsActive)
-        {
-            throw new ApplicationRuleViolationException(
-                "The cash asset must exist and be active.");
-        }
-
-        if (cashAsset.Id != cashAssetId)
-        {
-            throw new ApplicationRuleViolationException(
-                "The resolved cash asset does not match the request.");
-        }
-
-        if (cashAsset.Type is not AssetType.Cash
-            and not AssetType.Currency)
-        {
-            throw new ApplicationRuleViolationException(
-                "Fund purchase consideration must use a cash or currency asset.");
-        }
-
-        if (cashAsset.LotTrackingMode != LotTrackingMode.None)
-        {
-            throw new ApplicationRuleViolationException(
-                "The purchase cash asset cannot use lot tracking.");
-        }
-
-        if (cashAsset.BaseCurrency != currency)
-        {
-            throw new ApplicationRuleViolationException(
-                "Cash consideration currency must match the cash asset currency.");
-        }
-    }
-
-    private static void EnsureNonEmpty(Guid value, string parameterName)
-    {
-        if (value == Guid.Empty)
+        if (idempotencyKey.Length > MaximumIdempotencyKeyLength
+            || idempotencyKey.Any(char.IsControl))
         {
             throw new ArgumentException(
-                $"{parameterName} cannot be empty.",
-                parameterName);
+                "The idempotency key is not in a supported form.",
+                nameof(idempotencyKey));
         }
     }
 }

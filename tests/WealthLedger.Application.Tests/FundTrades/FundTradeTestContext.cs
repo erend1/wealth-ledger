@@ -1,4 +1,6 @@
+using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.FundTrades;
+using WealthLedger.Domain.Ledger;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Lots;
@@ -61,6 +63,93 @@ internal sealed class FundTradeReferenceStoreFake
     internal OpeningBalancePortfolioReference? Portfolio { get; set; }
 
     internal OpeningBalanceHouseholdReference? Household { get; set; }
+
+    /// <summary>
+    /// How many reference reads this store served, so a test can prove that
+    /// receipt-first replay short-circuits before any current-state lookup.
+    /// </summary>
+    internal int ReadCalls { get; private set; }
+
+    /// <summary>
+    /// Builds a valid reference set for callers that use their own
+    /// identifiers, so existing suites keep their fixtures.
+    /// </summary>
+    internal static FundTradeReferenceStoreFake CreateFor(
+        Guid householdId,
+        Guid portfolioId,
+        Guid fundAccountId,
+        Guid cashAccountId,
+        Guid fundAssetId,
+        Guid cashAssetId,
+        int minorUnitDigits = 2)
+    {
+        var store = CreateValid();
+
+        store.Household =
+            new OpeningBalanceHouseholdReference(
+                householdId,
+                FundTradeIds.Try);
+
+        store.Portfolio =
+            store.Portfolio! with
+            {
+                PortfolioId = portfolioId,
+                HouseholdId = householdId
+            };
+
+        var fundAccount =
+            store.Accounts[FundTradeIds.FundAccount] with
+            {
+                AccountId = fundAccountId,
+                HouseholdId = householdId
+            };
+
+        var cashAccount =
+            store.Accounts[FundTradeIds.CashAccount] with
+            {
+                AccountId = cashAccountId,
+                HouseholdId = householdId
+            };
+
+        var fundAsset =
+            store.Assets[FundTradeIds.FundAsset] with
+            {
+                AssetId = fundAssetId
+            };
+
+        var cashAsset =
+            store.Assets[FundTradeIds.CashAsset] with
+            {
+                AssetId = cashAssetId
+            };
+
+        store.Accounts.Clear();
+
+        /*
+         * One account may carry both legs, which is what a legacy
+         * single-account purchase does. That shared account still has to
+         * satisfy the stricter fund-account rule, so it stays an investment
+         * account rather than being overwritten by the cash-typed one.
+         */
+        store.Accounts[fundAccountId] = fundAccount;
+
+        if (cashAccountId != fundAccountId)
+        {
+            store.Accounts[cashAccountId] = cashAccount;
+        }
+
+        store.Assets.Clear();
+        store.Assets[fundAssetId] = fundAsset;
+        store.Assets[cashAssetId] = cashAsset;
+
+        store.Currencies[FundTradeIds.Try] =
+            store.Currencies[FundTradeIds.Try] with
+            {
+                MinorUnitDigits = minorUnitDigits
+            };
+
+        return store;
+    }
 
     internal static FundTradeReferenceStoreFake CreateValid()
     {
@@ -144,15 +233,20 @@ internal sealed class FundTradeReferenceStoreFake
     public Task<OpeningBalanceHouseholdReference?> FindHouseholdAsync(
         Guid householdId,
         CancellationToken cancellationToken = default)
-        => Task.FromResult(
+    {
+        ReadCalls++;
+
+        return Task.FromResult(
             Household?.HouseholdId == householdId
                 ? Household
                 : null);
+    }
 
     public Task<OpeningBalanceCurrencyReference?> FindCurrencyAsync(
         CurrencyCode code,
         CancellationToken cancellationToken = default)
     {
+        ReadCalls++;
         Currencies.TryGetValue(code, out var currency);
         return Task.FromResult(currency);
     }
@@ -160,7 +254,10 @@ internal sealed class FundTradeReferenceStoreFake
     public Task<OpeningBalanceInstitutionReference?> FindInstitutionAsync(
         Guid institutionId,
         CancellationToken cancellationToken = default)
-        => Task.FromResult<OpeningBalanceInstitutionReference?>(
+    {
+        ReadCalls++;
+
+        return Task.FromResult<OpeningBalanceInstitutionReference?>(
             institutionId == FundTradeIds.Institution
                 ? new OpeningBalanceInstitutionReference(
                     FundTradeIds.Institution,
@@ -169,19 +266,25 @@ internal sealed class FundTradeReferenceStoreFake
                     InstitutionType.Bank,
                     IsActive: true)
                 : null);
+    }
 
     public Task<OpeningBalancePortfolioReference?> FindPortfolioAsync(
         Guid portfolioId,
         CancellationToken cancellationToken = default)
-        => Task.FromResult(
+    {
+        ReadCalls++;
+
+        return Task.FromResult(
             Portfolio?.PortfolioId == portfolioId
                 ? Portfolio
                 : null);
+    }
 
     public Task<OpeningBalanceAccountReference?> FindAccountAsync(
         Guid accountId,
         CancellationToken cancellationToken = default)
     {
+        ReadCalls++;
         Accounts.TryGetValue(accountId, out var account);
         return Task.FromResult(account);
     }
@@ -190,6 +293,7 @@ internal sealed class FundTradeReferenceStoreFake
         Guid assetId,
         CancellationToken cancellationToken = default)
     {
+        ReadCalls++;
         Assets.TryGetValue(assetId, out var asset);
         return Task.FromResult(asset);
     }
@@ -249,5 +353,70 @@ internal sealed class FundLotCustodyStoreFake : IFundLotCustodyReadStore
                 costBasis));
 
         return this;
+    }
+}
+
+/// <summary>
+/// Captures what a fund trade would have written, without a database.
+/// </summary>
+internal sealed class FundTradePostingStoreFake : IFundTradePostingStore
+{
+    internal LedgerTransaction? Transaction { get; private set; }
+
+    internal AssetLot? NewLot { get; private set; }
+
+    internal IReadOnlyList<ReviewedLotAllocation> ReviewedPlan
+    { get; private set; } = [];
+
+    internal LedgerSubmissionReceipt? AttemptedReceipt
+    { get; private set; }
+
+    internal bool LastHadExplanatoryNote { get; private set; }
+
+    internal int CommitCalls { get; private set; }
+
+    internal FundSaleCommitStatus NextStatus { get; set; }
+        = FundSaleCommitStatus.Committed;
+
+    internal LedgerSubmissionReceipt? WinningReceipt { get; set; }
+
+    public Task<FundSaleCommitResult> TryCommitPurchaseAsync(
+        LedgerSubmissionReceipt receipt,
+        LedgerTransaction transaction,
+        AssetLot newLot,
+        FundTradeScope scope,
+        bool hasExplanatoryNote,
+        CancellationToken cancellationToken = default)
+    {
+        CommitCalls++;
+        AttemptedReceipt = receipt;
+        Transaction = transaction;
+        NewLot = newLot;
+        LastHadExplanatoryNote = hasExplanatoryNote;
+
+        return Task.FromResult(
+            new FundSaleCommitResult(
+                NextStatus,
+                WinningReceipt ?? receipt));
+    }
+
+    public Task<FundSaleCommitResult> TryCommitSaleAsync(
+        LedgerSubmissionReceipt receipt,
+        LedgerTransaction transaction,
+        FundTradeScope scope,
+        IReadOnlyList<ReviewedLotAllocation> reviewedPlan,
+        bool hasExplanatoryNote,
+        CancellationToken cancellationToken = default)
+    {
+        CommitCalls++;
+        AttemptedReceipt = receipt;
+        Transaction = transaction;
+        ReviewedPlan = reviewedPlan;
+        LastHadExplanatoryNote = hasExplanatoryNote;
+
+        return Task.FromResult(
+            new FundSaleCommitResult(
+                NextStatus,
+                WinningReceipt ?? receipt));
     }
 }
