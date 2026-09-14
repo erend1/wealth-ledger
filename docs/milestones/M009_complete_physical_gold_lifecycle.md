@@ -1,20 +1,28 @@
 # M009: Complete Physical-Gold Lifecycle
 
-Status: Draft
+Status: Accepted
 
 Owner: Human and agent
 
-Last reviewed: 2026-09-14
+Last reviewed: 2026-09-15
 
-## Planning status and dependency gate
+Accepted: 2026-09-14
 
-This document may be reviewed while M008 hardening continues, but it does not
-authorize M009 implementation. It was drafted against committed M008
-implementation commit `b2f316d` in an isolated planning worktree.
+## Acceptance record and implementation gate
 
-M009 must not move to Accepted or In Progress until all material M008 review
-findings are reconciled in source, tests, and state documentation. In
-particular:
+The human owners reviewed the complete Draft and explicitly approved it as
+suitable on 2026-09-14. All twenty Recommended decisions were accepted without
+amendment. ADR-010 records the accepted allocation-level piece-movement model
+and the PhysicalGold extension of ADR-009 cumulative realized-cost
+apportionment.
+
+Acceptance authorizes this bounded M009 contract. It was drafted and accepted
+against committed M008 implementation commit `b2f316d` in an isolated planning
+worktree, then reconciled onto verified M008 merge commit `d1d9ece` on
+2026-09-15.
+
+The predecessor gate closed when PR #12 verified and merged all material M008
+review findings:
 
 - sale-preview realized cost must agree with ADR-009 after an earlier partial
   disposal;
@@ -26,8 +34,9 @@ particular:
 - Fund verification must reject non-Fund Buy and Sell transactions; and
 - the committed M008 checkpoint must agree with `PROJECT_STATE.md`.
 
-These are not M009 scope. M009 must consume their corrected contracts and keep
-focused regression tests around the Fund-versus-PhysicalGold boundary.
+These fixes remain M008 behavior, not M009 scope. M009 must consume their
+corrected contracts and keep focused regression tests around the
+Fund-versus-PhysicalGold boundary.
 
 ## Objective
 
@@ -171,9 +180,9 @@ that owns the PhysicalVault or cash Account.
 
 ## Decisions and decision gates
 
-Every decision below is a recommendation and remains unaccepted while this
-milestone is Draft. Human acceptance or amendment is required before
-implementation.
+Every decision below was accepted as recommended by the human owners on
+2026-09-14. A later change to a material decision requires an explicit milestone
+amendment and, where cross-cutting, a superseding ADR.
 
 ### Decision 1: deliver purchase, sale, and custody transfer together
 
@@ -433,9 +442,8 @@ buckets; Known and Unknown disposed gross quantity; the method/version; and
 whether the source sale remains effective. It never treats Unknown as zero and
 does not compute gain/loss without an accepted valuation/FX context.
 
-Human acceptance of this decision extends ADR-009's scope and requires either a
-small superseding/additive ADR or an explicit amendment ADR; do not silently edit
-the accepted historical ADR.
+Acceptance of this decision extends ADR-009's scope through ADR-010. ADR-010 is
+additive and leaves the accepted historical ADR unchanged.
 
 ### Decision 16: make reviewed sale and transfer plans stale-safe
 
@@ -795,7 +803,7 @@ Expected forward migration after M008 migration 007:
 008_PhysicalGoldLifecycle
 ```
 
-Proposed additive tables, subject to decision acceptance:
+Accepted additive schema design, to be implemented by M009:
 
 ```text
 PhysicalGoldLotAllocationDetail
@@ -983,14 +991,15 @@ must not conceal new formatting drift.
 
 ## Documentation updates
 
-After human acceptance:
+Acceptance documentation completed on 2026-09-14:
 
-- change this milestone to Accepted and record every accepted amendment;
-- add the piece-movement and ADR-009 scope decision to a new accepted ADR rather
-  than rewriting historical decisions;
-- update canonical Domain/database/data-capture/architecture/UX prose only for
-  accepted design, not planned implementation; and
-- leave `PROJECT_STATE.md` factual until code is verified.
+- this milestone records acceptance of all twenty decisions without amendment;
+- ADR-010 records the piece-movement model and physical-gold extension of
+  ADR-009 without rewriting accepted history;
+- `ROADMAP.md`, `PROJECT_STATE.md`, and the ADR index distinguish the accepted
+  plan from implemented or verified behavior; and
+- canonical Domain/database/data-capture/architecture/UX prose remains
+  unchanged until implementation establishes the actual behavior.
 
 After implementation verification:
 
@@ -1006,7 +1015,6 @@ After implementation verification:
 
 ```text
 docs(m009): accept physical-gold lifecycle contract
-fix(m008): close prerequisite fund lifecycle findings
 feat(domain): model signed physical-gold piece movement
 feat(application): add physical-gold purchase evaluation and posting
 feat(application): add selected gold sale and realized-cost derivation
@@ -1019,8 +1027,8 @@ test(browser): verify synthetic physical-gold lifecycle
 docs(state): record verified M009 checkpoint
 ```
 
-The M008 prerequisite fixes belong to the M008 hardening branch and should be
-merged before rebasing this planning branch. Do not hide them inside M009
+The M008 prerequisite fixes were verified and merged through PR #12 before this
+planning branch was rebased. Do not duplicate or reinterpret them inside M009
 implementation commits.
 
 ## Risks and rollback

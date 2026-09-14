@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-15
 
 ## How to read this roadmap
 
@@ -47,7 +47,7 @@ Statuses used here:
 | M006 | Verified | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; verified 2026-09-08 |
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
 | M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
-| M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
+| M009 | Accepted | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; M008 verified 2026-09-15, ready to begin |
 | M010 | Planned | Transaction search, position inventory, reconciliation, and evidence capture | Core entry workflows |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
 | M012 | Planned | Goal, reserve, allocation policy, deterministic performance, and monthly review | Reliable ledger and valuation data |
@@ -117,9 +117,13 @@ history at the Draft-to-Posted boundary. Verification includes 676 tests, three
 real-Chromium journeys, no formatter or EF-model drift, and a retained synthetic
 backup/restore drill.
 
-M008 was verified on 2026-09-15. M009, the complete physical-gold lifecycle,
-is the next Planned candidate and needs its own bounded contract and explicit
-human acceptance before implementation.
+M008 was verified and merged through PR #12 on 2026-09-15, including resolution
+of every prerequisite finding recorded during M009 planning. M009 was accepted
+on 2026-09-14 after the human owners approved all twenty Recommended decisions
+without amendment. ADR-010 records allocation-level physical-gold piece
+movement and extends ADR-009 cumulative realized-cost apportionment to physical
+gold. M009 is the next accepted milestone and is ready to move to In Progress
+when implementation begins.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -198,9 +202,10 @@ milestone becomes Accepted:
 | UI framework, single-host topology, readiness modes, direct Application boundary, exact presentation, and browser verification | M006 | Resolved by accepted M006 on 2026-09-03 and ADR-008 |
 | Opening reference scope, semantic duplicate/history rules, lot/cost/gold/date semantics, verification, contracts, and correction | M007 | Resolved by all fifteen accepted M007 decisions on 2026-09-10; no new ADR was required |
 | Completed Fund-trade scope, cash/cost equations, price reconciliation, custody-aware FIFO, stale-plan protection, compatibility, and correction UI | M008 | Resolved by all eighteen accepted M008 decisions on 2026-09-12, including the amended price formula, post-time cash check, and provenance precedence |
+| Physical-gold gross/piece movement, selected physical lots, custody transfer, making-charge treatment, realized cost, correction, and asset-family guard isolation | M009 | Resolved by all twenty accepted M009 decisions and ADR-010 on 2026-09-14; implementation remains gated by M008 verification |
 | Remote or home-server access, authentication, authorization, and transport security | after M006 | New milestone and ADR; ADR-008 keeps normal operation loopback-only |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
-| Partial lot-cost apportionment, Unknown completeness, currency grouping, and correction behavior | M008/M012 | Resolved by ADR-009, accepted 2026-09-12; M008 implements only Fund realized-cost derivation |
+| Partial lot-cost apportionment, Unknown completeness, currency grouping, and correction behavior | M008/M009/M012 | Resolved by ADR-009, accepted 2026-09-12; ADR-010 extends the accepted cumulative method to physical gold, while broader analytics remain deferred to M012 |
 | Agent read-contract and human approval boundary | M013 | ADR |
 
 ## Deferred capabilities
