@@ -28,7 +28,8 @@ public sealed class CriticalJourneysTests
                 EmulateAccessibilityPreferences: true,
                 ExerciseOpeningCutover: true,
                 ViewportWidth: 390,
-                ViewportHeight: 844));
+                ViewportHeight: 844,
+                ExerciseFundLifecycle: true));
 
     [Fact]
     public Task FirstRunAndLedgerNavigation_WorkByKeyboardWithValidationFocus()
@@ -378,6 +379,15 @@ public sealed class CriticalJourneysTests
         if (options.ExerciseOpeningCutover)
         {
             baseAddress = await RunOpeningCutoverAsync(
+                page,
+                workspace,
+                baseAddress,
+                options);
+        }
+
+        if (options.ExerciseFundLifecycle)
+        {
+            baseAddress = await RunFundLifecycleAsync(
                 page,
                 workspace,
                 baseAddress,
@@ -777,6 +787,264 @@ public sealed class CriticalJourneysTests
         return baseAddress;
     }
 
+    /// <summary>
+    /// The ordinary monthly path: cash arrives, two purchases build lots, and
+    /// one sale consumes them oldest first.
+    /// </summary>
+    /// <remarks>
+    /// This runs after the opening cutover, so the fund already holds two
+    /// undated opening lots with no recorded cost. Selling across all four
+    /// lots is what proves the mixed result is reported honestly rather than
+    /// treating the missing cost as zero.
+    /// </remarks>
+    private static async Task<Uri> RunFundLifecycleAsync(
+        IPage page,
+        BrowserTestWorkspace workspace,
+        Uri baseAddress,
+        JourneyOptions options)
+    {
+        await GoToAsync(page, baseAddress, "/record");
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+
+        // The hub names each workflow rather than offering one generic form.
+        foreach (var destination in new[]
+                 {
+                     "/record/contribution",
+                     "/record/fund-purchase",
+                     "/record/fund-sale",
+                     "/record/opening-balance"
+                 })
+        {
+            Assert.Equal(
+                1,
+                await page.Locator($"a[href=\"{destination}\"]").CountAsync());
+        }
+
+        await GoToAsync(page, baseAddress, "/record/contribution");
+        await AssertPageFrameAsync(page);
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AccountId"),
+            "ANA_HESAP");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_CashAssetId"),
+            "TRY_NAKIT");
+        await page.Locator("#Input_Amount").FillAsync("5000");
+        await page.Locator("#Input_CategoryCode").SelectOptionAsync("SALARY");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser monthly contribution.");
+        await ClickFundButtonAsync(page, "Gözden geçir");
+        Assert.Contains(
+            "5.000,00 TRY",
+            await page.Locator("main").InnerTextAsync());
+        await ClickFundButtonAsync(page, "Nakit girişini kaydet");
+        await page.Locator("main").WaitForAsync();
+
+        var firstPurchase = await RecordFundPurchaseAsync(
+            page,
+            baseAddress,
+            quantity: "10",
+            unitPrice: "10",
+            consideration: "100",
+            executionDate: "2026-09-08",
+            reference: "BROWSER-PURCHASE-1");
+
+        Assert.Contains(
+            "Açılan lot",
+            await page.Locator("main").InnerTextAsync());
+
+        var secondPurchase = await RecordFundPurchaseAsync(
+            page,
+            baseAddress,
+            quantity: "20",
+            unitPrice: "12",
+            consideration: "240",
+            executionDate: "2026-09-09",
+            reference: "BROWSER-PURCHASE-2");
+
+        Assert.NotEqual(firstPurchase, secondPurchase);
+
+        /*
+         * Sell across every lot the household holds: both undated opening
+         * lots first, then both purchases. The undated lots carry no recorded
+         * cost, so the result must come back partially known.
+         */
+        await GoToAsync(page, baseAddress, "/record/fund-sale");
+        await AssertPageFrameAsync(page);
+        await FillFundTradeScopeAsync(page);
+        await page.Locator("#Input_Quantity").FillAsync("140");
+        await page.Locator("#Input_UnitPrice").FillAsync("15");
+        await page.Locator("#Input_CashConsideration").FillAsync("2100");
+        await page.Locator("#Input_ExecutionDate").FillAsync("2026-09-10");
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-SALE-1");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser partial liquidation.");
+        await ClickFundButtonAsync(page, "Gözden geçir");
+        await page.Locator("#fund-sale-review-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+
+        if (await page.Locator("#fund-sale-review-heading").CountAsync() != 1)
+        {
+            throw new InvalidOperationException(
+                "Fund sale review failed: "
+                + string.Join(
+                    " | ",
+                    await page.Locator(".validation-summary")
+                        .AllInnerTextsAsync()));
+        }
+
+        var reviewText = await page.Locator("main").InnerTextAsync();
+
+        Assert.Contains("Kullanılacak lotlar", reviewText);
+        Assert.Contains("PARTIALLY_KNOWN", reviewText);
+        Assert.Contains("ADR009_CUMULATIVE_ROUND_HALF_TO_EVEN_V1", reviewText);
+        Assert.Contains("yalnızca maliyeti bilinen kısmı", reviewText);
+
+        // Four lots: two opening, two purchases.
+        Assert.Equal(
+            4,
+            await page.Locator(
+                    "input[name^=\"Input.ReviewedPlan\"][name$=\"AssetLotId\"]")
+                .CountAsync());
+
+        await ClickFundButtonAsync(page, "Satışı kaydet");
+        await page.Locator("#fund-receipt-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+
+        if (await page.Locator("#fund-receipt-heading").CountAsync() != 1)
+        {
+            throw new InvalidOperationException(
+                "Fund sale post failed: "
+                + string.Join(
+                    " | ",
+                    await page.Locator(".validation-summary")
+                        .AllInnerTextsAsync()));
+        }
+
+        var saleReceipt = new Uri(page.Url).AbsolutePath;
+        var receiptText = await page.Locator("main").InnerTextAsync();
+
+        Assert.Contains("Kullanılan lotlar", receiptText);
+        Assert.Contains("PARTIALLY_KNOWN", receiptText);
+        Assert.Contains("13,456789 fon birimi", receiptText);
+
+        // Refreshing a receipt must not record anything a second time.
+        await page.ReloadAsync(
+            new PageReloadOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+        Assert.Equal(saleReceipt, new Uri(page.Url).AbsolutePath);
+        Assert.Equal(
+            1,
+            await page.Locator("#fund-receipt-heading").CountAsync());
+
+        // Everything survives a restart, because nothing is held in memory.
+        await workspace.StopHostAsync();
+        baseAddress = await workspace.StartHostAsync();
+
+        foreach (var receiptPath in new[]
+                 {
+                     firstPurchase,
+                     secondPurchase,
+                     saleReceipt
+                 })
+        {
+            await GoToAsync(page, baseAddress, receiptPath);
+            Assert.Equal(
+                1,
+                await page.Locator("#fund-receipt-heading").CountAsync());
+        }
+
+        Assert.Contains(
+            "PARTIALLY_KNOWN",
+            await page.Locator("main").InnerTextAsync());
+
+        // The host moved to a new port on restart; the caller needs it.
+        return baseAddress;
+    }
+
+    private static async Task<string> RecordFundPurchaseAsync(
+        IPage page,
+        Uri baseAddress,
+        string quantity,
+        string unitPrice,
+        string consideration,
+        string executionDate,
+        string reference)
+    {
+        await GoToAsync(page, baseAddress, "/record/fund-purchase");
+        await FillFundTradeScopeAsync(page);
+        await page.Locator("#Input_Quantity").FillAsync(quantity);
+        await page.Locator("#Input_UnitPrice").FillAsync(unitPrice);
+        await page.Locator("#Input_CashConsideration").FillAsync(consideration);
+        await page.Locator("#Input_ExecutionDate").FillAsync(executionDate);
+        await page.Locator("#Input_ExternalReference").FillAsync(reference);
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser fund purchase.");
+
+        await ClickFundButtonAsync(page, "Gözden geçir");
+        await page.Locator("#fund-review-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+
+        if (await page.Locator("#fund-review-heading").CountAsync() != 1)
+        {
+            throw new InvalidOperationException(
+                "Fund purchase review failed: "
+                + string.Join(
+                    " | ",
+                    await page.Locator(".validation-summary")
+                        .AllInnerTextsAsync()));
+        }
+
+        await ClickFundButtonAsync(page, "Alımı kaydet");
+        await page.Locator("#fund-receipt-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+
+        if (await page.Locator("#fund-receipt-heading").CountAsync() != 1)
+        {
+            throw new InvalidOperationException(
+                "Fund purchase post failed: "
+                + string.Join(
+                    " | ",
+                    await page.Locator(".validation-summary")
+                        .AllInnerTextsAsync()));
+        }
+
+        return new Uri(page.Url).AbsolutePath;
+    }
+
+    private static async Task FillFundTradeScopeAsync(IPage page)
+    {
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_FundAccountId"),
+            "ANA_HESAP");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_CashAccountId"),
+            "ANA_HESAP");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_FundAssetId"),
+            "ILK_FON");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_CashAssetId"),
+            "TRY_NAKIT");
+    }
+
+    private static Task ClickFundButtonAsync(IPage page, string name)
+        => page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = name,
+                    Exact = true
+                })
+            .ClickAsync();
+
     private static async Task<string> ReviewAndPostOpeningAsync(IPage page)
     {
         await page.GetByRole(
@@ -1052,5 +1320,6 @@ public sealed class CriticalJourneysTests
         bool EmulateAccessibilityPreferences,
         bool ExerciseOpeningCutover,
         int ViewportWidth,
-        int ViewportHeight);
+        int ViewportHeight,
+        bool ExerciseFundLifecycle = false);
 }
