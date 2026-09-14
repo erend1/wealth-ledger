@@ -1,0 +1,333 @@
+@page "/record/fund-trade/{transactionId}/receipt"
+@model WealthLedger.UI.Pages.Record.FundTradeReceiptModel
+@inject UiText Text
+@using WealthLedger.Application.FundTrades
+@using WealthLedger.Domain.Lots
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["FundReceipt_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="fund-receipt-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Fund_Eyebrow"]</p>
+        <h1 id="fund-receipt-heading">@Text["FundReceipt_Title"]</h1>
+        <p class="lede">@Text["FundReceipt_Introduction"]</p>
+    </header>
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["FundReceipt_InvalidTitle"]</h2>
+            <p>@Text["FundReceipt_InvalidExplanation"]</p>
+        </section>
+    }
+    else if (Model.ReceiptNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["FundReceipt_NotFoundTitle"]</h2>
+            <p>@Text["FundReceipt_NotFoundExplanation"]</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable || Model.Verification is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Fund_LoadErrorTitle"]</h2>
+            <p>@Text["Fund_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        var verification = Model.Verification;
+        var facts = verification.Facts;
+        var economics = verification.Economics;
+        var currency = facts.CashConsideration.Currency.Value;
+        var digits = verification.MinorUnitDigits;
+
+        <section class="panel flow" aria-labelledby="fund-receipt-summary-heading">
+            <p class="status-mark">@Text["FundReceipt_PostedStatus"]</p>
+            <h2 id="fund-receipt-summary-heading">
+                @(Model.IsPurchase
+                    ? Text["FundPurchase_Title"]
+                    : Text["FundSale_Title"])
+            </h2>
+            <p>@Text["FundReceipt_PersistedExplanation"]</p>
+
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["FundReceipt_TransactionId"]</dt>
+                    <dd><code>@facts.TransactionId.ToString("D")</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["FundReceipt_PostedAt"]</dt>
+                    <dd>@Model.Values.UtcTimestamp(facts.PostedAtUtc).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Fund_Review_ExecutionDate"]</dt>
+                    <dd>@Model.Values.BusinessDate(facts.ExecutionDate).Text</dd>
+                </div>
+                @if (facts.OrderDate is DateOnly orderDate)
+                {
+                    <div>
+                        <dt>@Text["Fund_OrderDateLabel"]</dt>
+                        <dd>@Model.Values.BusinessDate(orderDate).Text</dd>
+                    </div>
+                }
+                @if (facts.SettlementDate is DateOnly settlementDate)
+                {
+                    <div>
+                        <dt>@Text["Fund_SettlementDateLabel"]</dt>
+                        <dd>@Model.Values.BusinessDate(settlementDate).Text</dd>
+                    </div>
+                }
+                <div>
+                    <dt>@Text["Fund_Review_ExecutedPrice"]</dt>
+                    <dd>@Model.Values.UnitPrice(facts.ExecutedUnitPrice.RawE8, currency).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Fund_Review_Consideration"]</dt>
+                    <dd>@Model.Values.Money(economics.CashConsideration.MinorUnits, currency, digits).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Fund_Review_NetCashEffect"]</dt>
+                    <dd>@Model.Values.Money(economics.NetCashEffect.MinorUnits, currency, digits).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Fund_Review_Discrepancy"]</dt>
+                    <dd>@Model.Values.Money(economics.DiscrepancyMinorUnits, currency, digits).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["FundReceipt_CurrentPosition"]</dt>
+                    <dd>
+                        @Model.Values.Quantity(
+                            verification.CurrentFundPositionRawE8,
+                            WealthLedger.Domain.Assets.AssetUnit.FundUnit,
+                            WealthLedger.UI.Presentation.QuantitySign.Absolute).Text
+                    </dd>
+                </div>
+                @if (!string.IsNullOrEmpty(facts.ExternalReference))
+                {
+                    <div>
+                        <dt>@Text["Fund_ExternalReferenceLabel"]</dt>
+                        <dd>@facts.ExternalReference</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(facts.Note))
+                {
+                    <div>
+                        <dt>@Text["Fund_NoteLabel"]</dt>
+                        <dd>@facts.Note</dd>
+                    </div>
+                }
+            </dl>
+        </section>
+
+        @* The lots this trade created or consumed. *@
+        <section class="panel flow" aria-labelledby="fund-receipt-lots-heading">
+            <h2 id="fund-receipt-lots-heading">
+                @(Model.IsPurchase
+                    ? Text["FundReceipt_CreatedLotTitle"]
+                    : Text["FundReceipt_ConsumedLotsTitle"])
+            </h2>
+
+            <table class="data-table">
+                <caption class="visually-hidden">@Text["FundReceipt_ConsumedLotsTitle"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Text["FundReceipt_LotId"]</th>
+                        <th scope="col">@Text["FundSale_Plan_AcquiredOn"]</th>
+                        <th scope="col">@Text["FundSale_Plan_Consumed"]</th>
+                        <th scope="col">@Text["FundSale_Plan_CostStatus"]</th>
+                        <th scope="col">@Text["FundSale_Plan_LotCost"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var allocation in facts.Allocations)
+                    {
+                        <tr>
+                            <td><code>@allocation.AssetLotId.ToString("D")</code></td>
+                            <td>
+                                @if (allocation.AcquiredOn is DateOnly acquired)
+                                {
+                                    @Model.Values.BusinessDate(acquired).Text
+                                }
+                                else
+                                {
+                                    <span class="state-text state-text--unavailable">@Text["State_Unknown"]</span>
+                                }
+                            </td>
+                            <td>
+                                @Model.Values.Quantity(
+                                    allocation.Quantity.RawE8,
+                                    WealthLedger.Domain.Assets.AssetUnit.FundUnit,
+                                    WealthLedger.UI.Presentation.QuantitySign.Absolute).Text
+                            </td>
+                            <td><code>@FundTradeDisplayCodes.CostStatus(allocation.CostStatus)</code></td>
+                            <td>
+                                @if (allocation.LotCostBasis is not null)
+                                {
+                                    @Model.Values.Money(
+                                        allocation.LotCostBasis.MinorUnits,
+                                        allocation.LotCostBasis.Currency.Value,
+                                        digits).Text
+                                }
+                                else
+                                {
+                                    <span class="state-text state-text--unavailable">@Text["State_Unknown"]</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+
+        @if (verification.RealizedCost is not null)
+        {
+            var realized = verification.RealizedCost;
+
+            <section class="panel flow" aria-labelledby="fund-receipt-realized-heading">
+                <h2 id="fund-receipt-realized-heading">@Text["FundSale_RealizedCostTitle"]</h2>
+                <p class="help">@Text["FundReceipt_RealizedDerivedExplanation"]</p>
+
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["FundSale_Realized_Completeness"]</dt>
+                        <dd><code>@FundTradeDisplayCodes.Completeness(realized.Completeness)</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["FundSale_Realized_KnownQuantity"]</dt>
+                        <dd>
+                            @Model.Values.Quantity(
+                                realized.KnownQuantityRawE8,
+                                WealthLedger.Domain.Assets.AssetUnit.FundUnit,
+                                WealthLedger.UI.Presentation.QuantitySign.Absolute).Text
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["FundSale_Realized_UnknownQuantity"]</dt>
+                        <dd>
+                            @Model.Values.Quantity(
+                                realized.UnknownQuantityRawE8,
+                                WealthLedger.Domain.Assets.AssetUnit.FundUnit,
+                                WealthLedger.UI.Presentation.QuantitySign.Absolute).Text
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["FundSale_Realized_Method"]</dt>
+                        <dd><code>@realized.MethodCode</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["FundReceipt_Realized_DerivedAt"]</dt>
+                        <dd>@Model.Values.UtcTimestamp(realized.DerivedAtUtc).Text</dd>
+                    </div>
+                    <div>
+                        <dt>@Text["FundReceipt_Realized_Effective"]</dt>
+                        <dd>
+                            @(realized.SourceSaleIsEffective
+                                ? Text["FundReceipt_Realized_IsEffective"]
+                                : Text["FundReceipt_Realized_NotEffective"])
+                        </dd>
+                    </div>
+                </dl>
+
+                @if (realized.Completeness == RealizedCostCompleteness.Unknown)
+                {
+                    <p class="state-text state-text--unavailable">
+                        @Text["FundSale_Realized_NoKnownCost"]
+                    </p>
+                }
+                else
+                {
+                    @if (realized.Completeness == RealizedCostCompleteness.PartiallyKnown)
+                    {
+                        <p class="state-text">@Text["FundSale_Realized_PartialWarning"]</p>
+                    }
+
+                    <ul class="plain-list">
+                        @foreach (var amount in realized.KnownAmounts)
+                        {
+                            <li>@Model.Values.Money(amount.MinorUnits, amount.CurrencyCode, digits).Text</li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+
+        @if (facts.Costs.Count > 0)
+        {
+            <section class="panel flow" aria-labelledby="fund-receipt-costs-heading">
+                <h2 id="fund-receipt-costs-heading">@Text["Fund_Review_CostsTitle"]</h2>
+                <table class="data-table">
+                    <caption class="visually-hidden">@Text["Fund_Review_CostsTitle"]</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Fund_CostTypeLabel"]</th>
+                            <th scope="col">@Text["Fund_CostTreatmentLabel"]</th>
+                            <th scope="col">@Text["Fund_CostAmountLabel"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cost in facts.Costs)
+                        {
+                            <tr>
+                                <td><code>@FundTradeCodes.ToCostTypeCode(cost.Type)</code></td>
+                                <td><code>@FundTradeCodes.ToTreatmentCode(cost.Treatment)</code></td>
+                                <td>@Model.Values.Money(cost.Amount.MinorUnits, currency, digits).Text</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @if (verification.WarningCodes.Count > 0)
+        {
+            <section class="summary-card summary-card--warning flow" role="status">
+                <h2>@Text["Fund_WarningsTitle"]</h2>
+                <ul class="plain-list">
+                    @foreach (var warning in verification.WarningCodes)
+                    {
+                        <li>@Text[$"Fund_Warning_{warning}"]</li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <section class="panel flow" aria-labelledby="fund-receipt-next-heading">
+            <h2 id="fund-receipt-next-heading">@Text["FundReceipt_NextTitle"]</h2>
+
+            <ul class="plain-list">
+                <li>
+                    <a class="card-link" asp-page="/Ledger/Details"
+                       asp-route-transactionId="@facts.TransactionId.ToString("D")">
+                        @Text["FundReceipt_OpenTransaction"]
+                    </a>
+                </li>
+                @if (Model.IsReversed)
+                {
+                    <li class="state-text">@Text["FundReceipt_AlreadyReversed"]</li>
+                }
+                else
+                {
+                    <li>
+                        <a class="card-link" asp-page="/Record/Reverse"
+                           asp-route-transactionId="@facts.TransactionId.ToString("D")">
+                            @Text["FundReceipt_ReverseAction"]
+                        </a>
+                    </li>
+                }
+            </ul>
+
+            <p class="help">@Text["FundReceipt_CorrectionHelp"]</p>
+        </section>
+    }
+</article>

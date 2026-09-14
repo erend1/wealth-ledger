@@ -61,8 +61,13 @@ public sealed partial class ReadyShellUiTests
 
         Assert.Contains("href=\"/\"", shell, StringComparison.Ordinal);
         Assert.Contains("href=\"/ledger\"", shell, StringComparison.Ordinal);
+        /*
+         * The shell now links to the record hub rather than straight to one
+         * workflow, because M008 adds three more. The hub itself is asserted
+         * below to still expose the opening-balance destination.
+         */
         Assert.Contains(
-            "href=\"/record/opening-balance\"",
+            "href=\"/record\"",
             shell,
             StringComparison.Ordinal);
         Assert.Contains("href=\"/settings\"", shell, StringComparison.Ordinal);
@@ -75,6 +80,27 @@ public sealed partial class ReadyShellUiTests
         Assert.DoesNotContain("http://", shell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("https://", shell, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(cookies);
+
+        using var recordHub = await client.GetAsync("/record");
+        var hubHtml = await recordHub.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, recordHub.StatusCode);
+        Assert.Contains(
+            "href=\"/record/opening-balance\"",
+            hubHtml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "href=\"/record/contribution\"",
+            hubHtml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "href=\"/record/fund-purchase\"",
+            hubHtml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "href=\"/record/fund-sale\"",
+            hubHtml,
+            StringComparison.Ordinal);
 
         using var style = await client.GetAsync(
             "/_content/WealthLedger.UI/css/shell.css");

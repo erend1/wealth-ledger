@@ -14,6 +14,7 @@ namespace WealthLedger.Application.FundTrades;
 public sealed record FundTradeVerification(
     FundTradePersistedFacts Facts,
     FundTradeEconomics Economics,
+    int MinorUnitDigits,
     long CurrentFundPositionRawE8,
     RealizedCostResult? RealizedCost,
     IReadOnlyList<string> WarningCodes);
@@ -166,6 +167,7 @@ public sealed class GetFundTradeVerificationUseCase
         return new FundTradeVerification(
             facts,
             economics,
+            currency.MinorUnitDigits,
             currentPosition,
             realizedCost,
             warnings);

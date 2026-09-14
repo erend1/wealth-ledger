@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Playwright;
@@ -463,10 +463,14 @@ public sealed class CriticalJourneysTests
         await GoToAsync(page, baseAddress, "/record/opening-balance");
         await AssertPageFrameAsync(page);
         await AssertResponsiveReflowAsync(page, options);
+        /*
+         * The primary nav marks the Record section, not one workflow inside
+         * it, because M008 adds three more recording destinations.
+         */
         Assert.Equal(
             1,
             await page.Locator(
-                ".primary-nav a[href=\"/record/opening-balance\"][aria-current=\"page\"]")
+                ".primary-nav a[href=\"/record\"][aria-current=\"page\"]")
                 .CountAsync());
 
         await SelectOptionContainingAsync(

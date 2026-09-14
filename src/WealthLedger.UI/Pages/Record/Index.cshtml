@@ -1,0 +1,52 @@
+@page "/record"
+@model WealthLedger.UI.Pages.Record.IndexModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["RecordHub_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="record-hub-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Fund_Eyebrow"]</p>
+        <h1 id="record-hub-heading">@Text["RecordHub_Title"]</h1>
+        <p class="lede">@Text["RecordHub_Introduction"]</p>
+    </header>
+
+    <nav class="dashboard-grid" aria-label="@Text["RecordHub_ChoicesLabel"]">
+        <section class="panel flow">
+            <h2>@Text["Contribution_Title"]</h2>
+            <p>@Text["RecordHub_ContributionExplanation"]</p>
+            <a class="card-link" asp-page="/Record/Contribution">
+                @Text["RecordHub_ContributionAction"]
+            </a>
+        </section>
+
+        <section class="panel flow">
+            <h2>@Text["FundPurchase_Title"]</h2>
+            <p>@Text["RecordHub_PurchaseExplanation"]</p>
+            <a class="card-link" asp-page="/Record/FundPurchase">
+                @Text["RecordHub_PurchaseAction"]
+            </a>
+        </section>
+
+        <section class="panel flow">
+            <h2>@Text["FundSale_Title"]</h2>
+            <p>@Text["RecordHub_SaleExplanation"]</p>
+            <a class="card-link" asp-page="/Record/FundSale">
+                @Text["RecordHub_SaleAction"]
+            </a>
+        </section>
+
+        <section class="panel flow">
+            <h2>@Text["Opening_Title"]</h2>
+            <p>@Text["RecordHub_OpeningExplanation"]</p>
+            <a class="card-link" asp-page="/Record/OpeningBalance">
+                @Text["RecordHub_OpeningAction"]
+            </a>
+        </section>
+    </nav>
+
+    <p class="help">@Text["RecordHub_ScopeHelp"]</p>
+</article>
