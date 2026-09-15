@@ -1346,6 +1346,13 @@ public sealed class LotIntegrityTriggerTests
                 ActualFinenessPpm = 916_000,
                 PieceCount = 1
             });
+
+            context.PhysicalGoldLotAllocationDetails.Add(
+                new PhysicalGoldLotAllocationDetailRow
+                {
+                    LotEntryAllocationId = allocationId,
+                    PieceDelta = 1
+                });
         }
 
         await context.SaveChangesAsync();

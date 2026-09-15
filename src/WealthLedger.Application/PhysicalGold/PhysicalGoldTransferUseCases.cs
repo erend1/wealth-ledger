@@ -14,9 +14,12 @@ public sealed class PreviewPhysicalGoldTransferUseCase
         IPhysicalGoldCustodyReadStore custodyStore,
         TimeProvider timeProvider)
     {
-        _referenceStore = referenceStore;
-        _custodyStore = custodyStore;
-        _timeProvider = timeProvider;
+        _referenceStore = referenceStore
+            ?? throw new ArgumentNullException(nameof(referenceStore));
+        _custodyStore = custodyStore
+            ?? throw new ArgumentNullException(nameof(custodyStore));
+        _timeProvider = timeProvider
+            ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<PhysicalGoldTransferPreview> ExecuteAsync(
@@ -102,10 +105,14 @@ public sealed class RecordPhysicalGoldTransferUseCase
         IPhysicalGoldPostingStore postingStore,
         TimeProvider timeProvider)
     {
-        _referenceStore = referenceStore;
-        _submissionStore = submissionStore;
-        _postingStore = postingStore;
-        _timeProvider = timeProvider;
+        _referenceStore = referenceStore
+            ?? throw new ArgumentNullException(nameof(referenceStore));
+        _submissionStore = submissionStore
+            ?? throw new ArgumentNullException(nameof(submissionStore));
+        _postingStore = postingStore
+            ?? throw new ArgumentNullException(nameof(postingStore));
+        _timeProvider = timeProvider
+            ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<RecordPhysicalGoldActivityResult> ExecuteAsync(

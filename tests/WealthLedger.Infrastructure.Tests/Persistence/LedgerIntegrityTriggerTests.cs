@@ -255,7 +255,7 @@ public sealed class LedgerIntegrityTriggerTests
             context.LedgerTransactions.Add(
                 CoreLedgerTestData.CreateDraftTransaction(
                     originalId,
-                    TransactionType.Buy));
+                    TransactionType.Adjustment));
 
             context.TransactionEntries.AddRange(
                 CoreLedgerTestData.CreateEntry(

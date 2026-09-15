@@ -648,11 +648,17 @@ public sealed class FundTradeLifecycleTests
     public async Task Verification_RejectsNonFundTrades(
         TransactionType tradeType)
     {
-        await using var database = await SqliteTestDatabase.CreateAsync();
+        await using var database = await SqliteTestDatabase.CreateAsync(
+            "20260913054039_007_FundTradeLifecycleGuards");
         await SeedAsync(database);
 
         var transactionId =
             await SeedEquityTradeAsync(database, tradeType);
+
+        await using (var upgrade = database.CreateContext())
+        {
+            await upgrade.Database.MigrateAsync();
+        }
 
         await using var context = database.CreateContext();
 
@@ -795,9 +801,11 @@ public sealed class FundTradeLifecycleTests
         await context.SaveChangesAsync();
 
         /*
-         * The M008 trigger only governs fund trades, so an equity trade
-         * posts normally. That is exactly why the read model has to refuse
-         * it rather than relying on the trigger.
+     * The M008 trigger only governs fund trades, so this historical equity
+     * trade can be posted under migration 007. Migration 008 then upgrades
+     * that history while refusing any new unsupported Buy/Sell principal
+     * family. The read model must continue to fail closed for the historical
+     * non-Fund activity.
          */
         await context.Database.ExecuteSqlRawAsync(
             """

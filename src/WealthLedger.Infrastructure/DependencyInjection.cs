@@ -7,6 +7,7 @@ using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Positions;
+using WealthLedger.Application.PhysicalGold;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure.LocalData;
 using WealthLedger.Infrastructure.Persistence;
@@ -163,6 +164,9 @@ public static class DependencyInjection
         services.AddScoped<IFundTradePostingStore>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
+        services.AddScoped<IPhysicalGoldPostingStore>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
 
         services.AddScoped<
             IFundLotCustodyReadStore,
@@ -173,6 +177,15 @@ public static class DependencyInjection
         services.AddScoped<
             IFundTradeVerificationReadStore,
             EfCoreFundTradeVerificationReadStore>();
+        services.AddScoped<
+            IPhysicalGoldCustodyReadStore,
+            EfCorePhysicalGoldCustodyReadStore>();
+        services.AddScoped<
+            IPhysicalGoldRealizedCostReadStore,
+            EfCorePhysicalGoldRealizedCostReadStore>();
+        services.AddScoped<
+            IPhysicalGoldVerificationReadStore,
+            EfCorePhysicalGoldVerificationReadStore>();
 
         services.AddScoped<ILedgerTransactionReadStore, EfCoreLedgerTransactionReadStore>();
         services.AddScoped<

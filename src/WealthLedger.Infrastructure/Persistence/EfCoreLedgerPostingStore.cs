@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.OpeningBalances;
+using WealthLedger.Application.PhysicalGold;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Infrastructure.Persistence.Rows;
@@ -11,8 +12,9 @@ namespace WealthLedger.Infrastructure.Persistence;
 
 public sealed partial class EfCoreLedgerPostingStore
     : ILedgerPostingStore,
-      ILedgerSubmissionStore,
-      IFundTradePostingStore
+       ILedgerSubmissionStore,
+       IFundTradePostingStore,
+       IPhysicalGoldPostingStore
 {
     private sealed record PreparedLedgerGraph(
         LedgerTransactionRow Transaction,
@@ -21,7 +23,9 @@ public sealed partial class EfCoreLedgerPostingStore
         CashFlowDetailRow? CashFlow,
         AssetLotRow[] Lots,
         LotEntryAllocationRow[] Allocations,
-        PhysicalGoldLotDetailRow[] PhysicalGoldDetails);
+        PhysicalGoldLotDetailRow[] PhysicalGoldDetails,
+        PhysicalGoldLotAllocationDetailRow[] PhysicalGoldAllocationDetails,
+        PhysicalGoldTradeDetailRow? PhysicalGoldTradeDetail);
 
     private readonly WealthLedgerDbContext _dbContext;
 
@@ -278,7 +282,13 @@ public sealed partial class EfCoreLedgerPostingStore
                 .Select(MapPhysicalGoldDetail)
                 .Where(row => row is not null)
                 .Cast<PhysicalGoldLotDetailRow>()
-                .ToArray());
+                .ToArray(),
+
+            lots
+                .SelectMany(MapPhysicalGoldAllocationDetails)
+                .ToArray(),
+
+            MapPhysicalGoldTradeDetail(transaction));
     }
 
     private void AddGraph(
@@ -307,6 +317,15 @@ public sealed partial class EfCoreLedgerPostingStore
 
         _dbContext.PhysicalGoldLotDetails.AddRange(
             graph.PhysicalGoldDetails);
+
+        _dbContext.PhysicalGoldLotAllocationDetails.AddRange(
+            graph.PhysicalGoldAllocationDetails);
+
+        if (graph.PhysicalGoldTradeDetail is not null)
+        {
+            _dbContext.PhysicalGoldTradeDetails.Add(
+                graph.PhysicalGoldTradeDetail);
+        }
     }
 
     private static void ValidateReceipt(
@@ -626,5 +645,29 @@ public sealed partial class EfCoreLedgerPostingStore
                 CertificateReference =
                     lot.PhysicalGoldDetail.CertificateReference,
                 Note = lot.PhysicalGoldDetail.Note
+            };
+
+    private static IEnumerable<PhysicalGoldLotAllocationDetailRow>
+        MapPhysicalGoldAllocationDetails(AssetLot lot)
+        => lot.Allocations
+            .Where(allocation => allocation.PhysicalGoldDetail is not null)
+            .Select(allocation =>
+                new PhysicalGoldLotAllocationDetailRow
+                {
+                    LotEntryAllocationId = allocation.Id,
+                    PieceDelta =
+                        allocation.PhysicalGoldDetail!.PieceDelta
+                });
+
+    private static PhysicalGoldTradeDetailRow?
+        MapPhysicalGoldTradeDetail(LedgerTransaction transaction)
+        => transaction.PhysicalGoldTradeDetail is null
+            ? null
+            : new PhysicalGoldTradeDetailRow
+            {
+                LedgerTransactionId = transaction.Id,
+                CounterpartyInstitutionId = transaction
+                    .PhysicalGoldTradeDetail
+                    .CounterpartyInstitutionId
             };
 }

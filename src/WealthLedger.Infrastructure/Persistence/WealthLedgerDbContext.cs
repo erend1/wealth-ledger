@@ -42,6 +42,13 @@ public sealed class WealthLedgerDbContext : DbContext
     internal DbSet<PhysicalGoldLotDetailRow> PhysicalGoldLotDetails
         => Set<PhysicalGoldLotDetailRow>();
 
+    internal DbSet<PhysicalGoldLotAllocationDetailRow>
+        PhysicalGoldLotAllocationDetails
+        => Set<PhysicalGoldLotAllocationDetailRow>();
+
+    internal DbSet<PhysicalGoldTradeDetailRow> PhysicalGoldTradeDetails
+        => Set<PhysicalGoldTradeDetailRow>();
+
     internal DbSet<CommandReceiptRow> CommandReceipts
         => Set<CommandReceiptRow>();
 
@@ -66,6 +73,10 @@ public sealed class WealthLedgerDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AssetLotConfiguration());
         modelBuilder.ApplyConfiguration(new LotEntryAllocationConfiguration());
         modelBuilder.ApplyConfiguration(new PhysicalGoldLotDetailConfiguration());
+        modelBuilder.ApplyConfiguration(
+            new PhysicalGoldLotAllocationDetailConfiguration());
+        modelBuilder.ApplyConfiguration(
+            new PhysicalGoldTradeDetailConfiguration());
         modelBuilder.ApplyConfiguration(new CommandReceiptConfiguration());
     }
 }

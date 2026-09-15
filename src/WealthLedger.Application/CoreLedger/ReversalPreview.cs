@@ -16,7 +16,8 @@ namespace WealthLedger.Application.CoreLedger
         Guid AssetLotId,
         Guid OriginalTransactionEntryId,
         int EntrySequence,
-        QuantityDelta QuantityDelta);
+        QuantityDelta QuantityDelta,
+        int? PhysicalGoldPieceDelta = null);
 
     public sealed record ReversalPreviewResult(
         Guid OriginalTransactionId,
