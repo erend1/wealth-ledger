@@ -8,6 +8,15 @@
 
         public const string RecordFundSale = "RECORD_FUND_SALE";
 
+        public const string RecordPhysicalGoldPurchase =
+            "RECORD_PHYSICAL_GOLD_PURCHASE";
+
+        public const string RecordPhysicalGoldSale =
+            "RECORD_PHYSICAL_GOLD_SALE";
+
+        public const string RecordPhysicalGoldTransfer =
+            "RECORD_PHYSICAL_GOLD_TRANSFER";
+
         public const string RecordOpeningBalance = "RECORD_OPENING_BALANCE";
 
         public const string ReversePostedTransaction = "REVERSE_POSTED_TRANSACTION";
