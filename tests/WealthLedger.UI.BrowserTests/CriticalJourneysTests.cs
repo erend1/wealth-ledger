@@ -942,6 +942,12 @@ public sealed class CriticalJourneysTests
             1,
             await page.Locator("#fund-receipt-heading").CountAsync());
 
+        await RunFundCorrectionAsync(
+            page,
+            baseAddress,
+            saleReceipt,
+            options);
+
         // Everything survives a restart, because nothing is held in memory.
         await workspace.StopHostAsync();
         baseAddress = await workspace.StartHostAsync();
@@ -959,12 +965,105 @@ public sealed class CriticalJourneysTests
                 await page.Locator("#fund-receipt-heading").CountAsync());
         }
 
+        // The reversed sale still reads back, and says it is not effective.
         Assert.Contains(
-            "PARTIALLY_KNOWN",
+            "ters kayıtla iptal edilmiş",
             await page.Locator("main").InnerTextAsync());
 
         // The host moved to a new port on restart; the caller needs it.
         return baseAddress;
+    }
+
+    /// <summary>
+    /// Corrects a posted fund sale from its receipt, without JavaScript.
+    /// </summary>
+    /// <remarks>
+    /// A correction is the one workflow a household reaches for when
+    /// something is already wrong, so it has to work in the plainest possible
+    /// browser. The original stays Posted, the reversal is a separate record,
+    /// and the consumed lot quantities come back.
+    /// </remarks>
+    private static async Task RunFundCorrectionAsync(
+        IPage page,
+        Uri baseAddress,
+        string saleReceipt,
+        JourneyOptions options)
+    {
+        await GoToAsync(page, baseAddress, saleReceipt);
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Bu işlemi ters kayıtla düzelt",
+                    Exact = true
+                })
+            .ClickAsync();
+
+        await page.Locator("#fund-reverse-heading").WaitForAsync();
+
+        var eligibility = await page.Locator("main").InnerTextAsync();
+
+        Assert.Contains("Uygun", eligibility);
+        Assert.Contains("Geri verilecek lotlar", eligibility);
+
+        // Posting without a reason must be refused, with focus on the field.
+        await ClickFundButtonAsync(page, "Kalıcı ters kaydı oluştur");
+        await page.Locator(".validation-summary").WaitForAsync();
+
+        Assert.Equal(
+            "#Input_Reason",
+            await page.Locator(".validation-summary a")
+                .First
+                .GetAttributeAsync("href"));
+
+        await page.Locator("#Input_Reason")
+            .FillAsync("Synthetic browser correction for the fund sale.");
+
+        await ClickFundButtonAsync(page, "Kalıcı ters kaydı oluştur");
+        await page.Locator("#fund-receipt-heading").WaitForAsync();
+
+        // Back on the receipt, the correction is reported, not offered again.
+        var corrected = await page.Locator("main").InnerTextAsync();
+
+        Assert.Contains("zaten ters kayıtla düzeltilmiş", corrected);
+
+        Assert.Equal(
+            0,
+            await page.GetByRole(
+                    AriaRole.Link,
+                    new PageGetByRoleOptions
+                    {
+                        Name = "Bu işlemi ters kayıtla düzelt",
+                        Exact = true
+                    })
+                .CountAsync());
+
+        /*
+         * The sale consumed one hundred and forty units, so reversing it puts
+         * all of them back. A corrected sale is then reviewed afresh against
+         * the restored holding.
+         */
+        await GoToAsync(page, baseAddress, "/record/fund-sale");
+        await FillFundTradeScopeAsync(page);
+        await page.Locator("#Input_Quantity").FillAsync("120");
+        await page.Locator("#Input_UnitPrice").FillAsync("15");
+        await page.Locator("#Input_CashConsideration").FillAsync("1800");
+        await page.Locator("#Input_ExecutionDate").FillAsync("2026-09-11");
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-SALE-CORRECTED");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser corrected liquidation.");
+
+        await ClickFundButtonAsync(page, "Gözden geçir");
+        await page.Locator("#fund-sale-review-heading").WaitForAsync();
+
+        await ClickFundButtonAsync(page, "Satışı kaydet");
+        await page.Locator("#fund-receipt-heading").WaitForAsync();
+
+        Assert.NotEqual(saleReceipt, new Uri(page.Url).AbsolutePath);
     }
 
     private static async Task<string> RecordFundPurchaseAsync(

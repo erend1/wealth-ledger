@@ -1725,4 +1725,29 @@
   <data name="RecordHub_OpeningExplanation" xml:space="preserve"><value>Defter tutmaya başlamadan önce sahip olduğunuz bakiyeler.</value></data>
   <data name="RecordHub_OpeningAction" xml:space="preserve"><value>Açılış bakiyesi kaydet</value></data>
   <data name="RecordHub_ScopeHelp" xml:space="preserve"><value>Kaydedilen işlemler silinemez veya değiştirilemez. Düzeltme, ayrı bir ters kayıtla yapılır.</value></data>
+  <data name="FundReverse_Title" xml:space="preserve"><value>Fon işlemini ters kayıtla düzelt</value></data>
+  <data name="FundReverse_Introduction" xml:space="preserve"><value>Kaydedilen işlem silinmez veya değiştirilmez. Düzeltme, zıt etkileri olan ayrı ve kalıcı bir ters kayıtla yapılır.</value></data>
+  <data name="FundReverse_EffectsTitle" xml:space="preserve"><value>Ters kaydın etkileri</value></data>
+  <data name="FundReverse_EntryRole" xml:space="preserve"><value>Satır türü</value></data>
+  <data name="FundReverse_EntryEffect" xml:space="preserve"><value>Etki</value></data>
+  <data name="FundReverse_RestoredLotsTitle" xml:space="preserve"><value>Geri verilecek lotlar</value></data>
+  <data name="FundReverse_RestoredLotsHelp" xml:space="preserve"><value>Ters kayıt, satışın kullandığı lot adetlerini aynen geri verir.</value></data>
+  <data name="FundReverse_ReasonLegend" xml:space="preserve"><value>Düzeltme nedeni</value></data>
+  <data name="FundReverse_ReasonLabel" xml:space="preserve"><value>Neden</value></data>
+  <data name="FundReverse_ReasonHelp" xml:space="preserve"><value>Bu düzeltmenin nedenini yazın. Neden kalıcı olarak saklanır.</value></data>
+  <data name="FundReverse_PostAction" xml:space="preserve"><value>Kalıcı ters kaydı oluştur</value></data>
+  <data name="FundReverse_PostActionHelp" xml:space="preserve"><value>Ters kayıt da kalıcıdır ve geri alınamaz. Düzeltilmiş işlemi ayrıca kaydetmeniz gerekir.</value></data>
+  <data name="FundReverse_NextTitle" xml:space="preserve"><value>Sonraki adımlar</value></data>
+  <data name="FundReverse_BackToReceipt" xml:space="preserve"><value>İşlem kaydına dön</value></data>
+  <data name="FundReverse_StartCorrectedPurchase" xml:space="preserve"><value>Düzeltilmiş fon alımını kaydet</value></data>
+  <data name="FundReverse_StartCorrectedSale" xml:space="preserve"><value>Düzeltilmiş fon satışını kaydet</value></data>
+  <data name="FundReverse_ReplacementHelp" xml:space="preserve"><value>Düzeltilmiş işlem ayrı bir kayıttır ve kendi kayıt anahtarını kullanır. Defterde ters kayıt ile yeni kayıt arasında kalıcı bir bağ tutulmaz.</value></data>
+  <data name="FundReverse_Eligible" xml:space="preserve"><value>Uygun — zıt etkiler oluşturulacak.</value></data>
+  <data name="FundReverse_AlreadyReversed" xml:space="preserve"><value>Bu işlem zaten ters kayıtla düzeltilmiş. İkinci bir ters kayıt oluşturulamaz.</value></data>
+  <data name="FundReverse_BlockedByDependencies" xml:space="preserve"><value>Bu alımdan gelen adetler sonradan satılmış. Önce ilgili satışı ters kayıtla düzeltin.</value></data>
+  <data name="FundReverse_TargetIsReversal" xml:space="preserve"><value>Bu kayıt zaten bir ters kayıt. Ters kaydın ters kaydı alınamaz.</value></data>
+  <data name="FundReverse_NotPosted" xml:space="preserve"><value>Yalnızca kaydedilmiş işlemler ters kayıtla düzeltilebilir.</value></data>
+  <data name="FundReverse_UnsupportedShape" xml:space="preserve"><value>Bu işlemin kayıtlı yapısı ters kayıt için desteklenmiyor.</value></data>
+  <data name="FundReverse_Validation_ReasonRequired" xml:space="preserve"><value>Düzeltme nedeni zorunludur.</value></data>
+  <data name="FundReverse_Validation_ReasonInvalid" xml:space="preserve"><value>Neden en fazla 2000 karakter olmalı ve kontrol karakteri içermemelidir.</value></data>
 </root>

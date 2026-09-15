@@ -348,7 +348,398 @@ public sealed partial class FundTradeUiTests
         }
     }
 
-    private static async Task PostPurchaseAsync(
+    /*
+     * A note is the one field a user is required to fill in when something
+     * needs explaining, so it is exactly the field most likely to contain
+     * something private. It must never reach a log.
+     */
+    [Fact]
+    public async Task FundTradeLogs_OmitNotesReferencesAndResolvedPaths()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = CreateClient(factory);
+
+        const string privateReference = "PRIVATE-FUND-REFERENCE-PAYLOAD";
+        const string privateNote = "PRIVATE-FUND-NOTE-PAYLOAD";
+
+        var page = await GetFormAsync(client, "/record/fund-purchase");
+        var form = PurchaseForm(factory, page);
+
+        form["Input.ExternalReference"] = privateReference;
+        form["Input.Note"] = privateNote;
+
+        using var review = await client.PostAsync(
+            "/record/fund-purchase?handler=Review",
+            new FormUrlEncodedContent(form));
+
+        var reviewHtml = WebUtility.HtmlDecode(
+            await review.Content.ReadAsStringAsync());
+
+        form["__RequestVerificationToken"] = TokenFrom(reviewHtml);
+
+        using var post = await client.PostAsync(
+            "/record/fund-purchase?handler=Post",
+            new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        // A refused submission exercises the error paths too.
+        var refusedPage = await GetFormAsync(client, "/record/fund-sale");
+        var refused = SaleForm(factory, refusedPage, quantity: "9999");
+        refused["Input.Note"] = privateNote;
+        refused["Input.ExternalReference"] = privateReference;
+
+        using var refusedResponse = await client.PostAsync(
+            "/record/fund-sale?handler=Review",
+            new FormUrlEncodedContent(refused));
+
+        Assert.Equal(
+            HttpStatusCode.UnprocessableEntity,
+            refusedResponse.StatusCode);
+
+        var logs = string.Join(
+            Environment.NewLine,
+            factory.Logs.Messages);
+
+        Assert.DoesNotContain(privateReference, logs);
+        Assert.DoesNotContain(privateNote, logs);
+        Assert.DoesNotContain("Sentetik", logs);
+        Assert.DoesNotContain("sha256-", logs);
+        Assert.DoesNotContain("SELECT", logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            factory.DatabasePath,
+            logs,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    /*
+     * The verification route explains fund-specific facts. A contribution is
+     * not a fund trade, and neither is an equity Buy, so the route must give
+     * the same not-found answer it gives for a transaction that does not
+     * exist rather than leaking that one is there.
+     */
+    [Fact]
+    public async Task Verification_RejectsNonFundTransactions()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        var fixture = await factory.SeedReadyUiLedgerAsync();
+        using var client = CreateClient(factory);
+
+        var household = factory.ReadySetup.HouseholdId;
+
+        foreach (var transactionId in new[]
+                 {
+                     fixture.ContributionTransactionId,
+                     Guid.NewGuid()
+                 })
+        {
+            using var response = await client.GetAsync(
+                $"/api/households/{household:D}/ledger/fund-trades/{transactionId:D}/verification");
+
+            Assert.Equal(
+                HttpStatusCode.NotFound,
+                response.StatusCode);
+
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.DoesNotContain("SHELL-", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("SELECT", body, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task Verification_RejectsAnotherHousehold()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        await factory.SeedReadyUiLedgerAsync();
+        using var client = CreateClient(factory);
+
+        var page = await GetFormAsync(client, "/record/fund-purchase");
+        var form = PurchaseForm(factory, page);
+
+        using var review = await client.PostAsync(
+            "/record/fund-purchase?handler=Review",
+            new FormUrlEncodedContent(form));
+
+        form["__RequestVerificationToken"] =
+            TokenFrom(
+                WebUtility.HtmlDecode(
+                    await review.Content.ReadAsStringAsync()));
+
+        using var post = await client.PostAsync(
+            "/record/fund-purchase?handler=Post",
+            new FormUrlEncodedContent(form));
+
+        var receiptPath =
+            Assert.IsType<Uri>(post.Headers.Location).OriginalString;
+
+        var transactionId =
+            Guid.Parse(
+                receiptPath.Split('/')[3]);
+
+        using var response = await client.GetAsync(
+            $"/api/households/{Guid.NewGuid():D}/ledger/fund-trades/{transactionId:D}/verification");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /*
+     * The correction path must be walkable from the receipt without raw ids
+     * or API calls: receipt, reversal eligibility, posted reversal, then a
+     * separately reviewed replacement.
+     */
+    [Fact]
+    public async Task Purchase_CorrectionRunsFromReceiptToReplacement()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = CreateClient(factory);
+
+        var receiptPath =
+            await PostPurchaseAsync(
+                factory,
+                client,
+                quantity: "10",
+                note: "Yanlis adetle kaydedildi.");
+
+        var transactionId = TransactionIdFrom(receiptPath);
+        var reversePath = $"/record/fund-trade/{transactionId:D}/reverse";
+
+        // The receipt offers the correction path.
+        using var receipt = await client.GetAsync(receiptPath);
+        var receiptHtml = WebUtility.HtmlDecode(
+            await receipt.Content.ReadAsStringAsync());
+
+        Assert.Contains(reversePath, receiptHtml, StringComparison.Ordinal);
+
+        // Eligibility is shown before anything is posted.
+        var reversePage = await GetFormAsync(client, reversePath);
+
+        Assert.Contains(
+            "Uygun",
+            WebUtility.HtmlDecode(reversePage.Html),
+            StringComparison.Ordinal);
+
+        await using (var beforeContext = factory.CreateDbContext())
+        {
+            Assert.Equal(
+                0,
+                await beforeContext.LedgerTransactions
+                    .CountAsync(x => x.Type == TransactionType.Reversal));
+        }
+
+        using var reversed = await client.PostAsync(
+            $"{reversePath}?handler=Reverse",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    ["__RequestVerificationToken"] = reversePage.Token,
+                    ["Input.IdempotencyKey"] = reversePage.CommandKey,
+                    ["Input.Reason"] = "Adet yanlis girilmisti."
+                }));
+
+        Assert.Equal(HttpStatusCode.Redirect, reversed.StatusCode);
+
+        Assert.Equal(
+            receiptPath,
+            Assert.IsType<Uri>(reversed.Headers.Location).OriginalString);
+
+        await using (var context = factory.CreateDbContext())
+        {
+            var reversal =
+                Assert.Single(
+                    await context.LedgerTransactions
+                        .Where(x => x.Type == TransactionType.Reversal)
+                        .ToListAsync());
+
+            Assert.Equal(transactionId, reversal.ReversalOfTransactionId);
+            Assert.Equal(TransactionStatus.Posted, reversal.Status);
+
+            // The original is untouched and still Posted.
+            var original =
+                await context.LedgerTransactions
+                    .SingleAsync(x => x.Id == transactionId);
+
+            Assert.Equal(TransactionStatus.Posted, original.Status);
+
+            // The lot the purchase opened is back to zero.
+            Assert.Equal(
+                0,
+                await context.LotEntryAllocations
+                    .SumAsync(x => x.QuantityDeltaE8));
+        }
+
+        // The receipt now reports the correction rather than offering it.
+        using var afterReceipt = await client.GetAsync(receiptPath);
+        var afterHtml = WebUtility.HtmlDecode(
+            await afterReceipt.Content.ReadAsStringAsync());
+
+        Assert.DoesNotContain(
+            reversePath,
+            afterHtml,
+            StringComparison.Ordinal);
+
+        // A corrected purchase is a separate, separately reviewed record.
+        var replacementPath =
+            await PostPurchaseAsync(
+                factory,
+                client,
+                quantity: "12",
+                note: "Duzeltilmis alim.");
+
+        Assert.NotEqual(receiptPath, replacementPath);
+
+        await using var finalContext = factory.CreateDbContext();
+
+        Assert.Equal(
+            2,
+            await finalContext.LedgerTransactions
+                .CountAsync(x => x.Type == TransactionType.Buy));
+
+        Assert.Equal(
+            12_00000000L,
+            await finalContext.LotEntryAllocations
+                .SumAsync(x => x.QuantityDeltaE8));
+    }
+
+    [Fact]
+    public async Task Sale_CorrectionRestoresConsumedLotQuantities()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = CreateClient(factory);
+
+        await PostPurchaseAsync(
+            factory,
+            client,
+            quantity: "10",
+            note: "Alim.");
+
+        var salePath = await PostSaleAsync(factory, client, quantity: "4");
+        var saleId = TransactionIdFrom(salePath);
+
+        await using (var afterSale = factory.CreateDbContext())
+        {
+            Assert.Equal(
+                6_00000000L,
+                await afterSale.LotEntryAllocations
+                    .SumAsync(x => x.QuantityDeltaE8));
+        }
+
+        var reversePath = $"/record/fund-trade/{saleId:D}/reverse";
+        var reversePage = await GetFormAsync(client, reversePath);
+
+        using var reversed = await client.PostAsync(
+            $"{reversePath}?handler=Reverse",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    ["__RequestVerificationToken"] = reversePage.Token,
+                    ["Input.IdempotencyKey"] = reversePage.CommandKey,
+                    ["Input.Reason"] = "Satis adedi yanlisti."
+                }));
+
+        Assert.Equal(HttpStatusCode.Redirect, reversed.StatusCode);
+
+        await using (var context = factory.CreateDbContext())
+        {
+            // The consumed units are back in the lot, exactly.
+            Assert.Equal(
+                10_00000000L,
+                await context.LotEntryAllocations
+                    .SumAsync(x => x.QuantityDeltaE8));
+
+            Assert.Equal(
+                TransactionStatus.Posted,
+                (await context.LedgerTransactions
+                    .SingleAsync(x => x.Id == saleId)).Status);
+        }
+
+        // A corrected sale is a new review against the restored holding.
+        var replacementPath =
+            await PostSaleAsync(factory, client, quantity: "5");
+
+        Assert.NotEqual(salePath, replacementPath);
+
+        await using var finalContext = factory.CreateDbContext();
+
+        Assert.Equal(
+            5_00000000L,
+            await finalContext.LotEntryAllocations
+                .SumAsync(x => x.QuantityDeltaE8));
+    }
+
+    /*
+     * Reversing a purchase whose units have since been sold would strand the
+     * sale, so the dependency is explained and no reversal form is offered.
+     */
+    [Fact]
+    public async Task Purchase_ReversalIsBlockedWhileItsUnitsAreSold()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = CreateClient(factory);
+
+        var purchasePath =
+            await PostPurchaseAsync(
+                factory,
+                client,
+                quantity: "10",
+                note: "Alim.");
+
+        await PostSaleAsync(factory, client, quantity: "4");
+
+        var reversePath =
+            $"/record/fund-trade/{TransactionIdFrom(purchasePath):D}/reverse";
+
+        using var page = await client.GetAsync(reversePath);
+        var html = WebUtility.HtmlDecode(
+            await page.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+
+        // The blocked eligibility message names the dependency.
+        Assert.Contains("sonradan", html, StringComparison.Ordinal);
+
+        // No reversal form is offered at all.
+        Assert.DoesNotContain(
+            "handler=Reverse",
+            html,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "Input_Reason",
+            html,
+            StringComparison.Ordinal);
+    }
+
+    private static Guid TransactionIdFrom(string receiptPath)
+        => Guid.Parse(receiptPath.Split('/')[3]);
+
+    private static async Task<string> PostSaleAsync(
+        WealthLedgerApiFactory factory,
+        HttpClient client,
+        string quantity)
+    {
+        var page = await GetFormAsync(client, "/record/fund-sale");
+        var form = SaleForm(factory, page, quantity);
+
+        using var review = await client.PostAsync(
+            "/record/fund-sale?handler=Review",
+            new FormUrlEncodedContent(form));
+
+        var html = WebUtility.HtmlDecode(
+            await review.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, review.StatusCode);
+
+        using var post = await client.PostAsync(
+            "/record/fund-sale?handler=Post",
+            new FormUrlEncodedContent(CarryReviewedPlan(form, html)));
+
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        return Assert.IsType<Uri>(post.Headers.Location).OriginalString;
+    }
+
+    private static async Task<string> PostPurchaseAsync(
         WealthLedgerApiFactory factory,
         HttpClient client,
         string quantity,
@@ -381,6 +772,8 @@ public sealed partial class FundTradeUiTests
             new FormUrlEncodedContent(form));
 
         Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+
+        return Assert.IsType<Uri>(post.Headers.Location).OriginalString;
     }
 
     private static Dictionary<string, string> PurchaseForm(
