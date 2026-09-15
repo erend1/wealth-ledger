@@ -240,6 +240,72 @@ public partial class _007_FundTradeLifecycleGuards
                     'FUND_TRADE_REFERENCE_INVALID: a fund trade requires active same-household references with a base currency.')
             END;
 
+            /*
+             * An investment or pension account must name an active
+             * institution. M007 already requires this when the account is
+             * created, and a fund trade must not become the way that
+             * requirement is bypassed.
+             *
+             * The fund and cash accounts may be different accounts at
+             * different institutions; only each account's own institution is
+             * checked.
+             */
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM "TransactionEntry" AS entry
+                    JOIN "Account" AS account
+                      ON account."Id" = entry."AccountId"
+                    WHERE entry."TransactionId" = NEW."Id"
+                      AND account."AccountTypeCode" IN (
+                        'INVESTMENT', 'PENSION')
+                      AND (
+                        account."InstitutionId" IS NULL
+                        OR NOT EXISTS (
+                            SELECT 1
+                            FROM "Institution" AS institution
+                            WHERE institution."Id"
+                                  = account."InstitutionId"
+                              AND institution."IsActive" = 1
+                        )
+                      )
+                )
+                THEN RAISE(
+                    ABORT,
+                    'FUND_TRADE_REFERENCE_INVALID: an investment or pension account requires an active institution.')
+            END;
+
+            -- A trade cannot predate the account that holds it.
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM "TransactionEntry" AS entry
+                    JOIN "Account" AS account
+                      ON account."Id" = entry."AccountId"
+                    WHERE entry."TransactionId" = NEW."Id"
+                      AND account."OpenedOn" IS NOT NULL
+                      AND NEW."ExecutionDate" < account."OpenedOn"
+                )
+                THEN RAISE(
+                    ABORT,
+                    'FUND_TRADE_DATE_INVALID: the execution date precedes an account opening date.')
+            END;
+
+            -- A closed account cannot receive a new trade.
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM "TransactionEntry" AS entry
+                    JOIN "Account" AS account
+                      ON account."Id" = entry."AccountId"
+                    WHERE entry."TransactionId" = NEW."Id"
+                      AND account."ClosedOn" IS NOT NULL
+                )
+                THEN RAISE(
+                    ABORT,
+                    'FUND_TRADE_REFERENCE_INVALID: a closed account cannot receive a fund trade.')
+            END;
+
             -- The fund leg needs an investment or pension account.
             SELECT CASE
                 WHEN EXISTS (
@@ -308,6 +374,19 @@ public partial class _007_FundTradeLifecycleGuards
                       AND entry."PriceCurrencyCode" IS NOT NULL
                       AND entry."PriceCurrencyCode"
                           <> asset."BaseCurrencyCode"
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM "TransactionCostComponent" AS cost
+                    WHERE cost."TransactionId" = NEW."Id"
+                      AND cost."CurrencyCode" NOT IN (
+                        SELECT asset."BaseCurrencyCode"
+                        FROM "TransactionEntry" AS entry
+                        JOIN "Asset" AS asset
+                          ON asset."Id" = entry."AssetId"
+                        WHERE entry."TransactionId" = NEW."Id"
+                          AND asset."BaseCurrencyCode" IS NOT NULL
+                      )
                 )
                 THEN RAISE(
                     ABORT,
