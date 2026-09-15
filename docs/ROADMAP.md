@@ -47,7 +47,7 @@ Statuses used here:
 | M006 | Verified | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; verified 2026-09-08 |
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
 | M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
-| M009 | Accepted | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; M008 verified 2026-09-15, ready to begin |
+| M009 | In Progress | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; implementation started from verified M008 on 2026-09-15 |
 | M010 | Planned | Transaction search, position inventory, reconciliation, and evidence capture | Core entry workflows |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
 | M012 | Planned | Goal, reserve, allocation policy, deterministic performance, and monthly review | Reliable ledger and valuation data |
@@ -122,8 +122,7 @@ of every prerequisite finding recorded during M009 planning. M009 was accepted
 on 2026-09-14 after the human owners approved all twenty Recommended decisions
 without amendment. ADR-010 records allocation-level physical-gold piece
 movement and extends ADR-009 cumulative realized-cost apportionment to physical
-gold. M009 is the next accepted milestone and is ready to move to In Progress
-when implementation begins.
+gold. M009 became the sole In Progress milestone on 2026-09-15.
 
 No later roadmap item should be implemented merely because it appears in this
 file.

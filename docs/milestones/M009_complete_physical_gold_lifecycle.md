@@ -1,12 +1,14 @@
 # M009: Complete Physical-Gold Lifecycle
 
-Status: Accepted
+Status: In Progress
 
 Owner: Human and agent
 
 Last reviewed: 2026-09-15
 
 Accepted: 2026-09-14
+
+Implementation started: 2026-09-15
 
 ## Acceptance record and implementation gate
 

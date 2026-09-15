@@ -91,17 +91,17 @@ explicit resolutions recorded in the milestone's acceptance record. ADR-009
 records the accepted deterministic realized-cost method. M008 was verified on
 2026-09-15 after its Domain, Application, real-SQLite, API, Razor UI, real-
 browser, privacy, migration, backup, and restore evidence passed, including
-direct-SQL guard refusals and a real concurrent-sale race. No milestone is
-currently In Progress.
+direct-SQL guard refusals and a real concurrent-sale race. M008 remains
+Verified while M009 is implemented.
 
 [`M009: Complete Physical-Gold Lifecycle`](milestones/M009_complete_physical_gold_lifecycle.md)
 was accepted on 2026-09-14 after the human owners approved all twenty
 Recommended decisions without amendment. ADR-010 records signed allocation-
 level piece movement and the physical-gold extension of ADR-009 cumulative
-realized-cost apportionment. M009 is not In Progress and adds no implemented or
-verified behavior. Its M008 predecessor and prerequisite findings were verified
-through PR #12 on 2026-09-15, so M009 is ready to become the sole In Progress
-milestone when implementation begins.
+realized-cost apportionment. M009 became the sole In Progress milestone on
+2026-09-15 after its M008 predecessor and prerequisite findings were verified
+through PR #12. This starting checkpoint adds no M009 implemented or verified
+behavior; implementation evidence will be recorded only after it is proved.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
@@ -722,9 +722,9 @@ bounded Fund correction UI, strengthened posting guard, real concurrent-sale
 race, Fund-only verification, and final state documentation were merged through
 PR #12 on 2026-09-15.
 
-M009 is Accepted as the next delivery milestone, and ADR-010 records its new
+M009 is the sole In Progress delivery milestone, and ADR-010 records its new
 cross-cutting physical-gold movement decision. Its predecessor gate is closed;
-no milestone is currently In Progress.
+no later milestone has started.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
