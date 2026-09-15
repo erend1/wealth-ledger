@@ -94,6 +94,15 @@ browser, privacy, migration, backup, and restore evidence passed, including
 direct-SQL guard refusals and a real concurrent-sale race. No milestone is
 currently In Progress.
 
+[`M009: Complete Physical-Gold Lifecycle`](milestones/M009_complete_physical_gold_lifecycle.md)
+was accepted on 2026-09-14 after the human owners approved all twenty
+Recommended decisions without amendment. ADR-010 records signed allocation-
+level piece movement and the physical-gold extension of ADR-009 cumulative
+realized-cost apportionment. M009 is not In Progress and adds no implemented or
+verified behavior. Its M008 predecessor and prerequisite findings were verified
+through PR #12 on 2026-09-15, so M009 is ready to become the sole In Progress
+milestone when implementation begins.
+
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
 fail-closed startup-mode boundary, guided browser initialization for storage,
@@ -708,10 +717,14 @@ M006 was verified on 2026-09-08.
 
 ## Next delivery candidate
 
-M007 is Verified and no milestone is In Progress. M008 and ADR-009 are the next
-Proposed delivery contract and cross-cutting decision. Do not begin the normal
-investment-fund lifecycle until their decisions are reviewed and explicitly
-accepted or amended by the human owners.
+M008 is Verified. Its accepted contract, ADR-009, cumulative sale-preview cost,
+bounded Fund correction UI, strengthened posting guard, real concurrent-sale
+race, Fund-only verification, and final state documentation were merged through
+PR #12 on 2026-09-15.
+
+M009 is Accepted as the next delivery milestone, and ADR-010 records its new
+cross-cutting physical-gold movement decision. Its predecessor gate is closed;
+no milestone is currently In Progress.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
@@ -724,9 +737,6 @@ Do not start live market data, provider-specific integration, optimization, AI/L
   own accepted milestone and ADR before any non-loopback binding.
 - Application-level database or package encryption beyond M004's accepted
   OS/device-encryption reliance remains deferred to a separate ADR.
-- M008 now exposes the partial lot-cost allocation, correction, and
-  completeness gap. ADR-009 proposes deterministic cumulative apportionment;
-  the decision remains open until explicit human acceptance.
 - SQLite concurrency beyond M004's single-machine ownership boundary and the
   scoped database collisions handled by M002/M003/M007.
 
