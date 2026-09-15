@@ -890,6 +890,65 @@ public sealed class FundSalePreviewTests
             exception.ErrorCode);
     }
 
+    /*
+     * The preview must apply ADR-009 cumulatively, not compute an
+     * independent proportional share. With one unit already gone from a
+     * three-unit lot costing one hundred, the next unit is worth
+     * round_even(100*2/3) - round_even(100*1/3) = 67 - 33 = 34.
+     *
+     * An independent share would say 33 against the original quantity, or 50
+     * against the remaining quantity. Both would disagree with the receipt.
+     */
+    [Fact]
+    public async Task Preview_AfterAnEarlierPartialSale_IsCumulative()
+    {
+        var custody =
+            new FundLotCustodyStoreFake()
+                .WithLot(
+                    "aaaaaaaa-0000-0000-0000-00000000000f",
+                    available: 2m,
+                    acquiredOn: new DateOnly(2026, 1, 1),
+                    CostBasis.Known(
+                        Money.FromMinorUnits(100, FundTradeIds.Try)));
+
+        var realizedCost = new FundRealizedCostStoreFake(custody);
+
+        realizedCost.PriorDisposals[
+            Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000f")] = 1m;
+
+        var preview =
+            await PreviewAsync(
+                Command(quantity: 1m),
+                custody,
+                realizedCost);
+
+        Assert.Equal(
+            34,
+            Assert.Single(preview.RealizedCost.KnownAmounts)
+                .MinorUnits);
+    }
+
+    [Fact]
+    public async Task Preview_OnAFreshLot_MatchesTheFirstCumulativeStep()
+    {
+        var custody =
+            new FundLotCustodyStoreFake()
+                .WithLot(
+                    "aaaaaaaa-0000-0000-0000-00000000000e",
+                    available: 3m,
+                    acquiredOn: new DateOnly(2026, 1, 1),
+                    CostBasis.Known(
+                        Money.FromMinorUnits(100, FundTradeIds.Try)));
+
+        var preview =
+            await PreviewAsync(Command(quantity: 1m), custody);
+
+        Assert.Equal(
+            33,
+            Assert.Single(preview.RealizedCost.KnownAmounts)
+                .MinorUnits);
+    }
+
     internal static FundSaleCommand Command(decimal quantity)
         => new(
             FundTradeIds.Household,
@@ -909,12 +968,14 @@ public sealed class FundSalePreviewTests
 
     private static Task<FundSalePreview> PreviewAsync(
         FundSaleCommand command,
-        FundLotCustodyStoreFake custody)
+        FundLotCustodyStoreFake custody,
+        FundRealizedCostStoreFake? realizedCost = null)
     {
         var useCase =
             new PreviewFundSaleUseCase(
                 FundTradeReferenceStoreFake.CreateValid(),
                 custody,
+                realizedCost ?? new FundRealizedCostStoreFake(custody),
                 new LotAllocationService(),
                 new FundTradeTimeProvider(
                     new DateTimeOffset(

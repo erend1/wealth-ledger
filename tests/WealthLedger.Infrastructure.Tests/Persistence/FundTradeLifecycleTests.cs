@@ -632,6 +632,188 @@ public sealed class FundTradeLifecycleTests
                 .SumAsync(x => x.QuantityDeltaE8));
     }
 
+    /*
+     * Buy and Sell are not fund-specific transaction types. An equity trade
+     * uses exactly the same shape, and the fund verification read model
+     * explains fund-specific facts such as FIFO lot consumption and ADR-009
+     * realized cost.
+     *
+     * Reporting an equity trade through it would present a fund explanation
+     * of something that is not one, so it must fail closed with the same
+     * not-found answer any unreadable transaction gets.
+     */
+    [Theory]
+    [InlineData(TransactionType.Buy)]
+    [InlineData(TransactionType.Sell)]
+    public async Task Verification_RejectsNonFundTrades(
+        TransactionType tradeType)
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedAsync(database);
+
+        var transactionId =
+            await SeedEquityTradeAsync(database, tradeType);
+
+        await using var context = database.CreateContext();
+
+        var exception =
+            await Assert.ThrowsAsync<FundTradeException>(
+                () =>
+                    BuildVerificationUseCase(context).ExecuteAsync(
+                        CoreLedgerTestData.HouseholdId,
+                        transactionId));
+
+        Assert.Equal(
+            FundTradeErrorCategory.NotFound,
+            exception.Category);
+
+        Assert.Equal(
+            FundTradeErrorCodes.NotFound,
+            exception.ErrorCode);
+
+        // The refusal names nothing private about the transaction.
+        Assert.DoesNotContain(
+            transactionId.ToString("D"),
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "EQUITY-TRADE",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Verification_RejectsAnotherHouseholdsFundTrade()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedAsync(database);
+
+        Guid transactionId;
+
+        await using (var context = database.CreateContext())
+        {
+            transactionId =
+                (await BuildPurchaseUseCase(context).ExecuteAsync(
+                    "purchase-cross-household",
+                    PurchaseCommand(
+                        quantity: 10m,
+                        considerationMinor: 100_00)))
+                .TransactionId;
+        }
+
+        await using var reader = database.CreateContext();
+
+        var exception =
+            await Assert.ThrowsAsync<FundTradeException>(
+                () =>
+                    BuildVerificationUseCase(reader).ExecuteAsync(
+                        CoreLedgerTestData.OtherHouseholdId,
+                        transactionId));
+
+        // The same answer as for a transaction that does not exist.
+        Assert.Equal(
+            FundTradeErrorCategory.NotFound,
+            exception.Category);
+
+        Assert.Equal(
+            FundTradeErrorCodes.NotFound,
+            exception.ErrorCode);
+    }
+
+    /// <summary>
+    /// Writes a posted equity Buy or Sell directly, bypassing the fund
+    /// writers, which cannot produce one.
+    /// </summary>
+    private static async Task<Guid> SeedEquityTradeAsync(
+        SqliteTestDatabase database,
+        TransactionType tradeType)
+    {
+        var transactionId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
+        var isBuy = tradeType == TransactionType.Buy;
+
+        await using var context = database.CreateContext();
+
+        context.Assets.Add(
+            new WealthLedger.Infrastructure.Persistence.Rows.AssetRow
+            {
+                Id = EquityAssetId,
+                Code = "EQUITY_TEST",
+                Name = "Synthetic Equity",
+                Type = Domain.Assets.AssetType.Equity,
+                BaseUnit = Domain.Assets.AssetUnit.Share,
+                BaseCurrencyCode = "TRY",
+                // Optional tracking keeps the fixture focused: this test is
+                // about the asset type, not about equity lot lineage.
+                LotTrackingMode = Domain.Assets.LotTrackingMode.Optional,
+                IsActive = true,
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc
+            });
+
+        context.LedgerTransactions.Add(
+            new WealthLedger.Infrastructure.Persistence.Rows.LedgerTransactionRow
+            {
+                Id = transactionId,
+                HouseholdId = CoreLedgerTestData.HouseholdId,
+                Type = tradeType,
+                Status = TransactionStatus.Draft,
+                ExecutionDate = ExecutionDate,
+                ExternalReference = "EQUITY-TRADE",
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc
+            });
+
+        context.TransactionEntries.AddRange(
+            new WealthLedger.Infrastructure.Persistence.Rows.TransactionEntryRow
+            {
+                Id = principalId,
+                TransactionId = transactionId,
+                EntrySequence = 0,
+                PortfolioId = CoreLedgerTestData.PortfolioId,
+                AccountId = CoreLedgerTestData.AccountId,
+                AssetId = EquityAssetId,
+                QuantityDeltaE8 = isBuy ? 10_00000000L : -10_00000000L,
+                Role = EntryRole.Principal,
+                UnitPriceE8 = 10_00000000L,
+                PriceCurrencyCode = "TRY",
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc
+            },
+            new WealthLedger.Infrastructure.Persistence.Rows.TransactionEntryRow
+            {
+                Id = Guid.NewGuid(),
+                TransactionId = transactionId,
+                EntrySequence = 1,
+                PortfolioId = CoreLedgerTestData.PortfolioId,
+                AccountId = CoreLedgerTestData.DestinationAccountId,
+                AssetId = CoreLedgerTestData.CashAssetId,
+                QuantityDeltaE8 =
+                    isBuy ? -100_000_000_000L : 100_000_000_000L,
+                Role = EntryRole.Consideration,
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc
+            });
+
+        await context.SaveChangesAsync();
+
+        /*
+         * The M008 trigger only governs fund trades, so an equity trade
+         * posts normally. That is exactly why the read model has to refuse
+         * it rather than relying on the trigger.
+         */
+        await context.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE "LedgerTransaction"
+            SET "StatusCode" = 'POSTED', "PostedAtUtc" = {1}
+            WHERE "ExternalReference" = {0};
+            """,
+            "EQUITY-TRADE",
+            "2026-08-24T10:00:00.0000000Z");
+
+        return transactionId;
+    }
+
+    private static readonly Guid EquityAssetId =
+        Guid.Parse("60000000-0000-0000-0000-0000000000e1");
+
     private static async Task SeedAsync(SqliteTestDatabase database)
     {
         await using var context = database.CreateContext();
@@ -658,6 +840,7 @@ public sealed class FundTradeLifecycleTests
         return new PreviewFundSaleUseCase(
             new EfCoreOpeningBalanceReferenceStore(context),
             new EfCoreFundLotCustodyReadStore(store),
+            new EfCoreFundRealizedCostReadStore(context),
             new LotAllocationService(),
             new FixedTimeProvider(RecordedAtUtc));
     }

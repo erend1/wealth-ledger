@@ -420,3 +420,82 @@ internal sealed class FundTradePostingStoreFake : IFundTradePostingStore
                 WinningReceipt ?? receipt));
     }
 }
+
+/// <summary>
+/// Supplies lot cost history without a database.
+/// </summary>
+/// <remarks>
+/// Histories are built from the custody fake's candidates, so a lot with no
+/// recorded disposal has its available quantity as its original quantity.
+/// A prior disposal can be declared explicitly, which is what makes the
+/// cumulative rule observable at this level.
+/// </remarks>
+internal sealed class FundRealizedCostStoreFake : IFundRealizedCostReadStore
+{
+    private readonly FundLotCustodyStoreFake _custody;
+
+    internal FundRealizedCostStoreFake(FundLotCustodyStoreFake custody)
+        => _custody = custody;
+
+    /// <summary>
+    /// Quantity already disposed from a lot before the sale under review.
+    /// </summary>
+    internal Dictionary<Guid, decimal> PriorDisposals { get; } = [];
+
+    public Task<IReadOnlyList<RealizedCostLotHistory>>
+        ListEffectiveLotHistoryAsync(
+            Guid householdId,
+            Guid saleTransactionId,
+            CancellationToken cancellationToken = default)
+        => ListLotHistoryAsync(
+            householdId,
+            _custody.Candidates.Select(x => x.AssetLotId).ToArray(),
+            cancellationToken);
+
+    public Task<IReadOnlyList<RealizedCostLotHistory>> ListLotHistoryAsync(
+        Guid householdId,
+        IReadOnlyCollection<Guid> assetLotIds,
+        CancellationToken cancellationToken = default)
+    {
+        var histories = new List<RealizedCostLotHistory>();
+
+        foreach (var candidate in _custody.Candidates
+                     .Where(x => assetLotIds.Contains(x.AssetLotId)))
+        {
+            var prior =
+                PriorDisposals.TryGetValue(
+                    candidate.AssetLotId,
+                    out var declared)
+                    ? declared
+                    : 0m;
+
+            var disposals = new List<EffectiveLotDisposal>();
+
+            if (prior > 0)
+            {
+                disposals.Add(
+                    new EffectiveLotDisposal(
+                        Guid.Parse("dddddddd-0000-0000-0000-000000000001"),
+                        new DateTimeOffset(
+                            2026, 2, 1, 0, 0, 0, TimeSpan.Zero),
+                        EntrySequence: 0,
+                        AllocationId:
+                            Guid.Parse(
+                                "eeeeeeee-0000-0000-0000-000000000001"),
+                        Quantity.FromDecimal(prior)));
+            }
+
+            // Available is what remains, so the original is the sum.
+            histories.Add(
+                new RealizedCostLotHistory(
+                    candidate.AssetLotId,
+                    Quantity.FromDecimal(
+                        candidate.AvailableQuantity.ToDecimal() + prior),
+                    candidate.CostBasis,
+                    disposals));
+        }
+
+        return Task.FromResult<IReadOnlyList<RealizedCostLotHistory>>(
+            histories);
+    }
+}

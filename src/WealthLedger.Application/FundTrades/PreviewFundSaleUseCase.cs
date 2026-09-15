@@ -13,12 +13,14 @@ public sealed class PreviewFundSaleUseCase
 {
     private readonly IOpeningBalanceReferenceReadStore _referenceStore;
     private readonly IFundLotCustodyReadStore _custodyStore;
+    private readonly IFundRealizedCostReadStore _realizedCostStore;
     private readonly LotAllocationService _allocationService;
     private readonly TimeProvider _timeProvider;
 
     public PreviewFundSaleUseCase(
         IOpeningBalanceReferenceReadStore referenceStore,
         IFundLotCustodyReadStore custodyStore,
+        IFundRealizedCostReadStore realizedCostStore,
         LotAllocationService allocationService,
         TimeProvider timeProvider)
     {
@@ -26,6 +28,8 @@ public sealed class PreviewFundSaleUseCase
             ?? throw new ArgumentNullException(nameof(referenceStore));
         _custodyStore = custodyStore
             ?? throw new ArgumentNullException(nameof(custodyStore));
+        _realizedCostStore = realizedCostStore
+            ?? throw new ArgumentNullException(nameof(realizedCostStore));
         _allocationService = allocationService
             ?? throw new ArgumentNullException(nameof(allocationService));
         _timeProvider = timeProvider
@@ -109,7 +113,10 @@ public sealed class PreviewFundSaleUseCase
         }
 
         var realizedCost =
-            ProjectRealizedCost(planLines);
+            await ProjectRealizedCostAsync(
+                scope.HouseholdId,
+                planLines,
+                cancellationToken);
 
         if (realizedCost.Completeness
             != RealizedCostCompleteness.CompleteKnown)
@@ -194,75 +201,77 @@ public sealed class PreviewFundSaleUseCase
     }
 
     /// <summary>
-    /// Projects realized cost from the planned consumption.
+    /// Projects realized cost for the planned consumption.
     /// </summary>
     /// <remarks>
-    /// The projection assumes each planned lot contributes its whole share,
-    /// which is what the cumulative method produces when the sale is the next
-    /// effective disposal. After posting, the receipt recomputes the result
-    /// from persisted allocations rather than reusing this projection.
+    /// This loads each planned lot's existing effective disposal sequence and
+    /// applies the accepted cumulative rule, so the figure shown in review is
+    /// the figure the receipt will show.
+    ///
+    /// A proportional share computed on its own, whether against the original
+    /// or the remaining quantity, agrees only for the first sale from a lot
+    /// and drifts once the lot has been partly sold.
     /// </remarks>
-    private static RealizedCostProjection ProjectRealizedCost(
-        IReadOnlyList<FundSalePlanLine> planLines)
+    private async Task<RealizedCostProjection> ProjectRealizedCostAsync(
+        Guid householdId,
+        IReadOnlyList<FundSalePlanLine> planLines,
+        CancellationToken cancellationToken)
     {
-        long knownQuantity = 0;
-        long unknownQuantity = 0;
+        var histories =
+            await _realizedCostStore.ListLotHistoryAsync(
+                householdId,
+                planLines.Select(x => x.AssetLotId).ToArray(),
+                cancellationToken);
 
-        var amounts =
-            new Dictionary<string, long>(StringComparer.Ordinal);
+        var historyByLot =
+            histories.ToDictionary(x => x.AssetLotId);
+
+        var planned = new List<PlannedLotDisposal>();
 
         foreach (var line in planLines)
         {
-            if (line.CostStatus != CostBasisStatus.Known)
+            if (!historyByLot.TryGetValue(
+                    line.AssetLotId,
+                    out var history))
             {
-                unknownQuantity = checked(
-                    unknownQuantity + line.ConsumedQuantityRawE8);
-
-                continue;
+                throw FundTradeException.Invalid(
+                    FundTradeErrorCodes.UnsupportedPersistedShape,
+                    "A planned lot is missing its persisted acquisition history.");
             }
 
-            knownQuantity = checked(
-                knownQuantity + line.ConsumedQuantityRawE8);
-
-            /*
-             * Available quantity is what remains of the lot, so the share of
-             * the remaining cost is proportional to how much of that
-             * remainder this sale consumes.
-             */
-            var share =
-                Domain.Common.ExactInteger.DivideRoundHalfToEven(
-                    (Int128)line.LotCostMinorUnits!.Value
-                    * line.ConsumedQuantityRawE8,
-                    line.AvailableQuantityRawE8);
-
-            var currency = line.LotCostCurrencyCode!;
-
-            amounts[currency] =
-                checked(
-                    amounts.GetValueOrDefault(currency)
-                    + (long)share);
+            planned.Add(
+                new PlannedLotDisposal(
+                    history,
+                    Quantity.FromRaw(line.ConsumedQuantityRawE8)));
         }
 
-        var completeness =
-            (knownQuantity, unknownQuantity) switch
-            {
-                ( > 0, 0) => RealizedCostCompleteness.CompleteKnown,
-                ( > 0, > 0) => RealizedCostCompleteness.PartiallyKnown,
-                _ => RealizedCostCompleteness.Unknown
-            };
+        RealizedSaleCost projected;
+
+        try
+        {
+            projected =
+                RealizedLotCostCalculator.Project(planned);
+        }
+        catch (Domain.Common.DomainRuleViolationException exception)
+        {
+            throw new FundTradeException(
+                FundTradeErrorCategory.Conflict,
+                FundTradeErrorCodes.UnsupportedPersistedShape,
+                "The persisted lot history cannot support a realized-cost projection.",
+                innerException: exception);
+        }
 
         return new RealizedCostProjection(
-            completeness,
-            knownQuantity,
-            unknownQuantity,
-            amounts
-                .OrderBy(x => x.Key, StringComparer.Ordinal)
+            projected.Completeness,
+            projected.KnownQuantity.RawE8,
+            projected.UnknownQuantity.RawE8,
+            projected.KnownAmountsByCurrency
                 .Select(x =>
                     new RealizedCostCurrencyAmount(
-                        x.Key,
-                        x.Value))
+                        x.Currency.Value,
+                        x.MinorUnits))
                 .ToList(),
-            RealizedLotCostCalculator.MethodCode);
+            projected.MethodCode);
     }
 
     private async Task AddNegativeCashWarningAsync(

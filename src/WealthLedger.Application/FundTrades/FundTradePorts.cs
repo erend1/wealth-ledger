@@ -131,6 +131,20 @@ public interface IFundRealizedCostReadStore
         Guid householdId,
         Guid saleTransactionId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads the same history for lots named directly, so a sale can be
+    /// projected before it exists.
+    /// </summary>
+    /// <remarks>
+    /// Review needs exactly what posting will use. Without the existing
+    /// disposal sequence a preview could only guess a proportional share,
+    /// and would disagree with the receipt for any lot already partly sold.
+    /// </remarks>
+    Task<IReadOnlyList<RealizedCostLotHistory>> ListLotHistoryAsync(
+        Guid householdId,
+        IReadOnlyCollection<Guid> assetLotIds,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

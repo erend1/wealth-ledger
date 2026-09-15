@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.FundTrades;
+using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.ValueObjects;
@@ -73,6 +74,22 @@ public sealed class EfCoreFundRealizedCostReadStore
                 select allocation.AssetLotId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
+
+        return await ListLotHistoryAsync(
+            householdId,
+            consumedLotIds,
+            cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RealizedCostLotHistory>>
+        ListLotHistoryAsync(
+            Guid householdId,
+            IReadOnlyCollection<Guid> assetLotIds,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(assetLotIds);
+
+        var consumedLotIds = assetLotIds.ToList();
 
         if (consumedLotIds.Count == 0)
         {
@@ -237,6 +254,30 @@ public sealed class EfCoreFundTradeVerificationReadStore
                 x => x.Role == EntryRole.Consideration)
             ?? throw new CoreLedgerPersistenceException(
                 "A posted fund trade must contain one consideration entry.");
+
+        /*
+         * A Buy or Sell is not necessarily a fund trade. Equity and
+         * physical-gold trades share the same transaction types, and this
+         * read model explains fund-specific facts such as FIFO lot
+         * consumption and ADR-009 realized cost.
+         *
+         * Reporting a non-fund trade through it would present a fund
+         * explanation of something that is not one, so it fails closed and
+         * the caller sees the same not-found answer as for any other
+         * transaction it may not read.
+         */
+        var principalIsFund =
+            await _dbContext.Assets
+                .AsNoTracking()
+                .AnyAsync(
+                    asset => asset.Id == principal.AssetId
+                             && asset.Type == AssetType.Fund,
+                    cancellationToken);
+
+        if (!principalIsFund)
+        {
+            return null;
+        }
 
         var costRows =
             await _dbContext.TransactionCostComponents

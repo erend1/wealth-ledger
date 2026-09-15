@@ -42,6 +42,13 @@ namespace WealthLedger.Domain.Lots
         IReadOnlyList<EffectiveLotDisposal> EffectiveDisposals);
 
     /// <summary>
+    /// One lot a reviewed sale plans to consume, with its current history.
+    /// </summary>
+    public sealed record PlannedLotDisposal(
+        RealizedCostLotHistory Lot,
+        Quantity Quantity);
+
+    /// <summary>
     /// The cost apportioned to one sale from one lot.
     /// </summary>
     public sealed record RealizedLotCostLine(
@@ -135,6 +142,120 @@ namespace WealthLedger.Domain.Lots
             }
 
             return Summarize(lines);
+        }
+
+        /// <summary>
+        /// Projects what a not-yet-posted sale would realize if it were the
+        /// next effective disposal of each planned lot.
+        /// </summary>
+        /// <remarks>
+        /// Review and receipt must agree. The only way to guarantee that is
+        /// for both to apply the same cumulative rule, so this shares the
+        /// formula and the summarization with <see cref="Compute"/> rather
+        /// than reimplementing a proportional share.
+        ///
+        /// Calculating a projected share independently, as
+        /// <c>round_even(C * q / Q)</c> or against the lot's remaining
+        /// quantity, is correct only for the first sale from a lot and drifts
+        /// afterwards.
+        /// </remarks>
+        public static RealizedSaleCost Project(
+            IReadOnlyCollection<PlannedLotDisposal> planned)
+        {
+            ArgumentNullException.ThrowIfNull(planned);
+
+            if (planned.Count == 0)
+            {
+                throw new DomainRuleViolationException(
+                    "A realized-cost projection requires at least one planned lot.");
+            }
+
+            var lines = new List<RealizedLotCostLine>();
+
+            foreach (var item in planned
+                         .OrderBy(x => x.Lot.AssetLotId))
+            {
+                ArgumentNullException.ThrowIfNull(item.Lot);
+
+                lines.Add(
+                    ProjectLine(item.Lot, item.Quantity));
+            }
+
+            return Summarize(lines);
+        }
+
+        private static RealizedLotCostLine ProjectLine(
+            RealizedCostLotHistory lot,
+            Quantity quantity)
+        {
+            ArgumentNullException.ThrowIfNull(lot.CostBasis);
+            ArgumentNullException.ThrowIfNull(lot.EffectiveDisposals);
+
+            var originalQuantity = lot.OriginalQuantity.RawE8;
+
+            if (originalQuantity <= 0)
+            {
+                throw new DomainRuleViolationException(
+                    "A lot with realized cost must have a positive original quantity.");
+            }
+
+            if (lot.CostBasis.Status == CostBasisStatus.NotApplicable)
+            {
+                throw new DomainRuleViolationException(
+                    "A fund lot cannot carry a not-applicable cost basis.");
+            }
+
+            if (quantity.RawE8 <= 0)
+            {
+                throw new DomainRuleViolationException(
+                    "A planned disposal quantity must be positive.");
+            }
+
+            // The quantity already gone in the current effective sequence.
+            long disposed = 0;
+
+            foreach (var disposal in lot.EffectiveDisposals)
+            {
+                disposed = checked(
+                    disposed + disposal.Quantity.RawE8);
+            }
+
+            var projected = checked(disposed + quantity.RawE8);
+
+            if (projected > originalQuantity)
+            {
+                throw new DomainRuleViolationException(
+                    "The planned disposal exceeds the original lot quantity.");
+            }
+
+            if (lot.CostBasis.Status != CostBasisStatus.Known)
+            {
+                return new RealizedLotCostLine(
+                    lot.AssetLotId,
+                    quantity,
+                    CostBasisStatus.Unknown,
+                    KnownCost: null);
+            }
+
+            var totalCost = lot.CostBasis.Amount!.MinorUnits;
+
+            var assigned =
+                ExactInteger.DivideRoundHalfToEven(
+                    (Int128)totalCost * projected,
+                    originalQuantity)
+                - ExactInteger.DivideRoundHalfToEven(
+                    (Int128)totalCost * disposed,
+                    originalQuantity);
+
+            return new RealizedLotCostLine(
+                lot.AssetLotId,
+                quantity,
+                CostBasisStatus.Known,
+                Money.FromMinorUnits(
+                    ExactInteger.ToInt64(
+                        assigned,
+                        "The projected realized cost does not fit the supported money range."),
+                    lot.CostBasis.Amount!.Currency));
         }
 
         private static RealizedLotCostLine? ComputeLine(
