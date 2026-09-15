@@ -464,6 +464,221 @@ public sealed class PhysicalGoldLifecycleTests
         Assert.Equal([saleId], previewResult.BlockingTransactionIds);
     }
 
+    [Fact]
+    public async Task PostedPhysicalGoldTradeDetail_IsImmutable()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedAsync(database);
+        Guid purchaseId;
+        await using (var context = database.CreateContext())
+        {
+            purchaseId = (await PurchaseRecorder(context).ExecuteAsync(
+                "gold-purchase-immutable-trade-detail",
+                PurchaseCommand())).TransactionId;
+        }
+
+        var update = await Assert.ThrowsAsync<Microsoft.Data.Sqlite.SqliteException>(
+            () => database.ExecuteNonQueryAsync(
+                "UPDATE PhysicalGoldTradeDetail SET CounterpartyInstitutionId = NULL WHERE LedgerTransactionId = $id;",
+                new Microsoft.Data.Sqlite.SqliteParameter(
+                    "$id",
+                    purchaseId.ToString("D"))));
+        Assert.Contains(
+            "PHYSICAL_GOLD_TRADE_HISTORY_IMMUTABLE",
+            update.Message,
+            StringComparison.Ordinal);
+
+        var delete = await Assert.ThrowsAsync<Microsoft.Data.Sqlite.SqliteException>(
+            () => database.ExecuteNonQueryAsync(
+                "DELETE FROM PhysicalGoldTradeDetail WHERE LedgerTransactionId = $id;",
+                new Microsoft.Data.Sqlite.SqliteParameter(
+                    "$id",
+                    purchaseId.ToString("D"))));
+        Assert.Contains(
+            "PHYSICAL_GOLD_TRADE_HISTORY_IMMUTABLE",
+            delete.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConcurrentSales_UseIndependentConnectionsAndOnlyOneConsumesCustody()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedAsync(database);
+        Guid lotId;
+        await using (var context = database.CreateContext())
+        {
+            lotId = (await PurchaseRecorder(context).ExecuteAsync(
+                "gold-purchase-before-sale-race",
+                PurchaseCommand())).AssetLotId;
+        }
+
+        var command = SaleCommand(
+        [
+            new PhysicalGoldSelectedLot(
+                lotId,
+                Quantity.FromDecimal(15m),
+                1)
+        ]);
+        await using (var context = database.CreateContext())
+        {
+            var preview = await SalePreview(context).ExecuteAsync(command);
+            command = command with
+            {
+                ReviewedPlanFingerprint = preview.PlanFingerprint
+            };
+        }
+
+        var gate = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task<(Guid? TransactionId, Exception? Error)> AttemptAsync(
+            string idempotencyKey)
+        {
+            await gate.Task;
+            await using var context = database.CreateContext();
+            try
+            {
+                var result = await SaleRecorder(context).ExecuteAsync(
+                    idempotencyKey,
+                    command);
+                return (result.TransactionId, null);
+            }
+            catch (Exception exception)
+            {
+                return (null, exception);
+            }
+        }
+
+        var first = AttemptAsync("gold-sale-race-a");
+        var second = AttemptAsync("gold-sale-race-b");
+        gate.SetResult(true);
+        var outcomes = await Task.WhenAll(first, second);
+
+        Assert.Single(outcomes, x => x.TransactionId is not null);
+        var loser = Assert.Single(outcomes, x => x.Error is not null);
+        var conflict = Assert.IsType<PhysicalGoldException>(loser.Error);
+        Assert.Equal(PhysicalGoldErrorCategory.Conflict, conflict.Category);
+        Assert.Contains(
+            conflict.ErrorCode,
+            new[]
+            {
+                PhysicalGoldErrorCodes.InsufficientGrossWeight,
+                PhysicalGoldErrorCodes.PersistenceConflict
+            });
+        Assert.DoesNotContain("SQLite", conflict.Message, StringComparison.OrdinalIgnoreCase);
+
+        await using var reader = database.CreateContext();
+        Assert.Equal(1, await reader.CommandReceipts.CountAsync(
+            x => x.OperationCode
+                == LedgerOperationCodes.RecordPhysicalGoldSale));
+        Assert.Equal(1, await reader.LedgerTransactions.CountAsync(
+            x => x.Type == TransactionType.Sell
+                && x.Status == TransactionStatus.Posted));
+        Assert.False(await reader.LedgerTransactions.AnyAsync(
+            x => x.Type == TransactionType.Sell
+                && x.Status == TransactionStatus.Draft));
+        var position = Assert.Single((await new GetPhysicalGoldCustodyInventoryUseCase(
+                new EfCorePhysicalGoldVerificationReadStore(reader))
+            .ExecuteAsync(CoreLedgerTestData.HouseholdId)).Items);
+        Assert.Equal(5_00000000L, position.GrossWeightRawE8);
+        Assert.Equal(1, position.PieceCount);
+    }
+
+    [Fact]
+    public async Task ConcurrentTransfers_UseIndependentConnectionsAndOnlyOneMovesCustody()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedAsync(database);
+        Guid lotId;
+        await using (var context = database.CreateContext())
+        {
+            lotId = (await PurchaseRecorder(context).ExecuteAsync(
+                "gold-purchase-before-transfer-race",
+                PurchaseCommand())).AssetLotId;
+        }
+
+        var command = TransferCommand(
+        [
+            new PhysicalGoldSelectedLot(
+                lotId,
+                Quantity.FromDecimal(15m),
+                1)
+        ]);
+        await using (var context = database.CreateContext())
+        {
+            var preview = await TransferPreview(context).ExecuteAsync(command);
+            command = command with
+            {
+                ReviewedPlanFingerprint = preview.PlanFingerprint
+            };
+        }
+
+        var gate = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task<(Guid? TransactionId, Exception? Error)> AttemptAsync(
+            string idempotencyKey)
+        {
+            await gate.Task;
+            await using var context = database.CreateContext();
+            try
+            {
+                var result = await TransferRecorder(context).ExecuteAsync(
+                    idempotencyKey,
+                    command);
+                return (result.TransactionId, null);
+            }
+            catch (Exception exception)
+            {
+                return (null, exception);
+            }
+        }
+
+        var first = AttemptAsync("gold-transfer-race-a");
+        var second = AttemptAsync("gold-transfer-race-b");
+        gate.SetResult(true);
+        var outcomes = await Task.WhenAll(first, second);
+
+        Assert.Single(outcomes, x => x.TransactionId is not null);
+        var loser = Assert.Single(outcomes, x => x.Error is not null);
+        var conflict = Assert.IsType<PhysicalGoldException>(loser.Error);
+        Assert.Equal(PhysicalGoldErrorCategory.Conflict, conflict.Category);
+        Assert.Contains(
+            conflict.ErrorCode,
+            new[]
+            {
+                PhysicalGoldErrorCodes.InsufficientGrossWeight,
+                PhysicalGoldErrorCodes.PersistenceConflict
+            });
+        Assert.DoesNotContain("SQLite", conflict.Message, StringComparison.OrdinalIgnoreCase);
+
+        await using var reader = database.CreateContext();
+        Assert.Equal(1, await reader.CommandReceipts.CountAsync(
+            x => x.OperationCode
+                == LedgerOperationCodes.RecordPhysicalGoldTransfer));
+        Assert.Equal(1, await reader.LedgerTransactions.CountAsync(
+            x => x.Type == TransactionType.Transfer
+                && x.Status == TransactionStatus.Posted));
+        Assert.False(await reader.LedgerTransactions.AnyAsync(
+            x => x.Type == TransactionType.Transfer
+                && x.Status == TransactionStatus.Draft));
+        var inventory = (await new GetPhysicalGoldCustodyInventoryUseCase(
+                new EfCorePhysicalGoldVerificationReadStore(reader))
+            .ExecuteAsync(CoreLedgerTestData.HouseholdId)).Items;
+        Assert.Equal(2, inventory.Count);
+        Assert.Contains(inventory, x =>
+            x.AccountId == SourceVaultId
+            && x.GrossWeightRawE8 == 5_00000000L
+            && x.PieceCount == 1);
+        Assert.Contains(inventory, x =>
+            x.AccountId == DestinationVaultId
+            && x.GrossWeightRawE8 == 15_00000000L
+            && x.PieceCount == 1);
+        Assert.Equal(20_00000000L, inventory.Sum(x => x.GrossWeightRawE8));
+        Assert.Equal(2, inventory.Sum(x => x.PieceCount));
+    }
+
     private static PhysicalGoldPurchaseCommand PurchaseCommand()
         => new(
             CoreLedgerTestData.HouseholdId,
