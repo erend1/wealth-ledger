@@ -111,15 +111,14 @@ Repository inspection at the drafting baseline establishes these facts:
   cumulative realized-cost apportionment over effective disposals.
 - M008 adds reviewed Fund purchase and sale commands, costs, separate cash and
   asset Accounts, scoped lot availability, plan fingerprints, command receipts,
-  persistence readback, and UI patterns that can be reused only after its
-  hardening gate is complete.
+  persistence readback, and UI patterns whose hardening gate is now verified.
 - migration `007_FundTradeLifecycleGuards` currently treats every newly Posted
   Buy or Sell as a Fund trade. M009 cannot post a PhysicalGold Buy or Sell until
   a forward migration dispatches the guard by principal-asset family without
   weakening the Fund guarantees.
-- the M008 verification read store currently identifies a Fund trade by
-  transaction type alone. That boundary must be corrected before physical-gold
-  Buy and Sell records exist.
+- the corrected M008 verification read store fails closed unless the principal
+  asset is a Fund. M009 must preserve that Fund-only boundary and expose a
+  separate physical-gold verification contract.
 - there is no physical-gold purchase, sale, transfer, custody-inventory,
   transaction-specific verification, API, receipt, or routine Ready-mode form.
 - market/reference observations remain M011. Search, evidence upload, formal
@@ -333,7 +332,7 @@ but it is not persisted or described as an executed price.
 
 **Recommended:** when ExecutedUnitPrice exists, compute price-implied gross with
 checked `Int128` multiplication and midpoint-to-even conversion to integer minor
-units, using the M008 arithmetic primitive after its hardening is complete.
+units, using the verified M008 arithmetic primitive.
 
 Expected consideration is:
 
