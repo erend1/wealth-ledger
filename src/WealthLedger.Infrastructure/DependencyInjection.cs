@@ -1,7 +1,8 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.OpeningBalances;
@@ -159,6 +160,19 @@ public static class DependencyInjection
         services.AddScoped<ILedgerSubmissionStore>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
+        services.AddScoped<IFundTradePostingStore>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<EfCoreLedgerPostingStore>());
+
+        services.AddScoped<
+            IFundLotCustodyReadStore,
+            EfCoreFundLotCustodyReadStore>();
+        services.AddScoped<
+            IFundRealizedCostReadStore,
+            EfCoreFundRealizedCostReadStore>();
+        services.AddScoped<
+            IFundTradeVerificationReadStore,
+            EfCoreFundTradeVerificationReadStore>();
 
         services.AddScoped<ILedgerTransactionReadStore, EfCoreLedgerTransactionReadStore>();
         services.AddScoped<

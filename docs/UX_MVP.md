@@ -390,3 +390,42 @@ journeys.
 The broader MVP interaction model is not yet complete. Ordinary contribution,
 purchase, sale, transfer, searchable inventory/reconciliation, valuation, and
 planning entry from the UI remain in later accepted milestones.
+
+## Implemented recording workflows (M008)
+
+Record is a hub that names each workflow rather than offering one generic
+debit and credit table:
+
+```text
+/record
+/record/contribution
+/record/fund-purchase
+/record/fund-sale
+/record/fund-trade/{transactionId}/receipt
+/record/fund-trade/{transactionId}/reverse
+/record/opening-balance
+```
+
+Each flow runs the accepted four stages: identify, enter source facts, review
+the exact economic effect, then post and inspect the persisted receipt.
+Preview writes nothing. Post/Redirect/Get means refreshing a receipt records
+nothing a second time, and the receipt rebuilds from persisted facts so it
+survives a restart and direct navigation.
+
+Review states exact decimal values, both accounts, the total cash movement,
+each cost treatment, the lots affected, and every warning. A sale additionally
+shows the ordered FIFO plan with each lot's acquisition-date and cost
+knowledge, and realized cost with its completeness, currency buckets and
+method. It never shows current value, gain, return or tax.
+
+Unknown, known-zero and not-applicable are rendered as distinct states and
+never collapse into each other. A partially known realized cost is labelled as
+covering only the known part.
+
+Correction runs from the receipt. The reversal page states current eligibility
+in the user's terms, shows the exact opposite effects and the lot quantities
+that would be restored, and requires a reason. Posting it leaves the original
+Posted and writes a separate reversal; a corrected trade is then a new,
+separately reviewed submission with its own command identity. A purchase whose
+units have since been sold explains the dependency and offers no reversal form
+at all.

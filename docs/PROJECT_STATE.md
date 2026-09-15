@@ -1,6 +1,6 @@
 # WealthLedger Project State
 
-As of: 2026-09-12
+As of: 2026-09-15
 
 Status source: verified against the repository, the generated EF model, local
 .NET/SQLite test runs, real-process lifecycle smoke tests, and local Chromium
@@ -18,13 +18,17 @@ unknown position-scope behavior. M006 adds the verified local Razor Pages shell,
 fail-closed guided first run, exact Turkish-first presentation, and critical
 real-browser coverage. M007 adds the verified controlled opening-balance
 cutover for cash, foreign currency, funds, equities, and physical-gold lots,
-including persisted verification and bounded immutable correction.
+including persisted verification and bounded immutable correction. M008 adds
+the verified complete investment-fund lifecycle: reviewed contribution, fund
+purchase and fund sale workflows, separate fund and cash accounts, exact cost
+treatment, custody-scoped FIFO, stale-plan protection, completeness-aware derived
+realized cost, and a reviewed correction path through immutable reversal.
 
 Starting without a database, the explicit operations CLI can initialize the
 accepted migration chain and verify the resulting file. The default-off setup
 endpoint can then initialize required master data. Supported ledger use cases
-record retry-safe contributions, fund purchases, and one-scope opening balances,
-create acquisition lots,
+record retry-safe contributions, fund purchases, fund sales, and one-scope
+opening balances, create and consume acquisition lots,
 read posted transactions through stable HTTP projections, derive positions from
 immutable posted entry history, preview reversal eligibility, and post an exact
 retry-safe reversal without editing or deleting the original transaction.
@@ -78,12 +82,17 @@ M004 recovery smoke passed.
 was accepted on 2026-09-10 after the human owners approved all fifteen
 Recommended decisions exactly as written. M007 was verified on 2026-09-11 after
 its Domain, Application, SQLite, API, Razor UI, real-browser, privacy, backup,
-and restore evidence passed. No milestone is currently In Progress.
+and restore evidence passed.
 
 [`M008: Complete Investment-Fund Lifecycle`](milestones/M008_complete_investment_fund_lifecycle.md)
-is Proposed as of 2026-09-12. Its eighteen Recommended decisions and Proposed
-ADR-009 require explicit human review before implementation. The proposal adds
-no product behavior and does not change the M007 verified checkpoint.
+was accepted on 2026-09-12 after the human owner approved all eighteen
+Recommended decisions and ADR-009, with four technical amendments and three
+explicit resolutions recorded in the milestone's acceptance record. ADR-009
+records the accepted deterministic realized-cost method. M008 was verified on
+2026-09-15 after its Domain, Application, real-SQLite, API, Razor UI, real-
+browser, privacy, migration, backup, and restore evidence passed, including
+direct-SQL guard refusals and a real concurrent-sale race. No milestone is
+currently In Progress.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
@@ -108,6 +117,13 @@ viewports, external-request rejection, and process/file cleanup.
 ### Domain
 
 The repository contains the accepted fixed-point value objects, assets and stable vocabulary, master data, ledger aggregate and children, reversal behavior, cost basis, asset lots, signed lot-entry allocations, physical-gold detail, and FIFO allocation planning described by the canonical domain documents and ADRs.
+
+M008 adds custody-scoped FIFO planning over `ScopedLotCandidate`, so a sale
+consumes only quantity the selected portfolio and account actually hold rather
+than a lot's household-wide `CurrentQuantity`. It adds ADR-009 realized-cost
+apportionment, the midpoint-to-even integer division both that and the
+price-implied amount depend on, and the bounded Fund cost vocabulary with its
+fee/tax entry mapping. `AssetLot` still carries no custody field.
 
 M007 tightens `OpeningBalance` to exactly one positive Principal entry with an
 execution/as-of date and required source note, with no order/settlement date,

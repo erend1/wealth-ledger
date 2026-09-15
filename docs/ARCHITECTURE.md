@@ -331,3 +331,25 @@ Chromium. It includes JavaScript-disabled and keyboard-only journeys, narrow and
 desktop reflow, rejects all non-loopback requests, and proves browser, process,
 and synthetic-file cleanup. Browser installation is an explicit prerequisite,
 not a side effect of the test run.
+
+## Fund-trade composition (M008)
+
+Fund trades follow the same inward dependency rule as every other slice.
+
+- Domain owns the arithmetic: scope-aware FIFO planning over
+  `ScopedLotCandidate`, ADR-009 realized-cost apportionment, the
+  midpoint-to-even integer division both depend on, the price-implied amount,
+  and the bounded Fund cost vocabulary.
+- Application owns the workflow: previews that write nothing, the cash and
+  cost equations, provenance and date rules, canonical cost ordering,
+  fingerprints, and the reviewed-plan contract.
+- Infrastructure owns atomicity: fund trades commit through the existing
+  posting store, which re-checks the reviewed plan and the resulting cash
+  position inside the same write transaction that persists the trade.
+- API and UI own transport and presentation only. UI page models call
+  Application directly and never call the co-hosted JSON API.
+
+Plan freshness is deliberately an Application concern. A database trigger has
+no knowledge of what a user was shown, so it cannot judge whether a plan is
+stale; what the database guarantees is that quantity never goes negative and
+that the posted shape matches the accepted contract.

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
@@ -266,9 +266,16 @@ internal sealed class WealthLedgerApiFactory
             ReadySetup.CashAssetId,
             QuantityDelta.FromRaw(-12_345_000_000),
             EntryRole.Consideration);
+        /*
+         * The commission sits inside the consideration.
+         *
+         * An AdditionalCashOutflow component would have to be matched by a
+         * negative fee entry of the same amount, because M008 refuses to let
+         * a cost move cash without a corresponding entry.
+         */
         var cost = purchase.AddCost(
             CostType.Commission,
-            CostTreatment.AdditionalCashOutflow,
+            CostTreatment.IncludedInConsideration,
             Money.FromMinorUnits(250, currency),
             "Synthetic shell cost note.");
         var lot = AssetLot.Create(

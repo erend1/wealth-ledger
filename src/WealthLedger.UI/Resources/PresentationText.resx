@@ -1543,4 +1543,211 @@
   <data name="OpeningReverse_Error_Persistence" xml:space="preserve"><value>Ters kayıt kalıcı geçmişle çakıştı. Kısmi işlem oluşturulmadı; sayfayı yenileyip güncel uygunluğu kontrol edin.</value></data>
   <data name="Detail_PhysicalGoldTitle" xml:space="preserve"><value>Fiziksel altın lot ayrıntıları</value></data>
   <data name="Detail_PhysicalGoldDerivedExplanation" xml:space="preserve"><value>Saf altın ağırlığı, kalıcı brüt miktar ve ppm ayarından türetilir; ayrı bir yetkili bakiye değildir.</value></data>
+  <data name="Fund_Eyebrow" xml:space="preserve"><value>Kayıt</value></data>
+  <data name="Fund_ChoosePlaceholder" xml:space="preserve"><value>Seçin</value></data>
+  <data name="Fund_LoadErrorTitle" xml:space="preserve"><value>Seçenekler okunamadı</value></data>
+  <data name="Fund_LoadErrorExplanation" xml:space="preserve"><value>Güncel referanslar okunamadı. Hiçbir kayıt oluşturulmadı; sayfayı yenileyip yeniden deneyin.</value></data>
+  <data name="Fund_ChoicesTruncatedTitle" xml:space="preserve"><value>Liste kısaltıldı</value></data>
+  <data name="Fund_ChoicesTruncatedExplanation" xml:space="preserve"><value>Seçenek listesi bu sayfada kısaltıldı. Aradığınız kayıt görünmüyorsa ana veri sayfalarından doğrulayın.</value></data>
+  <data name="Fund_Legend_Identify" xml:space="preserve"><value>Kapsam</value></data>
+  <data name="Fund_PortfolioLabel" xml:space="preserve"><value>Portföy</value></data>
+  <data name="Fund_FundAccountLabel" xml:space="preserve"><value>Fon hesabı</value></data>
+  <data name="Fund_FundAccountHelp" xml:space="preserve"><value>Fon biriminin tutulduğu yatırım veya bireysel emeklilik hesabı.</value></data>
+  <data name="Fund_FundAssetLabel" xml:space="preserve"><value>Fon</value></data>
+  <data name="Fund_CashAccountLabel" xml:space="preserve"><value>Nakit hesabı</value></data>
+  <data name="Fund_CashAccountHelp" xml:space="preserve"><value>Nakdin hareket ettiği hesap. Fon hesabıyla aynı olabilir ya da farklı olabilir.</value></data>
+  <data name="Fund_CashAssetLabel" xml:space="preserve"><value>Nakit varlığı</value></data>
+  <data name="Fund_Legend_SourceFacts" xml:space="preserve"><value>Kaynak bilgiler</value></data>
+  <data name="Fund_QuantityLabel" xml:space="preserve"><value>Fon adedi</value></data>
+  <data name="Fund_QuantityHelp" xml:space="preserve"><value>En fazla sekiz ondalık basamak.</value></data>
+  <data name="Fund_UnitPriceLabel" xml:space="preserve"><value>Gerçekleşen birim fiyat</value></data>
+  <data name="Fund_UnitPriceHelp" xml:space="preserve"><value>Ekstrede yazan birim fiyat. Tutarın adede bölünmesiyle üretilmez; olduğu gibi saklanır.</value></data>
+  <data name="Fund_ConsiderationLabel" xml:space="preserve"><value>Ödenen nakit tutar</value></data>
+  <data name="Fund_ConsiderationHelp" xml:space="preserve"><value>İşlem satırındaki nakit çıkışı. Tutara dahil edilmiş masraflar bu rakamın içindedir.</value></data>
+  <data name="Fund_ProceedsLabel" xml:space="preserve"><value>Alınan nakit tutar</value></data>
+  <data name="Fund_ProceedsHelp" xml:space="preserve"><value>Kesintiler sonrası hesaba geçen nakit. Ayrıca ödenen masraflar bu rakamın dışındadır.</value></data>
+  <data name="Fund_ExecutionDateLabel" xml:space="preserve"><value>Gerçekleşme tarihi</value></data>
+  <data name="Fund_OptionalDetailsTitle" xml:space="preserve"><value>Tarihler ve masraflar</value></data>
+  <data name="Fund_Legend_Dates" xml:space="preserve"><value>Ek tarihler</value></data>
+  <data name="Fund_OrderDateLabel" xml:space="preserve"><value>Emir tarihi</value></data>
+  <data name="Fund_OrderDateHelp" xml:space="preserve"><value>Biliniyorsa girin. Gerçekleşme tarihinden sonra olamaz.</value></data>
+  <data name="Fund_SettlementDateLabel" xml:space="preserve"><value>Valör tarihi</value></data>
+  <data name="Fund_SettlementDateHelp" xml:space="preserve"><value>Biliniyorsa girin. Gerçekleşme tarihinden önce olamaz. Nakit etkisini ertelemez.</value></data>
+  <data name="Fund_Legend_Costs" xml:space="preserve"><value>Masraflar</value></data>
+  <data name="Fund_CostsHelp" xml:space="preserve"><value>Her masrafın nakde nasıl yansıdığını seçin. Aynı masraf iki kez sayılmaz.</value></data>
+  <data name="Fund_CostRowTitle" xml:space="preserve"><value>Masraf</value></data>
+  <data name="Fund_CostTypeLabel" xml:space="preserve"><value>Masraf türü</value></data>
+  <data name="Fund_CostNonePlaceholder" xml:space="preserve"><value>Masraf yok</value></data>
+  <data name="Fund_CostTreatmentLabel" xml:space="preserve"><value>Nakit etkisi</value></data>
+  <data name="Fund_CostTreatmentHelp" xml:space="preserve"><value>Ayrıca ödenen masraf ikinci bir nakit hareketi oluşturur; diğerleri girilen tutarın içindedir.</value></data>
+  <data name="Fund_CostAmountLabel" xml:space="preserve"><value>Masraf tutarı</value></data>
+  <data name="Fund_CostNoteLabel" xml:space="preserve"><value>Masraf açıklaması</value></data>
+  <data name="Fund_AddCostAction" xml:space="preserve"><value>Masraf satırı ekle</value></data>
+  <data name="Fund_CostType_Commission" xml:space="preserve"><value>Komisyon</value></data>
+  <data name="Fund_CostType_Brokerage" xml:space="preserve"><value>Aracılık ücreti</value></data>
+  <data name="Fund_CostType_WithholdingTax" xml:space="preserve"><value>Stopaj</value></data>
+  <data name="Fund_CostType_OtherTax" xml:space="preserve"><value>Diğer vergi</value></data>
+  <data name="Fund_CostType_Other" xml:space="preserve"><value>Diğer</value></data>
+  <data name="Fund_Treatment_AdditionalCashOutflow" xml:space="preserve"><value>Ayrıca ödendi</value></data>
+  <data name="Fund_Treatment_WithheldFromProceeds" xml:space="preserve"><value>Tutardan kesildi</value></data>
+  <data name="Fund_Treatment_IncludedInConsideration" xml:space="preserve"><value>Girilen tutara dahil</value></data>
+  <data name="Fund_Treatment_InformationalOnly" xml:space="preserve"><value>Yalnızca bilgi</value></data>
+  <data name="Fund_Legend_Provenance" xml:space="preserve"><value>Kaynak belgesi</value></data>
+  <data name="Fund_ProvenanceHelp" xml:space="preserve"><value>En az bir referans numarası veya açıklama gerekir; sonradan bu kaydın nedenini açıklayabilmeniz için.</value></data>
+  <data name="Fund_ExternalReferenceLabel" xml:space="preserve"><value>Referans numarası</value></data>
+  <data name="Fund_NoteLabel" xml:space="preserve"><value>Açıklama</value></data>
+  <data name="Fund_ReviewStatus" xml:space="preserve"><value>Gözden geçirme</value></data>
+  <data name="Fund_ReviewTitle" xml:space="preserve"><value>Ekonomik etki</value></data>
+  <data name="Fund_ReviewAction" xml:space="preserve"><value>Gözden geçir</value></data>
+  <data name="Fund_PostActionHelp" xml:space="preserve"><value>Kaydedilen işlem değiştirilemez. Düzeltme, ayrı bir ters kayıt ve yeni bir kayıtla yapılır.</value></data>
+  <data name="Fund_WarningsTitle" xml:space="preserve"><value>Dikkat edilmesi gerekenler</value></data>
+  <data name="Fund_NoAdviceDisclaimer" xml:space="preserve"><value>Bu sayfa kaydedilen bilgileri gösterir. Güncel değer, kâr/zarar, getiri veya vergi hesabı yapmaz ve yatırım tavsiyesi vermez.</value></data>
+  <data name="Fund_Review_FundAccount" xml:space="preserve"><value>Fon hesabı</value></data>
+  <data name="Fund_Review_CashAccount" xml:space="preserve"><value>Nakit hesabı</value></data>
+  <data name="Fund_Review_Fund" xml:space="preserve"><value>Fon</value></data>
+  <data name="Fund_Review_ExecutionDate" xml:space="preserve"><value>Gerçekleşme tarihi</value></data>
+  <data name="Fund_Review_FundIncrease" xml:space="preserve"><value>Fon değişimi</value></data>
+  <data name="Fund_Review_IncreaseWord" xml:space="preserve"><value>artış</value></data>
+  <data name="Fund_Review_DecreaseWord" xml:space="preserve"><value>azalış</value></data>
+  <data name="Fund_Review_ExecutedPrice" xml:space="preserve"><value>Gerçekleşen birim fiyat</value></data>
+  <data name="Fund_Review_Consideration" xml:space="preserve"><value>Girilen nakit tutar</value></data>
+  <data name="Fund_Review_WithheldFromProceeds" xml:space="preserve"><value>Tutardan kesilen</value></data>
+  <data name="Fund_Review_AdditionalOutflow" xml:space="preserve"><value>Ayrıca ödenen</value></data>
+  <data name="Fund_Review_NetCashEffect" xml:space="preserve"><value>Net nakit etkisi</value></data>
+  <data name="Fund_Review_PriceImplied" xml:space="preserve"><value>Fiyattan hesaplanan tutar</value></data>
+  <data name="Fund_Review_ExpectedConsideration" xml:space="preserve"><value>Beklenen tutar</value></data>
+  <data name="Fund_Review_Discrepancy" xml:space="preserve"><value>Fark</value></data>
+  <data name="Fund_Review_LotCost" xml:space="preserve"><value>Lot maliyeti</value></data>
+  <data name="Fund_Review_CostsTitle" xml:space="preserve"><value>Masraf kalemleri</value></data>
+  <data name="Fund_Warning_FUND_TRADE_ROUNDING_CONSISTENT" xml:space="preserve"><value>Girilen tutar ile fiyattan hesaplanan tutar arasında en fazla bir kuruş fark var. Bu, olağan yuvarlamayla açıklanabilir.</value></data>
+  <data name="Fund_Warning_FUND_TRADE_EXPLAINED_DISCREPANCY" xml:space="preserve"><value>Girilen tutar ile fiyattan hesaplanan tutar arasındaki fark yuvarlamayla açıklanamıyor. Girilen bilgiler olduğu gibi kaydedilir ve açıklamanız kayıtta kalır.</value></data>
+  <data name="Fund_Warning_FUND_TRADE_NEGATIVE_PROJECTED_CASH" xml:space="preserve"><value>Bu kayıt sonrasında hesaplanan nakit tutarı eksiye düşüyor. Defterde tüm nakit geçmişi bulunmuyor olabilir; nedenini açıklamada belirtin.</value></data>
+  <data name="Fund_Warning_FUND_TRADE_UNKNOWN_ACQUISITION_DATE_ORDERING" xml:space="preserve"><value>Kullanılacak lotlardan en az birinin alım tarihi kayıtlı değil. Bu lotlar sırada önce gelir; bu bir varsayımdır, gerçek alım sırası bilgisi değildir.</value></data>
+  <data name="Fund_Warning_FUND_TRADE_INCOMPLETE_REALIZED_COST" xml:space="preserve"><value>Satılan adedin bir kısmının veya tamamının alım maliyeti kayıtlı değil. Eksik maliyet sıfır sayılmaz.</value></data>
+  <data name="Fund_Error_InvalidInput" xml:space="preserve"><value>Girilen bilgiler kabul edilmedi. Hiçbir kayıt oluşturulmadı.</value></data>
+  <data name="Fund_Error_ProvenanceRequired" xml:space="preserve"><value>En az bir referans numarası veya açıklama girin.</value></data>
+  <data name="Fund_Error_UnexplainedDiscrepancy" xml:space="preserve"><value>Girilen tutar fiyattan hesaplanan tutardan farklı. Açıklama alanında bu farkın nedenini yazın.</value></data>
+  <data name="Fund_Error_NegativeExpectedProceeds" xml:space="preserve"><value>Kesilen ve dahil edilen masraflar brüt satış tutarını aşamaz.</value></data>
+  <data name="Fund_Error_NegativeCashNoteRequired" xml:space="preserve"><value>Bu kayıt hesaplanan nakdi eksiye düşürüyor. Açıklama alanında nedenini yazın.</value></data>
+  <data name="Fund_Error_InsufficientQuantity" xml:space="preserve"><value>Seçilen portföy ve hesapta bu fondan yeterli adet bulunmuyor.</value></data>
+  <data name="Fund_Error_StaleReviewedPlan" xml:space="preserve"><value>Gözden geçirmenizden sonra mevcut lotlar değişti. Aşağıdaki güncel dağılımı inceleyip yeniden kaydedin.</value></data>
+  <data name="Fund_Error_Cost" xml:space="preserve"><value>Masraf kalemleri kabul edilmedi. Türü, nakit etkisini ve tutarı kontrol edin.</value></data>
+  <data name="Fund_Error_CurrencyMismatch" xml:space="preserve"><value>Fon, nakit varlığı, fiyat ve tutar aynı para biriminde olmalıdır.</value></data>
+  <data name="Fund_Error_Date" xml:space="preserve"><value>Tarihler kabul edilmedi. Gelecek tarih olamaz ve emir, gerçekleşme, valör sırası korunmalıdır.</value></data>
+  <data name="Fund_Error_Reference" xml:space="preserve"><value>Seçilen referanslar bu işlem için uygun değil.</value></data>
+  <data name="Fund_Error_ReferenceNotFound" xml:space="preserve"><value>Seçilen kayıtlardan biri bulunamadı.</value></data>
+  <data name="Fund_Error_IdempotencyConflict" xml:space="preserve"><value>Aynı kayıt anahtarı farklı bir işlem için kullanılmış. Hiçbir kayıt oluşturulmadı.</value></data>
+  <data name="Fund_Error_Persistence" xml:space="preserve"><value>Kayıt, kalıcı geçmişle çakıştı. Kısmi işlem oluşturulmadı.</value></data>
+  <data name="FundPurchase_Title" xml:space="preserve"><value>Fon alımı kaydet</value></data>
+  <data name="FundPurchase_Introduction" xml:space="preserve"><value>Gerçekleşmiş bir fon alımını kaydedin. Adet, fiyat, tutar ve masraflar olduğu gibi saklanır.</value></data>
+  <data name="FundPurchase_ReviewExplanation" xml:space="preserve"><value>Aşağıdaki tutarlar girdiğiniz bilgilerden hesaplandı. Kaydettiğinizde tam olarak bu etki oluşur ve bir alım lotu açılır.</value></data>
+  <data name="FundPurchase_PostAction" xml:space="preserve"><value>Alımı kaydet</value></data>
+  <data name="FundSale_Title" xml:space="preserve"><value>Fon satışı kaydet</value></data>
+  <data name="FundSale_Introduction" xml:space="preserve"><value>Gerçekleşmiş bir fon satışını kaydedin. Hangi lotların kullanılacağı, alım sırasına göre kendiliğinden belirlenir.</value></data>
+  <data name="FundSale_ReviewExplanation" xml:space="preserve"><value>Aşağıdaki dağılım, şu anki kayıtlara göre hesaplandı. Kaydettiğinizde tam olarak bu lotlar kullanılır.</value></data>
+  <data name="FundSale_PostAction" xml:space="preserve"><value>Satışı kaydet</value></data>
+  <data name="FundSale_StaleTitle" xml:space="preserve"><value>Dağılım değişti</value></data>
+  <data name="FundSale_StaleExplanation" xml:space="preserve"><value>Gözden geçirmenizden sonra mevcut lotlar değişti; hiçbir kayıt oluşturulmadı. Aşağıdaki güncel dağılımı inceleyip yeniden kaydedin.</value></data>
+  <data name="FundSale_Review_Available" xml:space="preserve"><value>Kapsamdaki mevcut adet</value></data>
+  <data name="FundSale_Review_FundDecrease" xml:space="preserve"><value>Fon değişimi</value></data>
+  <data name="FundSale_Review_Proceeds" xml:space="preserve"><value>Alınan nakit tutar</value></data>
+  <data name="FundSale_PlanTitle" xml:space="preserve"><value>Kullanılacak lotlar</value></data>
+  <data name="FundSale_PlanExplanation" xml:space="preserve"><value>Lotlar alım tarihine göre en eskiden başlanarak kullanılır. Lot seçimi elle yapılmaz.</value></data>
+  <data name="FundSale_Plan_Order" xml:space="preserve"><value>Sıra</value></data>
+  <data name="FundSale_Plan_AcquiredOn" xml:space="preserve"><value>Alım tarihi</value></data>
+  <data name="FundSale_Plan_Available" xml:space="preserve"><value>Lottaki adet</value></data>
+  <data name="FundSale_Plan_Consumed" xml:space="preserve"><value>Kullanılan adet</value></data>
+  <data name="FundSale_Plan_CostStatus" xml:space="preserve"><value>Maliyet bilgisi</value></data>
+  <data name="FundSale_Plan_LotCost" xml:space="preserve"><value>Lot maliyeti</value></data>
+  <data name="FundSale_RealizedCostTitle" xml:space="preserve"><value>Gerçekleşen alım maliyeti</value></data>
+  <data name="FundSale_Realized_Completeness" xml:space="preserve"><value>Bilgi bütünlüğü</value></data>
+  <data name="FundSale_Realized_KnownQuantity" xml:space="preserve"><value>Maliyeti bilinen adet</value></data>
+  <data name="FundSale_Realized_UnknownQuantity" xml:space="preserve"><value>Maliyeti bilinmeyen adet</value></data>
+  <data name="FundSale_Realized_Method" xml:space="preserve"><value>Hesaplama yöntemi</value></data>
+  <data name="FundSale_Realized_NoKnownCost" xml:space="preserve"><value>Satılan adedin hiçbiri için kayıtlı alım maliyeti yok. Bilinmeyen maliyet sıfır sayılmaz.</value></data>
+  <data name="FundSale_Realized_PartialWarning" xml:space="preserve"><value>Aşağıdaki tutar yalnızca maliyeti bilinen kısmı kapsar; toplam alım maliyeti değildir.</value></data>
+  <data name="FundReceipt_Title" xml:space="preserve"><value>Fon işlemi kaydı</value></data>
+  <data name="FundReceipt_Introduction" xml:space="preserve"><value>Kaydedilen işlemin kalıcı dökümü. Bu sayfa yenilendiğinde yeni bir kayıt oluşmaz.</value></data>
+  <data name="FundReceipt_PostedStatus" xml:space="preserve"><value>Kaydedildi</value></data>
+  <data name="FundReceipt_PersistedExplanation" xml:space="preserve"><value>Buradaki tüm değerler kalıcı kayıtlardan yeniden hesaplanır; uygulama yeniden başlatılsa da aynı kalır.</value></data>
+  <data name="FundReceipt_TransactionId" xml:space="preserve"><value>İşlem kimliği</value></data>
+  <data name="FundReceipt_PostedAt" xml:space="preserve"><value>Kayıt zamanı</value></data>
+  <data name="FundReceipt_CurrentPosition" xml:space="preserve"><value>Kapsamdaki güncel adet</value></data>
+  <data name="FundReceipt_CreatedLotTitle" xml:space="preserve"><value>Açılan lot</value></data>
+  <data name="FundReceipt_ConsumedLotsTitle" xml:space="preserve"><value>Kullanılan lotlar</value></data>
+  <data name="FundReceipt_LotId" xml:space="preserve"><value>Lot kimliği</value></data>
+  <data name="FundReceipt_RealizedDerivedExplanation" xml:space="preserve"><value>Gerçekleşen maliyet, kayıtlı lot geçmişinden türetilir; ayrı bir yetkili tutar olarak saklanmaz.</value></data>
+  <data name="FundReceipt_Realized_DerivedAt" xml:space="preserve"><value>Hesaplama zamanı</value></data>
+  <data name="FundReceipt_Realized_Effective" xml:space="preserve"><value>Kaydın geçerliliği</value></data>
+  <data name="FundReceipt_Realized_IsEffective" xml:space="preserve"><value>Bu satış hâlen geçerli.</value></data>
+  <data name="FundReceipt_Realized_NotEffective" xml:space="preserve"><value>Bu satış ters kayıtla iptal edilmiş; gerçekleşen maliyet taşımaz.</value></data>
+  <data name="FundReceipt_NextTitle" xml:space="preserve"><value>Sonraki adımlar</value></data>
+  <data name="FundReceipt_OpenTransaction" xml:space="preserve"><value>İşlem ayrıntısını aç</value></data>
+  <data name="FundReceipt_ReverseAction" xml:space="preserve"><value>Bu işlemi ters kayıtla düzelt</value></data>
+  <data name="FundReceipt_AlreadyReversed" xml:space="preserve"><value>Bu işlem zaten ters kayıtla düzeltilmiş.</value></data>
+  <data name="FundReceipt_CorrectionHelp" xml:space="preserve"><value>Kaydedilen işlem silinmez veya değiştirilmez. Düzeltme, ayrı bir ters kayıt ve gerekiyorsa yeni bir kayıtla yapılır.</value></data>
+  <data name="FundReceipt_InvalidTitle" xml:space="preserve"><value>Geçersiz adres</value></data>
+  <data name="FundReceipt_InvalidExplanation" xml:space="preserve"><value>Adresteki işlem kimliği okunamadı. Kayıt listesinden ilgili işlemi açın.</value></data>
+  <data name="FundReceipt_NotFoundTitle" xml:space="preserve"><value>Kayıt bulunamadı</value></data>
+  <data name="FundReceipt_NotFoundExplanation" xml:space="preserve"><value>Bu hanede böyle bir fon işlemi bulunamadı.</value></data>
+  <data name="Fund_Validation_ChoiceUnavailable" xml:space="preserve"><value>Seçilen kayıt artık kullanılabilir değil. Listeden güncel bir seçim yapın.</value></data>
+  <data name="Fund_Validation_Quantity" xml:space="preserve"><value>Adet sıfırdan büyük olmalı ve en fazla sekiz ondalık basamak içermelidir.</value></data>
+  <data name="Fund_Validation_Price" xml:space="preserve"><value>Birim fiyat sıfırdan büyük olmalı ve en fazla sekiz ondalık basamak içermelidir.</value></data>
+  <data name="Fund_Validation_Amount" xml:space="preserve"><value>Tutar sıfırdan büyük olmalı ve para biriminin ondalık hassasiyetini aşmamalıdır.</value></data>
+  <data name="Fund_Validation_Date" xml:space="preserve"><value>Tarihi GG.AA.YYYY biçiminde girin.</value></data>
+  <data name="Fund_Validation_CostType" xml:space="preserve"><value>Masraf türü bu işlem için desteklenmiyor.</value></data>
+  <data name="Contribution_Title" xml:space="preserve"><value>Nakit girişi kaydet</value></data>
+  <data name="Contribution_Introduction" xml:space="preserve"><value>Hane dışından gelen parayı kaydedin. Bu bir alım değildir; defterdeki bir varlığın yerine geçmez.</value></data>
+  <data name="Contribution_AmountLabel" xml:space="preserve"><value>Gelen tutar</value></data>
+  <data name="Contribution_AmountHelp" xml:space="preserve"><value>Hesaba geçen tutar. Para biriminin ondalık hassasiyetini aşmamalıdır.</value></data>
+  <data name="Contribution_CategoryLabel" xml:space="preserve"><value>Kaynak türü</value></data>
+  <data name="Contribution_Category_Salary" xml:space="preserve"><value>Maaş</value></data>
+  <data name="Contribution_Category_Bonus" xml:space="preserve"><value>Prim</value></data>
+  <data name="Contribution_Category_AcademicIncome" xml:space="preserve"><value>Akademik gelir</value></data>
+  <data name="Contribution_Category_Gift" xml:space="preserve"><value>Hediye</value></data>
+  <data name="Contribution_Category_Other" xml:space="preserve"><value>Diğer</value></data>
+  <data name="Contribution_MemberLabel" xml:space="preserve"><value>Hane üyesi</value></data>
+  <data name="Contribution_MemberNone" xml:space="preserve"><value>Belirtilmedi</value></data>
+  <data name="Contribution_MemberHelp" xml:space="preserve"><value>Bu girişin kime ait olduğunu belirtmek isterseniz seçin. Zorunlu değildir.</value></data>
+  <data name="Contribution_ReviewExplanation" xml:space="preserve"><value>Kaydettiğinizde nakit hesabınız aşağıdaki kadar artar.</value></data>
+  <data name="Contribution_Review_CashIncrease" xml:space="preserve"><value>Nakit değişimi</value></data>
+  <data name="Contribution_ExternalCapitalHelp" xml:space="preserve"><value>Nakit girişi, hane dışından gelen sermayedir. Fon alımından farklıdır ve karşılığında bir varlık çıkışı oluşmaz.</value></data>
+  <data name="Contribution_PostAction" xml:space="preserve"><value>Nakit girişini kaydet</value></data>
+  <data name="RecordHub_Title" xml:space="preserve"><value>Kayıt</value></data>
+  <data name="RecordHub_Introduction" xml:space="preserve"><value>Ne kaydetmek istediğinizi seçin. Her işlem türü defterde farklı biçimde saklanır.</value></data>
+  <data name="RecordHub_ChoicesLabel" xml:space="preserve"><value>Kayıt türleri</value></data>
+  <data name="RecordHub_ContributionExplanation" xml:space="preserve"><value>Maaş, prim veya benzeri bir kaynaktan hane dışından gelen para.</value></data>
+  <data name="RecordHub_ContributionAction" xml:space="preserve"><value>Nakit girişi kaydet</value></data>
+  <data name="RecordHub_PurchaseExplanation" xml:space="preserve"><value>Gerçekleşmiş bir fon alımı. Bir alım lotu açar.</value></data>
+  <data name="RecordHub_PurchaseAction" xml:space="preserve"><value>Fon alımı kaydet</value></data>
+  <data name="RecordHub_SaleExplanation" xml:space="preserve"><value>Gerçekleşmiş bir fon satışı. Mevcut lotları alım sırasına göre kullanır.</value></data>
+  <data name="RecordHub_SaleAction" xml:space="preserve"><value>Fon satışı kaydet</value></data>
+  <data name="RecordHub_OpeningExplanation" xml:space="preserve"><value>Defter tutmaya başlamadan önce sahip olduğunuz bakiyeler.</value></data>
+  <data name="RecordHub_OpeningAction" xml:space="preserve"><value>Açılış bakiyesi kaydet</value></data>
+  <data name="RecordHub_ScopeHelp" xml:space="preserve"><value>Kaydedilen işlemler silinemez veya değiştirilemez. Düzeltme, ayrı bir ters kayıtla yapılır.</value></data>
+  <data name="FundReverse_Title" xml:space="preserve"><value>Fon işlemini ters kayıtla düzelt</value></data>
+  <data name="FundReverse_Introduction" xml:space="preserve"><value>Kaydedilen işlem silinmez veya değiştirilmez. Düzeltme, zıt etkileri olan ayrı ve kalıcı bir ters kayıtla yapılır.</value></data>
+  <data name="FundReverse_EffectsTitle" xml:space="preserve"><value>Ters kaydın etkileri</value></data>
+  <data name="FundReverse_EntryRole" xml:space="preserve"><value>Satır türü</value></data>
+  <data name="FundReverse_EntryEffect" xml:space="preserve"><value>Etki</value></data>
+  <data name="FundReverse_RestoredLotsTitle" xml:space="preserve"><value>Geri verilecek lotlar</value></data>
+  <data name="FundReverse_RestoredLotsHelp" xml:space="preserve"><value>Ters kayıt, satışın kullandığı lot adetlerini aynen geri verir.</value></data>
+  <data name="FundReverse_ReasonLegend" xml:space="preserve"><value>Düzeltme nedeni</value></data>
+  <data name="FundReverse_ReasonLabel" xml:space="preserve"><value>Neden</value></data>
+  <data name="FundReverse_ReasonHelp" xml:space="preserve"><value>Bu düzeltmenin nedenini yazın. Neden kalıcı olarak saklanır.</value></data>
+  <data name="FundReverse_PostAction" xml:space="preserve"><value>Kalıcı ters kaydı oluştur</value></data>
+  <data name="FundReverse_PostActionHelp" xml:space="preserve"><value>Ters kayıt da kalıcıdır ve geri alınamaz. Düzeltilmiş işlemi ayrıca kaydetmeniz gerekir.</value></data>
+  <data name="FundReverse_NextTitle" xml:space="preserve"><value>Sonraki adımlar</value></data>
+  <data name="FundReverse_BackToReceipt" xml:space="preserve"><value>İşlem kaydına dön</value></data>
+  <data name="FundReverse_StartCorrectedPurchase" xml:space="preserve"><value>Düzeltilmiş fon alımını kaydet</value></data>
+  <data name="FundReverse_StartCorrectedSale" xml:space="preserve"><value>Düzeltilmiş fon satışını kaydet</value></data>
+  <data name="FundReverse_ReplacementHelp" xml:space="preserve"><value>Düzeltilmiş işlem ayrı bir kayıttır ve kendi kayıt anahtarını kullanır. Defterde ters kayıt ile yeni kayıt arasında kalıcı bir bağ tutulmaz.</value></data>
+  <data name="FundReverse_Eligible" xml:space="preserve"><value>Uygun — zıt etkiler oluşturulacak.</value></data>
+  <data name="FundReverse_AlreadyReversed" xml:space="preserve"><value>Bu işlem zaten ters kayıtla düzeltilmiş. İkinci bir ters kayıt oluşturulamaz.</value></data>
+  <data name="FundReverse_BlockedByDependencies" xml:space="preserve"><value>Bu alımdan gelen adetler sonradan satılmış. Önce ilgili satışı ters kayıtla düzeltin.</value></data>
+  <data name="FundReverse_TargetIsReversal" xml:space="preserve"><value>Bu kayıt zaten bir ters kayıt. Ters kaydın ters kaydı alınamaz.</value></data>
+  <data name="FundReverse_NotPosted" xml:space="preserve"><value>Yalnızca kaydedilmiş işlemler ters kayıtla düzeltilebilir.</value></data>
+  <data name="FundReverse_UnsupportedShape" xml:space="preserve"><value>Bu işlemin kayıtlı yapısı ters kayıt için desteklenmiyor.</value></data>
+  <data name="FundReverse_Validation_ReasonRequired" xml:space="preserve"><value>Düzeltme nedeni zorunludur.</value></data>
+  <data name="FundReverse_Validation_ReasonInvalid" xml:space="preserve"><value>Neden en fazla 2000 karakter olmalı ve kontrol karakteri içermemelidir.</value></data>
 </root>

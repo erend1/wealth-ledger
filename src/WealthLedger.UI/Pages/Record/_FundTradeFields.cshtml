@@ -1,0 +1,238 @@
+@model WealthLedger.UI.Pages.Record.FundTradePageModel
+@inject UiText Text
+@{
+    var choices = Model.Choices!;
+    var isSale = Model is WealthLedger.UI.Pages.Record.FundSaleModel;
+}
+
+@* Stage one: identify the household context this trade belongs to. *@
+<fieldset class="field-group flow">
+    <legend>@Text["Fund_Legend_Identify"]</legend>
+
+    <div class="field">
+        <label asp-for="Input.PortfolioId">@Text["Fund_PortfolioLabel"]</label>
+        <select asp-for="Input.PortfolioId"
+                aria-describedby="Input_PortfolioId-error">
+            <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+            @foreach (var item in choices.Portfolios.Items)
+            {
+                <option value="@item.PortfolioId.ToString("D")">@item.Name (@item.Code)</option>
+            }
+        </select>
+        <span id="Input_PortfolioId-error" class="field-error"
+              asp-validation-for="Input.PortfolioId"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.FundAccountId">@Text["Fund_FundAccountLabel"]</label>
+        <select asp-for="Input.FundAccountId"
+                aria-describedby="Input_FundAccountId-help Input_FundAccountId-error">
+            <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+            @foreach (var item in choices.FundAccounts.Items)
+            {
+                <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+            }
+        </select>
+        <p id="Input_FundAccountId-help" class="field-help">@Text["Fund_FundAccountHelp"]</p>
+        <span id="Input_FundAccountId-error" class="field-error"
+              asp-validation-for="Input.FundAccountId"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.FundAssetId">@Text["Fund_FundAssetLabel"]</label>
+        <select asp-for="Input.FundAssetId"
+                aria-describedby="Input_FundAssetId-error">
+            <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+            @foreach (var item in choices.FundAssets.Items)
+            {
+                <option value="@item.AssetId.ToString("D")">@item.Name (@item.Code)</option>
+            }
+        </select>
+        <span id="Input_FundAssetId-error" class="field-error"
+              asp-validation-for="Input.FundAssetId"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.CashAccountId">@Text["Fund_CashAccountLabel"]</label>
+        <select asp-for="Input.CashAccountId"
+                aria-describedby="Input_CashAccountId-help Input_CashAccountId-error">
+            <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+            @foreach (var item in choices.CashAccounts.Items)
+            {
+                <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+            }
+        </select>
+        <p id="Input_CashAccountId-help" class="field-help">@Text["Fund_CashAccountHelp"]</p>
+        <span id="Input_CashAccountId-error" class="field-error"
+              asp-validation-for="Input.CashAccountId"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.CashAssetId">@Text["Fund_CashAssetLabel"]</label>
+        <select asp-for="Input.CashAssetId"
+                aria-describedby="Input_CashAssetId-error">
+            <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+            @foreach (var item in choices.CashAssets.Items)
+            {
+                <option value="@item.AssetId.ToString("D")">@item.Name (@item.Code)</option>
+            }
+        </select>
+        <span id="Input_CashAssetId-error" class="field-error"
+              asp-validation-for="Input.CashAssetId"></span>
+    </div>
+</fieldset>
+
+@* Stage two: the source facts, preserved exactly as entered. *@
+<fieldset class="field-group flow">
+    <legend>@Text["Fund_Legend_SourceFacts"]</legend>
+
+    <div class="field">
+        <label asp-for="Input.Quantity">@Text["Fund_QuantityLabel"]</label>
+        <input asp-for="Input.Quantity" inputmode="decimal" maxlength="32"
+               aria-describedby="Input_Quantity-help Input_Quantity-error" />
+        <p id="Input_Quantity-help" class="field-help">@Text["Fund_QuantityHelp"]</p>
+        <span id="Input_Quantity-error" class="field-error"
+              asp-validation-for="Input.Quantity"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.UnitPrice">@Text["Fund_UnitPriceLabel"]</label>
+        <input asp-for="Input.UnitPrice" inputmode="decimal" maxlength="32"
+               aria-describedby="Input_UnitPrice-help Input_UnitPrice-error" />
+        <p id="Input_UnitPrice-help" class="field-help">@Text["Fund_UnitPriceHelp"]</p>
+        <span id="Input_UnitPrice-error" class="field-error"
+              asp-validation-for="Input.UnitPrice"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.CashConsideration">
+            @(isSale ? Text["Fund_ProceedsLabel"] : Text["Fund_ConsiderationLabel"])
+        </label>
+        <input asp-for="Input.CashConsideration" inputmode="decimal" maxlength="32"
+               aria-describedby="Input_CashConsideration-help Input_CashConsideration-error" />
+        <p id="Input_CashConsideration-help" class="field-help">
+            @(isSale ? Text["Fund_ProceedsHelp"] : Text["Fund_ConsiderationHelp"])
+        </p>
+        <span id="Input_CashConsideration-error" class="field-error"
+              asp-validation-for="Input.CashConsideration"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.ExecutionDate">@Text["Fund_ExecutionDateLabel"]</label>
+        <input asp-for="Input.ExecutionDate" type="date"
+               aria-describedby="Input_ExecutionDate-error" />
+        <span id="Input_ExecutionDate-error" class="field-error"
+              asp-validation-for="Input.ExecutionDate"></span>
+    </div>
+</fieldset>
+
+@*
+    Dates and costs are progressive disclosure, not hidden validation: the
+    section stays open whenever it already holds a value or an error.
+*@
+<details class="panel" open="@(Model.ShouldExpandOptionalDetails)">
+    <summary>@Text["Fund_OptionalDetailsTitle"]</summary>
+
+    <fieldset class="field-group flow">
+        <legend>@Text["Fund_Legend_Dates"]</legend>
+
+        <div class="field">
+            <label asp-for="Input.OrderDate">@Text["Fund_OrderDateLabel"]</label>
+            <input asp-for="Input.OrderDate" type="date"
+                   aria-describedby="Input_OrderDate-help Input_OrderDate-error" />
+            <p id="Input_OrderDate-help" class="field-help">@Text["Fund_OrderDateHelp"]</p>
+            <span id="Input_OrderDate-error" class="field-error"
+                  asp-validation-for="Input.OrderDate"></span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Input.SettlementDate">@Text["Fund_SettlementDateLabel"]</label>
+            <input asp-for="Input.SettlementDate" type="date"
+                   aria-describedby="Input_SettlementDate-help Input_SettlementDate-error" />
+            <p id="Input_SettlementDate-help" class="field-help">@Text["Fund_SettlementDateHelp"]</p>
+            <span id="Input_SettlementDate-error" class="field-error"
+                  asp-validation-for="Input.SettlementDate"></span>
+        </div>
+    </fieldset>
+
+    <fieldset class="field-group flow">
+        <legend>@Text["Fund_Legend_Costs"]</legend>
+        <p class="field-help">@Text["Fund_CostsHelp"]</p>
+
+        @for (var index = 0; index < Model.Input.Costs.Count; index++)
+        {
+            var costIndex = index;
+
+            <div class="fact-card flow">
+                <h3>@Text["Fund_CostRowTitle"] @(costIndex + 1)</h3>
+
+                <div class="field">
+                    <label asp-for="Input.Costs[costIndex].TypeCode">@Text["Fund_CostTypeLabel"]</label>
+                    <select asp-for="Input.Costs[costIndex].TypeCode"
+                            aria-describedby="Input_Costs_@(costIndex)__TypeCode-error">
+                        <option value="">@Text["Fund_CostNonePlaceholder"]</option>
+                        @foreach (var option in Model.CostTypes)
+                        {
+                            <option value="@option.Value">@Text[option.ResourceKey]</option>
+                        }
+                    </select>
+                    <span id="Input_Costs_@(costIndex)__TypeCode-error" class="field-error"
+                          asp-validation-for="Input.Costs[costIndex].TypeCode"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.Costs[costIndex].TreatmentCode">@Text["Fund_CostTreatmentLabel"]</label>
+                    <select asp-for="Input.Costs[costIndex].TreatmentCode"
+                            aria-describedby="Input_Costs_@(costIndex)__TreatmentCode-help">
+                        @foreach (var option in Model.CostTreatments)
+                        {
+                            <option value="@option.Value">@Text[option.ResourceKey]</option>
+                        }
+                    </select>
+                    <p id="Input_Costs_@(costIndex)__TreatmentCode-help" class="field-help">
+                        @Text["Fund_CostTreatmentHelp"]
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.Costs[costIndex].Amount">@Text["Fund_CostAmountLabel"]</label>
+                    <input asp-for="Input.Costs[costIndex].Amount" inputmode="decimal" maxlength="32"
+                           aria-describedby="Input_Costs_@(costIndex)__Amount-error" />
+                    <span id="Input_Costs_@(costIndex)__Amount-error" class="field-error"
+                          asp-validation-for="Input.Costs[costIndex].Amount"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.Costs[costIndex].Note">@Text["Fund_CostNoteLabel"]</label>
+                    <input asp-for="Input.Costs[costIndex].Note" maxlength="1000" />
+                </div>
+            </div>
+        }
+
+        <button type="submit" asp-page-handler="AddCost" class="button button--secondary">
+            @Text["Fund_AddCostAction"]
+        </button>
+    </fieldset>
+</details>
+
+@* Stage two continued: provenance, which the accepted contract requires. *@
+<fieldset class="field-group flow">
+    <legend>@Text["Fund_Legend_Provenance"]</legend>
+    <p class="field-help">@Text["Fund_ProvenanceHelp"]</p>
+
+    <div class="field">
+        <label asp-for="Input.ExternalReference">@Text["Fund_ExternalReferenceLabel"]</label>
+        <input asp-for="Input.ExternalReference" maxlength="256"
+               aria-describedby="Input_ExternalReference-error" />
+        <span id="Input_ExternalReference-error" class="field-error"
+              asp-validation-for="Input.ExternalReference"></span>
+    </div>
+
+    <div class="field">
+        <label asp-for="Input.Note">@Text["Fund_NoteLabel"]</label>
+        <textarea asp-for="Input.Note" maxlength="2000" rows="3"
+                  aria-describedby="Input_Note-error"></textarea>
+        <span id="Input_Note-error" class="field-error"
+              asp-validation-for="Input.Note"></span>
+    </div>
+</fieldset>

@@ -1,0 +1,179 @@
+@page "/record/contribution"
+@model WealthLedger.UI.Pages.Record.ContributionModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Contribution_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="contribution-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Fund_Eyebrow"]</p>
+        <h1 id="contribution-heading">@Text["Contribution_Title"]</h1>
+        <p class="lede">@Text["Contribution_Introduction"]</p>
+    </header>
+
+    <partial name="_ValidationSummary" />
+
+    @if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable || Model.Choices is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Fund_LoadErrorTitle"]</h2>
+            <p>@Text["Fund_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        <form method="post" class="flow" novalidate>
+            <input type="hidden" asp-for="Input.IdempotencyKey" />
+
+            <fieldset class="field-group flow">
+                <legend>@Text["Fund_Legend_Identify"]</legend>
+
+                <div class="field">
+                    <label asp-for="Input.PortfolioId">@Text["Fund_PortfolioLabel"]</label>
+                    <select asp-for="Input.PortfolioId" aria-describedby="Input_PortfolioId-error">
+                        <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+                        @foreach (var item in Model.Choices.Portfolios.Items)
+                        {
+                            <option value="@item.PortfolioId.ToString("D")">@item.Name (@item.Code)</option>
+                        }
+                    </select>
+                    <span id="Input_PortfolioId-error" class="field-error"
+                          asp-validation-for="Input.PortfolioId"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.AccountId">@Text["Fund_CashAccountLabel"]</label>
+                    <select asp-for="Input.AccountId" aria-describedby="Input_AccountId-error">
+                        <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+                        @foreach (var item in Model.Choices.CashAccounts.Items)
+                        {
+                            <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+                        }
+                    </select>
+                    <span id="Input_AccountId-error" class="field-error"
+                          asp-validation-for="Input.AccountId"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.CashAssetId">@Text["Fund_CashAssetLabel"]</label>
+                    <select asp-for="Input.CashAssetId" aria-describedby="Input_CashAssetId-error">
+                        <option value="">@Text["Fund_ChoosePlaceholder"]</option>
+                        @foreach (var item in Model.Choices.CashAssets.Items)
+                        {
+                            <option value="@item.AssetId.ToString("D")">@item.Name (@item.Code)</option>
+                        }
+                    </select>
+                    <span id="Input_CashAssetId-error" class="field-error"
+                          asp-validation-for="Input.CashAssetId"></span>
+                </div>
+            </fieldset>
+
+            <fieldset class="field-group flow">
+                <legend>@Text["Fund_Legend_SourceFacts"]</legend>
+
+                <div class="field">
+                    <label asp-for="Input.Amount">@Text["Contribution_AmountLabel"]</label>
+                    <input asp-for="Input.Amount" inputmode="decimal" maxlength="32"
+                           aria-describedby="Input_Amount-help Input_Amount-error" />
+                    <p id="Input_Amount-help" class="field-help">@Text["Contribution_AmountHelp"]</p>
+                    <span id="Input_Amount-error" class="field-error"
+                          asp-validation-for="Input.Amount"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.CategoryCode">@Text["Contribution_CategoryLabel"]</label>
+                    <select asp-for="Input.CategoryCode" aria-describedby="Input_CategoryCode-error">
+                        @foreach (var option in Model.Categories)
+                        {
+                            <option value="@option.Value">@Text[option.ResourceKey]</option>
+                        }
+                    </select>
+                    <span id="Input_CategoryCode-error" class="field-error"
+                          asp-validation-for="Input.CategoryCode"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.ExecutionDate">@Text["Fund_ExecutionDateLabel"]</label>
+                    <input asp-for="Input.ExecutionDate" type="date"
+                           aria-describedby="Input_ExecutionDate-error" />
+                    <span id="Input_ExecutionDate-error" class="field-error"
+                          asp-validation-for="Input.ExecutionDate"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.HouseholdMemberId">@Text["Contribution_MemberLabel"]</label>
+                    <select asp-for="Input.HouseholdMemberId"
+                            aria-describedby="Input_HouseholdMemberId-help">
+                        <option value="">@Text["Contribution_MemberNone"]</option>
+                        @if (Model.Members is not null)
+                        {
+                            @foreach (var member in Model.Members.Items)
+                            {
+                                <option value="@member.HouseholdMemberId.ToString("D")">@member.DisplayName</option>
+                            }
+                        }
+                    </select>
+                    <p id="Input_HouseholdMemberId-help" class="field-help">@Text["Contribution_MemberHelp"]</p>
+                </div>
+            </fieldset>
+
+            <fieldset class="field-group flow">
+                <legend>@Text["Fund_Legend_Provenance"]</legend>
+
+                <div class="field">
+                    <label asp-for="Input.ExternalReference">@Text["Fund_ExternalReferenceLabel"]</label>
+                    <input asp-for="Input.ExternalReference" maxlength="256" />
+                </div>
+
+                <div class="field">
+                    <label asp-for="Input.Note">@Text["Fund_NoteLabel"]</label>
+                    <textarea asp-for="Input.Note" maxlength="2000" rows="3"></textarea>
+                </div>
+            </fieldset>
+
+            @if (Model.IsReview && Model.ReviewAmount is not null)
+            {
+                <section class="panel review-panel flow" aria-labelledby="contribution-review-heading">
+                    <p class="status-mark">@Text["Fund_ReviewStatus"]</p>
+                    <h2 id="contribution-review-heading">@Text["Fund_ReviewTitle"]</h2>
+                    <p>@Text["Contribution_ReviewExplanation"]</p>
+
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Contribution_Review_CashIncrease"]</dt>
+                            <dd>
+                                @Model.PresentMoney(
+                                    Model.ReviewAmount.MinorUnits,
+                                    Model.ReviewCurrencyCode).Text
+                                <span class="state-text">@Text["Fund_Review_IncreaseWord"]</span>
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <p class="help">@Text["Contribution_ExternalCapitalHelp"]</p>
+
+                    <button class="button" type="submit" asp-page-handler="Post" data-final-submit>
+                        @Text["Contribution_PostAction"]
+                    </button>
+                    <p class="help">@Text["Fund_PostActionHelp"]</p>
+                </section>
+            }
+            else
+            {
+                <button class="button" type="submit" asp-page-handler="Review">
+                    @Text["Fund_ReviewAction"]
+                </button>
+            }
+        </form>
+    }
+</article>

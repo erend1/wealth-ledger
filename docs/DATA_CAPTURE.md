@@ -116,6 +116,27 @@ Capture:
 Realized cost is derived from lot allocations. It is not a user-entered sale
 field.
 
+As implemented by M008, the user does not select lots. The sale preview shows
+the deterministic scope-aware first-in-first-out plan, and the post carries
+that reviewed plan back so the server can refuse it if intervening history
+changed which lots would be consumed.
+
+Cost treatment fixes the cash effect exactly. Only `AdditionalCashOutflow`
+creates a second cash entry:
+
+    purchase net cash = -(consideration + additional outflow)
+    sale net cash     = +(consideration - additional outflow)
+
+`IncludedInConsideration` and `WithheldFromProceeds` are already inside the
+entered consideration, and `InformationalOnly` never moves cash. The
+acquisition lot records `consideration + additional outflow`, counting each
+cost exactly once.
+
+A Fund trade accepts only Commission, Brokerage, WithholdingTax, OtherTax and
+Other, at most sixteen components, each with a positive amount in the trade
+currency. A purchase rejects `WithheldFromProceeds` because it has no
+proceeds. Every new trade requires an external reference or a note.
+
 ## Physical-gold purchase
 
 Capture:

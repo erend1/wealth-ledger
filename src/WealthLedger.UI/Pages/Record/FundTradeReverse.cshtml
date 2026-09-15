@@ -1,0 +1,191 @@
+@page "/record/fund-trade/{transactionId}/reverse"
+@model WealthLedger.UI.Pages.Record.FundTradeReverseModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["FundReverse_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="fund-reverse-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Fund_Eyebrow"]</p>
+        <h1 id="fund-reverse-heading">@Text["FundReverse_Title"]</h1>
+        <p class="lede">@Text["FundReverse_Introduction"]</p>
+    </header>
+
+    <partial name="_ValidationSummary" />
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["FundReceipt_InvalidTitle"]</h2>
+            <p>@Text["FundReceipt_InvalidExplanation"]</p>
+        </section>
+    }
+    else if (Model.TradeNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["FundReceipt_NotFoundTitle"]</h2>
+            <p>@Text["FundReceipt_NotFoundExplanation"]</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable
+             || Model.Verification is null
+             || Model.Preview is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Fund_LoadErrorTitle"]</h2>
+            <p>@Text["Fund_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        var facts = Model.Verification.Facts;
+        var currency = facts.CashConsideration.Currency.Value;
+        var digits = Model.Verification.MinorUnitDigits;
+
+        <section class="panel flow" aria-labelledby="fund-reverse-original-heading">
+            <h2 id="fund-reverse-original-heading">
+                @(Model.IsPurchase
+                    ? Text["FundPurchase_Title"]
+                    : Text["FundSale_Title"])
+            </h2>
+
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["FundReceipt_TransactionId"]</dt>
+                    <dd><code>@facts.TransactionId.ToString("D")</code></dd>
+                </div>
+                <div>
+                    <dt>@Text["Fund_Review_ExecutionDate"]</dt>
+                    <dd>@Model.Values.BusinessDate(facts.ExecutionDate).Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Fund_Review_Consideration"]</dt>
+                    <dd>
+                        @Model.Values.Money(
+                            facts.CashConsideration.MinorUnits,
+                            currency,
+                            digits).Text
+                    </dd>
+                </div>
+                @if (!string.IsNullOrEmpty(facts.ExternalReference))
+                {
+                    <div>
+                        <dt>@Text["Fund_ExternalReferenceLabel"]</dt>
+                        <dd>@facts.ExternalReference</dd>
+                    </div>
+                }
+            </dl>
+        </section>
+
+        @* The exact opposite effects a reversal would post. *@
+        <section class="panel flow" aria-labelledby="fund-reverse-effects-heading">
+            <h2 id="fund-reverse-effects-heading">@Text["FundReverse_EffectsTitle"]</h2>
+            <p class="state-text">
+                @Text[WealthLedger.UI.Pages.Record.FundTradeReverseModel
+                    .EligibilityResourceKey(Model.Preview.EligibilityCode)]
+            </p>
+
+            @if (Model.Preview.CanReverse)
+            {
+                <table class="data-table">
+                    <caption class="visually-hidden">@Text["FundReverse_EffectsTitle"]</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">@Text["Detail_EntrySequenceLabel"]</th>
+                            <th scope="col">@Text["FundReverse_EntryRole"]</th>
+                            <th scope="col">@Text["FundReverse_EntryEffect"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.Preview.InverseEntries
+                            .OrderBy(item => item.Sequence))
+                        {
+                            <tr>
+                                <td>@entry.Sequence</td>
+                                <td><code>@entry.Role</code></td>
+                                <td aria-label="@Model.PresentEntry(entry).AssistiveText">
+                                    @Model.PresentEntry(entry).Text
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (Model.Preview.InverseLotAllocations.Count > 0)
+                {
+                    <h3>@Text["FundReverse_RestoredLotsTitle"]</h3>
+                    <p class="help">@Text["FundReverse_RestoredLotsHelp"]</p>
+
+                    <ul class="plain-list">
+                        @foreach (var allocation in Model.Preview.InverseLotAllocations)
+                        {
+                            <li><code>@allocation.AssetLotId.ToString("D")</code></li>
+                        }
+                    </ul>
+                }
+            }
+        </section>
+
+        @if (Model.Preview.CanReverse)
+        {
+            <form method="post" asp-page-handler="Reverse"
+                  asp-route-transactionId="@Model.TransactionId.ToString("D")"
+                  class="flow" novalidate>
+                <input type="hidden" asp-for="Input.IdempotencyKey" />
+
+                <fieldset class="field-group flow">
+                    <legend>@Text["FundReverse_ReasonLegend"]</legend>
+
+                    <div class="field">
+                        <label asp-for="Input.Reason">@Text["FundReverse_ReasonLabel"]</label>
+                        <textarea asp-for="Input.Reason" maxlength="2000" rows="3"
+                                  aria-describedby="Input_Reason-help Input_Reason-error"></textarea>
+                        <p id="Input_Reason-help" class="field-help">@Text["FundReverse_ReasonHelp"]</p>
+                        <span id="Input_Reason-error" class="field-error"
+                              asp-validation-for="Input.Reason"></span>
+                    </div>
+                </fieldset>
+
+                <button class="button button--danger" type="submit" data-final-submit>
+                    @Text["FundReverse_PostAction"]
+                </button>
+                <p class="help">@Text["FundReverse_PostActionHelp"]</p>
+            </form>
+        }
+
+        <section class="panel flow" aria-labelledby="fund-reverse-next-heading">
+            <h2 id="fund-reverse-next-heading">@Text["FundReverse_NextTitle"]</h2>
+
+            <ul class="plain-list">
+                <li>
+                    <a class="card-link" asp-page="/Record/FundTradeReceipt"
+                       asp-route-transactionId="@Model.TransactionId.ToString("D")">
+                        @Text["FundReverse_BackToReceipt"]
+                    </a>
+                </li>
+                <li>
+                    <a class="card-link"
+                       asp-page="@(Model.IsPurchase
+                           ? "/Record/FundPurchase"
+                           : "/Record/FundSale")">
+                        @(Model.IsPurchase
+                            ? Text["FundReverse_StartCorrectedPurchase"]
+                            : Text["FundReverse_StartCorrectedSale"])
+                    </a>
+                </li>
+            </ul>
+
+            <p class="help">@Text["FundReverse_ReplacementHelp"]</p>
+        </section>
+    }
+</article>

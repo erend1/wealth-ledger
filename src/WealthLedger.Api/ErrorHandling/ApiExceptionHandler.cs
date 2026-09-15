@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Diagnostics;
+﻿using Microsoft.AspNetCore.Diagnostics;
 using WealthLedger.Application.Common;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
+using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Common;
@@ -37,6 +38,15 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
             })
         {
             extensions["relatedTransactionId"] = relatedTransactionId;
+        }
+
+        if (extensions is not null
+            && exception is FundTradeException
+            {
+                RelatedTransactionId: Guid relatedFundTradeId
+            })
+        {
+            extensions["relatedTransactionId"] = relatedFundTradeId;
         }
 
         await Results.Problem(
@@ -111,6 +121,32 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
                     },
                     openingBalanceException.Message,
                     openingBalanceException.ErrorCode),
+            FundTradeException fundTradeException =>
+                new ApiFailure(
+                    fundTradeException.Category switch
+                    {
+                        FundTradeErrorCategory.NotFound =>
+                            StatusCodes.Status404NotFound,
+                        FundTradeErrorCategory.Conflict =>
+                            StatusCodes.Status409Conflict,
+                        FundTradeErrorCategory.Validation =>
+                            StatusCodes.Status422UnprocessableEntity,
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(fundTradeException.Category))
+                    },
+                    fundTradeException.Category switch
+                    {
+                        FundTradeErrorCategory.NotFound =>
+                            "Fund trade not found",
+                        FundTradeErrorCategory.Conflict =>
+                            "Fund trade conflict",
+                        FundTradeErrorCategory.Validation =>
+                            "Fund trade validation failed",
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(fundTradeException.Category))
+                    },
+                    fundTradeException.Message,
+                    fundTradeException.ErrorCode),
             NavigationPersistenceException => new ApiFailure(
                 StatusCodes.Status409Conflict,
                 "Navigation data unavailable",

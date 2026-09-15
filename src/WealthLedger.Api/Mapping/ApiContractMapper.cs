@@ -1,4 +1,4 @@
-using WealthLedger.Api.Contracts;
+﻿using WealthLedger.Api.Contracts;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
@@ -28,6 +28,14 @@ internal static class ApiContractMapper
             request.Note);
     }
 
+    /// <summary>
+    /// Maps the fund-purchase request onto its command.
+    /// </summary>
+    /// <remarks>
+    /// The trailing arguments are the facts added after version 1. Each
+    /// defaults to its legacy value, so a version-1 body still produces
+    /// exactly the command it always produced.
+    /// </remarks>
     internal static RecordFundPurchaseCommand ToCommand(
         this RecordFundPurchaseRequest request)
     {
@@ -48,7 +56,11 @@ internal static class ApiContractMapper
                 new CurrencyCode(request.CashConsiderationCurrencyCode)),
             EnsureExecutionDate(request.ExecutionDate),
             request.ExternalReference,
-            request.Note);
+            request.Note,
+            request.CashAccountId,
+            request.OrderDate,
+            request.SettlementDate,
+            FundTradeContractMapper.ToCosts(request.Costs));
     }
 
     internal static LedgerTransactionResponse ToResponse(

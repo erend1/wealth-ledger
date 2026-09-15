@@ -8,6 +8,11 @@ namespace WealthLedger.Application.Tests.CoreLedger
 {
     public sealed class FundPurchaseFingerprintTests
     {
+        /*
+         * Pins the current version, which is now 2. The separate version-1
+         * test below pins the older payload, so both the newest form and the
+         * replay form are protected against accidental change.
+         */
         [Fact]
         public void ComputeCurrent_KnownCommand_MatchesGoldenFingerprint()
         {
@@ -21,6 +26,47 @@ namespace WealthLedger.Application.Tests.CoreLedger
             var fingerprint =
                 RecordFundPurchaseCommandFingerprint
                     .ComputeCurrent(command);
+
+            Assert.Equal(
+                "SHA256",
+                fingerprint.AlgorithmCode);
+
+            Assert.Equal(
+                2,
+                fingerprint.Version);
+
+            Assert.Equal(
+                "1ff158beb0e7b9dbf368b8db8114a29146b4a01e3e6abbb55c0df5609d2bc347",
+                fingerprint.Value);
+        }
+
+        /*
+         * Pins version 1 through the explicit version path rather than
+         * through ComputeCurrent.
+         *
+         * ComputeCurrent follows the newest version. This test must keep
+         * passing unchanged after the fund-purchase fingerprint advances to
+         * version 2, because an existing version-1 receipt is replayed by
+         * recomputing version 1 from the same command. If version 1 ever
+         * hashed the moving CurrentVersion constant, every legitimate legacy
+         * retry would turn into an idempotency conflict instead.
+         */
+        [Fact]
+        public void ComputeV1_KnownCommand_IsIndependentOfCurrentVersion()
+        {
+            var command =
+                CreateCommand(
+                    externalReference:
+                        " fund-purchase-aug ",
+                    note:
+                        " August fund purchase ");
+
+            var fingerprint =
+                RecordFundPurchaseCommandFingerprint
+                    .Compute(
+                        command,
+                        "SHA256",
+                        version: 1);
 
             Assert.Equal(
                 "SHA256",

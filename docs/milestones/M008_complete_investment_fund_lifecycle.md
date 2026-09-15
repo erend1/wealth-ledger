@@ -1,14 +1,126 @@
 # M008: Complete Investment-Fund Lifecycle
 
-Status: Proposed
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-09-12
+Last reviewed: 2026-09-15
 
-This proposal is ready for human review. It does not authorize implementation.
-Every Recommended decision below must be accepted or amended explicitly before
-the milestone may move to Accepted or In Progress.
+Accepted on 2026-09-12 and verified on 2026-09-15. The human owner accepted
+all eighteen Recommended decisions and ADR-009, with the four technical
+amendments and three explicit resolutions recorded under "Acceptance record".
+
+## Verification record
+
+Verified on 2026-09-15 on branch `m008/complete-investment-fund-lifecycle`.
+
+Complete solution suite: 837 passing, up from the 676 baseline. Domain 160,
+Application 212, Infrastructure against real SQLite 224, UI presentation 71,
+API/UI host 144, Operations 23, Playwright Chromium 3.
+
+- `dotnet test WealthLedger.slnx --no-restore` passes in full.
+- `dotnet ef migrations has-pending-model-changes` reports no pending changes.
+- The 001-007 chain applies to a disposable database, 007 reverts to 006 and
+  re-applies, and the restored schema keeps all thirty triggers with
+  `PRAGMA integrity_check` returning ok.
+- Direct-SQL negative tests prove an invalid Fund Buy or Sell cannot reach
+  Posted: a cross-household cash leg, entries in different portfolios, a fund
+  leg in a cash account, a cash leg in a physical-vault account, a lot-tracked
+  cash asset, a mismatched executed-price currency, a mismatched cost-component
+  currency, an inactive asset, an inactive institution on the fund account, an
+  execution date before the account opened, and inverted signs. Separate
+  accounts at different institutions post normally, which the guard must allow.
+- A real concurrency test races two sales of forty units against a holding of
+  fifty, on independent connections and contexts with different idempotency
+  keys, released from one barrier. Exactly one commits, the loser leaves no
+  transaction, allocation or receipt, the derived balance stays non-negative,
+  and no `SqliteException` or `DbUpdateException` reaches the caller.
+- Query plans were captured before adding any index. Both proposed database
+  objects proved redundant and were dropped rather than shipped; see
+  Decision 18 as amended.
+- A disposable recovery drill migrated, seeded a synthetic purchase and two
+  partial sales, created and verified a backup, staged a restore to a separate
+  path, and read the restored copy back from a fresh process with the
+  cumulative cost basis intact. The workspace was deleted.
+- The real-browser journey runs the whole monthly path with JavaScript
+  disabled at a 390-pixel viewport: contribution, two purchases, a sale across
+  two undated opening lots and two purchase lots, then a correction from the
+  receipt through reversal to a separately reviewed replacement.
+- Logs were inspected for notes, references, fingerprints, SQL and resolved
+  paths; none appear.
+
+Four defects surfaced during implementation and verification, and were fixed:
+
+1. Every `ComputeV1` hashed the moving `CurrentVersion` constant. Raising it
+   for Decision 16 would have changed the version-1 hash and turned every
+   legitimate legacy retry into an idempotency conflict. Fixed in all four
+   fingerprints before any version-2 work, pinned by a regression test.
+2. The fund-sale use case never called `Post` before handing its transaction
+   to the store, so every sale would have been rejected as an unvalidated
+   graph. Found by the real-SQLite tests and fixed.
+3. Sale preview computed realized cost as an independent proportional share
+   against the lot's remaining quantity. That agrees with ADR-009 only for the
+   first sale from a lot; afterwards review and receipt disagreed, in one case
+   showing 50 where the receipt would record 34. Preview now loads the lot's
+   effective disposal sequence and applies the same cumulative calculator the
+   receipt uses, so the two cannot diverge.
+4. The verification read model accepted any Buy or Sell. An equity trade would
+   have been explained as a fund trade, complete with FIFO and realized-cost
+   sections that do not apply to it. It now fails closed with the same
+   not-found answer any unreadable transaction receives.
+
+Three gaps were closed in the migration-007 guard after auditing it against
+the accepted reference rules: an active institution is now required for
+investment and pension accounts, the execution date may not precede an
+account's opening date, a closed account may not receive a trade, and cost
+components must use the trade currency.
+
+One pre-existing baseline finding remains and is not an M008 regression:
+`dotnet format --verify-no-changes` reports three WHITESPACE findings in
+`src/WealthLedger.Domain/Ledger/LedgerTransaction.cs` at lines 469, 471 and
+472. They are present on `main` at commit `f769453`, in M003 code this
+milestone does not touch.
+
+## Acceptance record
+
+Accepted: Decisions 1-18 as written, except where amended below, and
+`docs/decisions/ADR-009-deterministic-realized-lot-cost.md`.
+
+Resolutions requested during acceptance review:
+
+1. **Decision 14 over Decision 16 for provenance.** The minimum-provenance rule
+   applies to every new first submission, including legacy-shaped v1 purchase
+   requests that omit both ExternalReference and Note. Transport and receipt
+   shape stay compatible; the validation is new and deliberately rejects a
+   previously accepted under-specified body. Provenance is not relaxed to
+   "only when v2 fields are present", because that would create exactly the
+   bypass Decision 16 warns against.
+2. **Decision 13 binds at post time.** The negative-projected-cash note
+   requirement is evaluated inside the posting transaction, not only during
+   preview, so neither a direct API caller nor a concurrent write can bypass
+   it. Preview continues to show the projected effect for review.
+3. **ADR-009 rounding consequence accepted.** Exact conservation of the
+   original Known cost `C` on full disposal is preferred over per-sale
+   stability, so reversing one sale may move up to one minor unit of derived
+   cost between other still-effective sales. Every result must therefore state
+   its method and effective as-of context.
+
+Amendments made during acceptance review:
+
+1. **Decision 7 price-comparison formula** is restated in a divide-only form
+   that is provably overflow-safe. See Decision 7.
+2. **Decision 18 enforcement layers** are stated separately for SQLite and
+   Application, because a trigger cannot evaluate a reviewed plan. See
+   Decision 18.
+3. **ADR-009 arithmetic width** records `Int128` as an accepted overflow-safe
+   implementation of the required arbitrary-width intermediate.
+4. **Pre-existing fingerprint defect must be fixed first.** Every
+   `Compute*CommandFingerprint.ComputeV1` currently hashes the
+   `CurrentVersion` constant instead of its own literal version number.
+   Raising the fund-purchase `CurrentVersion` to 2 for Decision 16 would
+   therefore silently change the v1 hash and turn every legitimate legacy
+   retry into an idempotency conflict. Each `ComputeVn` must hash its own
+   literal version, pinned by a regression test, before any version-2 work.
 
 ## Objective
 
@@ -307,11 +419,18 @@ binary floating point.
 For non-negative raw E8 quantity `Q`, raw E8 price `P`, and currency precision
 `d`, compare money using:
 
-    exact minor units = Q * P * 10^d / 10^16
+    exact minor units = Q * P / 10^(16 - d)
 
-Use a sufficiently wide integer intermediate and round to integer minor units
-with midpoint-to-even. The review shows the unambiguous rounded amount and the
-signed residual.
+**Amended on acceptance.** The equivalent form `Q * P * 10^d / 10^16` is
+algebraically identical but must not be implemented literally: `Q * P` alone
+reaches about 8.5e37 for extreme `Int64` inputs, and multiplying that by `10^d`
+overflows even `Int128`. Currency minor-unit digits are already constrained to
+0-8, so `16 - d` is always 8-16 and the divide-only form is provably safe in
+`Int128` for every `Int64` input pair.
+
+Round to integer minor units with midpoint-to-even, implemented on the integer
+quotient and remainder rather than any floating-point or decimal shortcut. The
+review shows the unambiguous rounded amount and the signed residual.
 
 Expected consideration is:
 
@@ -449,6 +568,12 @@ receipt show the projected cash effect and a prominent data-quality warning.
 When the currently derived cash position would become negative, require a
 non-empty Note explaining the known gap or funding context.
 
+**Amended on acceptance.** The note requirement is evaluated authoritatively at
+post time, inside the same write transaction that derives the resulting cash
+position, so a direct API caller cannot skip it and a concurrent write cannot
+race past it. Preview derives and displays the same projection for review but
+is not the enforcement point.
+
 No balance, available-cash field, or overdraft flag is stored as authority.
 
 ### Decision 14: require minimum trade provenance
@@ -498,6 +623,18 @@ version-1 receipts remain replayable only when every new field has its legacy
 default. A request with non-default new facts against a version-1 receipt is an
 idempotency conflict; version-1 computation must never ignore meaningful new
 fields.
+
+**Amended on acceptance.** Two points were resolved explicitly:
+
+1. Version-1 fingerprint computation must be pinned before version 2 exists.
+   `ComputeV1` currently hashes the `CurrentVersion` constant, so raising that
+   constant to 2 would change the version-1 hash itself and convert every
+   legitimate legacy retry into an idempotency conflict. Each `ComputeVn` hashes
+   its own literal version number, protected by a regression test over a known
+   payload.
+2. Transport compatibility does not extend to Decision 14. A legacy-shaped
+   request carrying neither ExternalReference nor Note is rejected as a new
+   first submission. Its receipt, if one already exists, still replays.
 
 Sale uses its own version-1 canonical fingerprint and receipt scoped by
 Household plus `RECORD_FUND_SALE`. Sale receipts use TransactionId as the
@@ -554,6 +691,22 @@ Draft-to-Posted boundary:
   Fee/Tax entry sums;
 - scope-correct sale availability and non-negative lot balance; and
 - stale/concurrent sale-plan rejection without partial persistence.
+
+**Amended on acceptance.** The last item spans two layers and must not be read
+as one trigger. A SQLite trigger has no knowledge of what a user reviewed, so:
+
+- **SQLite enforces** entry shape and signs, household/portfolio/account/asset
+  compatibility, allocation reconciliation, the purchase-lot cost equation, the
+  allowed cost vocabulary and exact Fee/Tax sums, non-negative global lot
+  balance, and non-negative scope-derived availability. These hold against
+  direct SQL and against any racing writer.
+- **Application plus the single write transaction enforce** reviewed-plan
+  freshness, by recomputing eligibility and the FIFO plan inside the commit
+  transaction and comparing it with the carried plan before writing anything.
+
+Both layers are required. The database is the last-resort arbiter of quantity
+truth; the plan fingerprint is what keeps a reviewed plan from being silently
+substituted.
 
 The migration adds no realized-cost, remaining-quantity, current-position,
 profit/loss, valuation, tax, or market-data table. Down removes only M008

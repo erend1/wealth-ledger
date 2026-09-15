@@ -1,7 +1,9 @@
-using WealthLedger.Api.Endpoints;
+﻿using WealthLedger.Api.Endpoints;
 using WealthLedger.Api.ErrorHandling;
 using WealthLedger.Api.Startup;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.FundTrades;
+using WealthLedger.Domain.Lots;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.OpeningBalances;
@@ -54,6 +56,14 @@ builder.Services.AddScoped<CreateOpeningBalanceAssetUseCase>();
 builder.Services.AddScoped<PreviewOpeningBalanceUseCase>();
 builder.Services.AddScoped<RecordOpeningBalanceUseCase>();
 builder.Services.AddScoped<GetOpeningBalanceVerificationUseCase>();
+
+// M008 fund trade lifecycle.
+builder.Services.AddSingleton<LotAllocationService>();
+builder.Services.AddScoped<ListFundTradeChoicesUseCase>();
+builder.Services.AddScoped<PreviewFundPurchaseUseCase>();
+builder.Services.AddScoped<PreviewFundSaleUseCase>();
+builder.Services.AddScoped<RecordFundSaleUseCase>();
+builder.Services.AddScoped<GetFundTradeVerificationUseCase>();
 
 var app = builder.Build();
 
@@ -129,6 +139,7 @@ switch (startupSelection.Mode)
         app.MapNavigationEndpoints();
         app.MapPositionEndpoints();
         app.MapOpeningBalanceEndpoints();
+        app.MapFundTradeEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:

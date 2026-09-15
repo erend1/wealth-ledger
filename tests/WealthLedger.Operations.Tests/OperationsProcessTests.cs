@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.LocalData;
@@ -101,7 +101,7 @@ public sealed class OperationsProcessTests : IDisposable
             "StartingMigration: 20260827072019_002_CommandReceipt",
             migrated.StandardOutput);
         Assert.Contains(
-            "EndingMigration: 20260910101810_006_OpeningBalanceCutoverGuards",
+            "EndingMigration: 20260913054039_007_FundTradeLifecycleGuards",
             migrated.StandardOutput);
         var preMigrationBackup = ReadOutputPath(
             migrated,

@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -10,6 +10,9 @@ internal static class RecordOpeningBalanceCommandFingerprint
 {
     internal const string CurrentAlgorithmCode = "SHA256";
     internal const int CurrentVersion = 1;
+
+    // Version 1 hashes this literal, never CurrentVersion.
+    private const int Version1 = 1;
 
     internal static CommandFingerprint ComputeCurrent(
         RecordOpeningBalanceCommand command)
@@ -24,7 +27,7 @@ internal static class RecordOpeningBalanceCommandFingerprint
         int version)
         => (algorithmCode, version) switch
         {
-            (CurrentAlgorithmCode, CurrentVersion) => ComputeV1(command),
+            (CurrentAlgorithmCode, Version1) => ComputeV1(command),
             _ => throw new NotSupportedException(
                 $"Opening-balance fingerprint '{algorithmCode}' version '{version}' is not supported.")
         };
@@ -47,7 +50,7 @@ internal static class RecordOpeningBalanceCommandFingerprint
                    }))
         {
             writer.WriteStartObject();
-            writer.WriteNumber("version", CurrentVersion);
+            writer.WriteNumber("version", Version1);
             writer.WriteString(
                 "operation",
                 LedgerOperationCodes.RecordOpeningBalance);
@@ -106,7 +109,7 @@ internal static class RecordOpeningBalanceCommandFingerprint
 
         return new CommandFingerprint(
             CurrentAlgorithmCode,
-            CurrentVersion,
+            Version1,
             Convert.ToHexString(
                     SHA256.HashData(buffer.WrittenSpan))
                 .ToLowerInvariant());

@@ -1,5 +1,7 @@
-using WealthLedger.Application.Common;
+﻿using WealthLedger.Application.Common;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.FundTrades;
+using WealthLedger.Application.Tests.FundTrades;
 using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
@@ -87,11 +89,13 @@ namespace WealthLedger.Application.Tests.CoreLedger
         [Fact]
         public async Task FundPurchase_BuildsPostedTransactionAndAcquisitionLot()
         {
-            var references = CreateReferenceData();
+            var references = CreateFundTradeReferences();
             var store = new StubLedgerSubmissionStore();
+            var posting = new FundTradePostingStoreFake();
             var useCase = new RecordFundPurchaseUseCase(
                 references,
                 store,
+                posting,
                 new FixedTimeProvider(RecordedAtUtc));
             var quantity = Quantity.FromDecimal(6_412.34918m);
             var unitPrice = UnitPrice.FromDecimal(
@@ -112,11 +116,13 @@ namespace WealthLedger.Application.Tests.CoreLedger
                     quantity,
                     unitPrice,
                     consideration,
-                    ExecutionDate));
+                    ExecutionDate,
+                    ExternalReference: "PURCHASE-TEST",
+                    Note: "Synthetic fund purchase"));
 
             var transaction = Assert.IsType<LedgerTransaction>(
-                store.Transaction);
-            var lot = Assert.Single(store.NewLots);
+                posting.Transaction);
+            var lot = Assert.IsType<AssetLot>(posting.NewLot);
             var principal = transaction.Entries.Single(
                 x => x.Role == EntryRole.Principal);
             var cash = transaction.Entries.Single(
@@ -125,11 +131,11 @@ namespace WealthLedger.Application.Tests.CoreLedger
 
             Assert.Equal(
                 1,
-                store.TryCommitCalls);
+                posting.CommitCalls);
 
             var receipt =
                 Assert.IsType<LedgerSubmissionReceipt>(
-                    store.AttemptedReceipt);
+                    posting.AttemptedReceipt);
 
             Assert.Equal(
                 result.TransactionId,
@@ -494,7 +500,10 @@ namespace WealthLedger.Application.Tests.CoreLedger
         public async Task FundPurchase_EquivalentReplay_ReturnsRecordedTransactionAndLot()
         {
             var references =
-                CreateReferenceData();
+                CreateFundTradeReferences();
+
+            var posting =
+                new FundTradePostingStoreFake();
 
             var command =
                 CreateFundPurchaseCommand();
@@ -533,6 +542,7 @@ namespace WealthLedger.Application.Tests.CoreLedger
                 new RecordFundPurchaseUseCase(
                     references,
                     store,
+                    posting,
                     new FixedTimeProvider(
                         RecordedAtUtc));
 
@@ -555,26 +565,23 @@ namespace WealthLedger.Application.Tests.CoreLedger
 
             Assert.Equal(
                 0,
-                store.TryCommitCalls);
+                posting.CommitCalls);
 
+            // Receipt lookup precedes every current-state read, so an
+            // equivalent retry never touches references at all.
             Assert.Equal(
                 0,
-                references.FindLocationCalls);
-
-            Assert.Equal(
-                0,
-                references.FindAssetCalls);
-
-            Assert.Equal(
-                0,
-                references.FindCurrencyCalls);
+                references.ReadCalls);
         }
 
         [Fact]
         public async Task FundPurchase_ReusedKeyWithDifferentCommand_ThrowsConflict()
         {
             var references =
-                CreateReferenceData();
+                CreateFundTradeReferences();
+
+            var posting =
+                new FundTradePostingStoreFake();
 
             var original =
                 CreateFundPurchaseCommand();
@@ -613,6 +620,7 @@ namespace WealthLedger.Application.Tests.CoreLedger
                 new RecordFundPurchaseUseCase(
                     references,
                     store,
+                    posting,
                     new FixedTimeProvider(
                         RecordedAtUtc));
 
@@ -624,18 +632,14 @@ namespace WealthLedger.Application.Tests.CoreLedger
 
             Assert.Equal(
                 0,
-                store.TryCommitCalls);
-
-            Assert.Equal(
-                0,
-                references.FindLocationCalls);
+                posting.CommitCalls);
         }
 
         [Fact]
         public async Task FundPurchase_EquivalentConcurrentWinner_ReturnsWinnerTransactionAndLot()
         {
             var references =
-                CreateReferenceData();
+                CreateFundTradeReferences();
 
             var command =
                 CreateFundPurchaseCommand();
@@ -661,19 +665,21 @@ namespace WealthLedger.Application.Tests.CoreLedger
                     winnerLotId,
                     RecordedAtUtc);
 
-            var store =
-                new StubLedgerSubmissionStore
+            var store = new StubLedgerSubmissionStore();
+
+            var posting =
+                new FundTradePostingStoreFake
                 {
-                    CommitResult =
-                        new LedgerSubmissionCommitResult(
-                            WasCommitted: false,
-                            Receipt: winnerReceipt)
+                    NextStatus =
+                        FundSaleCommitStatus.AlreadyRecorded,
+                    WinningReceipt = winnerReceipt
                 };
 
             var useCase =
                 new RecordFundPurchaseUseCase(
                     references,
                     store,
+                    posting,
                     new FixedTimeProvider(
                         RecordedAtUtc));
 
@@ -692,7 +698,7 @@ namespace WealthLedger.Application.Tests.CoreLedger
 
             Assert.Equal(
                 1,
-                store.TryCommitCalls);
+                posting.CommitCalls);
         }
 
         private static RecordFundPurchaseCommand CreateFundPurchaseCommand()
@@ -723,6 +729,22 @@ namespace WealthLedger.Application.Tests.CoreLedger
                 Note:
                     "Synthetic fund purchase");
         }
+
+        /// <summary>
+        /// Builds the richer reference set a fund trade validates against.
+        /// </summary>
+        /// <remarks>
+        /// Contribution still uses the narrower legacy reference port, so both
+        /// factories coexist rather than one replacing the other.
+        /// </remarks>
+        private static FundTradeReferenceStoreFake CreateFundTradeReferences()
+            => FundTradeReferenceStoreFake.CreateFor(
+                HouseholdId,
+                PortfolioId,
+                fundAccountId: AccountId,
+                cashAccountId: AccountId,
+                FundAssetId,
+                CashAssetId);
 
         private static StubLedgerReferenceData CreateReferenceData()
         {

@@ -1,0 +1,299 @@
+@page "/record/fund-sale"
+@model WealthLedger.UI.Pages.Record.FundSaleModel
+@inject UiText Text
+@using WealthLedger.Application.FundTrades
+@using WealthLedger.Domain.Lots
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["FundSale_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="fund-sale-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Fund_Eyebrow"]</p>
+        <h1 id="fund-sale-heading">@Text["FundSale_Title"]</h1>
+        <p class="lede">@Text["FundSale_Introduction"]</p>
+    </header>
+
+    <partial name="_ValidationSummary" />
+
+    @if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Ready_Household_StateTitle"]</h2>
+            <p>@Text[Model.HouseholdStateResourceKey]</p>
+        </section>
+    }
+    else if (Model.LoadUnavailable || Model.Choices is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert">
+            <h2>@Text["Fund_LoadErrorTitle"]</h2>
+            <p>@Text["Fund_LoadErrorExplanation"]</p>
+        </section>
+    }
+    else
+    {
+        @if (Model.RequiresFreshReview)
+        {
+            <section class="summary-card summary-card--warning flow" role="alert">
+                <h2>@Text["FundSale_StaleTitle"]</h2>
+                <p>@Text["FundSale_StaleExplanation"]</p>
+            </section>
+        }
+
+        @if (Model.ChoicesAreTruncated)
+        {
+            <section class="summary-card summary-card--warning flow" role="status">
+                <h2>@Text["Fund_ChoicesTruncatedTitle"]</h2>
+                <p>@Text["Fund_ChoicesTruncatedExplanation"]</p>
+            </section>
+        }
+
+        <form method="post" class="flow" novalidate>
+            <input type="hidden" asp-for="Input.IdempotencyKey" />
+
+            @*
+                The reviewed plan travels with the post so the server can tell
+                whether the user is still approving the same lots.
+            *@
+            <input type="hidden" asp-for="Input.ReviewedPlanFingerprint" />
+            @for (var index = 0; index < Model.Input.ReviewedPlan.Count; index++)
+            {
+                <input type="hidden" asp-for="Input.ReviewedPlan[index].AssetLotId" />
+                <input type="hidden" asp-for="Input.ReviewedPlan[index].QuantityRawE8" />
+            }
+
+            <partial name="_FundTradeFields" model="Model" />
+
+            @if (Model.IsReview && Model.Preview is not null)
+            {
+                var preview = Model.Preview;
+                var economics = preview.Economics;
+                var currency = preview.CurrencyCode;
+                var realized = preview.RealizedCost;
+
+                <section class="panel review-panel flow" aria-labelledby="fund-sale-review-heading">
+                    <p class="status-mark">@Text["Fund_ReviewStatus"]</p>
+                    <h2 id="fund-sale-review-heading">@Text["Fund_ReviewTitle"]</h2>
+                    <p>@Text["FundSale_ReviewExplanation"]</p>
+
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Fund_Review_FundAccount"]</dt>
+                            <dd>@preview.FundAccountName</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_CashAccount"]</dt>
+                            <dd>@preview.CashAccountName</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_Fund"]</dt>
+                            <dd>@preview.FundAssetName (@preview.FundAssetCode)</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_ExecutionDate"]</dt>
+                            <dd>@Model.PresentDate(preview.ExecutionDate).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["FundSale_Review_Available"]</dt>
+                            <dd>@Model.PresentFundQuantity(preview.AvailableQuantityRawE8).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["FundSale_Review_FundDecrease"]</dt>
+                            <dd aria-label="@Model.PresentFundQuantity(preview.FundQuantityRawE8).AssistiveText">
+                                @Model.PresentFundQuantity(preview.FundQuantityRawE8).Text
+                                <span class="state-text">@Text["Fund_Review_DecreaseWord"]</span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_ExecutedPrice"]</dt>
+                            <dd>@Model.PresentUnitPrice(preview.ExecutedUnitPriceRawE8, currency).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["FundSale_Review_Proceeds"]</dt>
+                            <dd>@Model.PresentMoney(economics.CashConsideration.MinorUnits, currency).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_WithheldFromProceeds"]</dt>
+                            <dd>@Model.PresentMoney(economics.WithheldFromProceedsTotal.MinorUnits, currency).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_AdditionalOutflow"]</dt>
+                            <dd>@Model.PresentMoney(economics.AdditionalCashOutflowTotal.MinorUnits, currency).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_NetCashEffect"]</dt>
+                            <dd>
+                                @Model.PresentMoney(economics.NetCashEffect.MinorUnits, currency).Text
+                                <span class="state-text">@Text["Fund_Review_IncreaseWord"]</span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_PriceImplied"]</dt>
+                            <dd>@Model.PresentMoney(economics.PriceImpliedGross.MinorUnits, currency).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_ExpectedConsideration"]</dt>
+                            <dd>@Model.PresentMoney(economics.ExpectedConsideration.MinorUnits, currency).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Fund_Review_Discrepancy"]</dt>
+                            <dd>@Model.PresentMoney(economics.DiscrepancyMinorUnits, currency).Text</dd>
+                        </div>
+                    </dl>
+
+                    @* The exact lots this sale would consume, oldest first. *@
+                    <h3>@Text["FundSale_PlanTitle"]</h3>
+                    <p class="help">@Text["FundSale_PlanExplanation"]</p>
+
+                    <table class="data-table">
+                        <caption class="visually-hidden">@Text["FundSale_PlanTitle"]</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">@Text["FundSale_Plan_Order"]</th>
+                                <th scope="col">@Text["FundSale_Plan_AcquiredOn"]</th>
+                                <th scope="col">@Text["FundSale_Plan_Available"]</th>
+                                <th scope="col">@Text["FundSale_Plan_Consumed"]</th>
+                                <th scope="col">@Text["FundSale_Plan_CostStatus"]</th>
+                                <th scope="col">@Text["FundSale_Plan_LotCost"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var index = 0; index < preview.Plan.Count; index++)
+                            {
+                                var line = preview.Plan[index];
+
+                                <tr>
+                                    <td>@(index + 1)</td>
+                                    <td>
+                                        @if (line.AcquiredOn is DateOnly acquiredOn)
+                                        {
+                                            @Model.PresentDate(acquiredOn).Text
+                                        }
+                                        else
+                                        {
+                                            <span class="state-text state-text--unavailable">
+                                                @Text["State_Unknown"]
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>@Model.PresentFundQuantity(line.AvailableQuantityRawE8).Text</td>
+                                    <td>@Model.PresentFundQuantity(line.ConsumedQuantityRawE8).Text</td>
+                                    <td><code>@Model.CostStatusCode(line.CostStatus)</code></td>
+                                    <td>
+                                        @if (line.LotCostMinorUnits is long cost
+                                             && line.LotCostCurrencyCode is string costCurrency)
+                                        {
+                                            @Model.PresentMoney(cost, costCurrency).Text
+                                        }
+                                        else
+                                        {
+                                            <span class="state-text state-text--unavailable">
+                                                @Text["State_Unknown"]
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    @* Realized cost, stated with its completeness and method. *@
+                    <h3>@Text["FundSale_RealizedCostTitle"]</h3>
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["FundSale_Realized_Completeness"]</dt>
+                            <dd><code>@Model.CompletenessCode(realized.Completeness)</code></dd>
+                        </div>
+                        <div>
+                            <dt>@Text["FundSale_Realized_KnownQuantity"]</dt>
+                            <dd>@Model.PresentFundQuantity(realized.KnownQuantityRawE8).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["FundSale_Realized_UnknownQuantity"]</dt>
+                            <dd>@Model.PresentFundQuantity(realized.UnknownQuantityRawE8).Text</dd>
+                        </div>
+                        <div>
+                            <dt>@Text["FundSale_Realized_Method"]</dt>
+                            <dd><code>@realized.MethodCode</code></dd>
+                        </div>
+                    </dl>
+
+                    @if (realized.Completeness == RealizedCostCompleteness.Unknown)
+                    {
+                        <p class="state-text state-text--unavailable">
+                            @Text["FundSale_Realized_NoKnownCost"]
+                        </p>
+                    }
+                    else
+                    {
+                        @if (realized.Completeness == RealizedCostCompleteness.PartiallyKnown)
+                        {
+                            <p class="state-text">@Text["FundSale_Realized_PartialWarning"]</p>
+                        }
+
+                        <ul class="plain-list">
+                            @foreach (var amount in realized.KnownAmounts)
+                            {
+                                <li>@Model.PresentMoney(amount.MinorUnits, amount.CurrencyCode).Text</li>
+                            }
+                        </ul>
+                    }
+
+                    @if (preview.Costs.Count > 0)
+                    {
+                        <h3>@Text["Fund_Review_CostsTitle"]</h3>
+                        <table class="data-table">
+                            <caption class="visually-hidden">@Text["Fund_Review_CostsTitle"]</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">@Text["Fund_CostTypeLabel"]</th>
+                                    <th scope="col">@Text["Fund_CostTreatmentLabel"]</th>
+                                    <th scope="col">@Text["Fund_CostAmountLabel"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cost in preview.Costs)
+                                {
+                                    <tr>
+                                        <td><code>@FundTradeCodes.ToCostTypeCode(cost.Type)</code></td>
+                                        <td><code>@FundTradeCodes.ToTreatmentCode(cost.Treatment)</code></td>
+                                        <td>@Model.PresentMoney(cost.Amount.MinorUnits, currency).Text</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                    @if (preview.WarningCodes.Count > 0)
+                    {
+                        <section class="summary-card summary-card--warning flow" role="status">
+                            <h3>@Text["Fund_WarningsTitle"]</h3>
+                            <ul class="plain-list">
+                                @foreach (var warning in preview.WarningCodes)
+                                {
+                                    <li>@Text[$"Fund_Warning_{warning}"]</li>
+                                }
+                            </ul>
+                        </section>
+                    }
+
+                    <p class="help">@Text["Fund_NoAdviceDisclaimer"]</p>
+
+                    <button class="button" type="submit" asp-page-handler="Post"
+                            data-final-submit>
+                        @Text["FundSale_PostAction"]
+                    </button>
+                    <p class="help">@Text["Fund_PostActionHelp"]</p>
+                </section>
+            }
+            else
+            {
+                <button class="button" type="submit" asp-page-handler="Review">
+                    @Text["Fund_ReviewAction"]
+                </button>
+            }
+        </form>
+    }
+</article>

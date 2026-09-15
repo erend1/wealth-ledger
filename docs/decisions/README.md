@@ -13,6 +13,6 @@ cross-cutting proposals that still require human acceptance.
 | ADR-006 | Accepted | Command idempotency is separate from external financial references |
 | ADR-007 | Accepted | Local data operations are explicit, exclusive, verified, and fail closed |
 | ADR-008 | Accepted | The local UI is server-rendered Razor Pages in the existing loopback host |
-| ADR-009 | Proposed | Realized lot cost uses deterministic cumulative apportionment and explicit completeness |
+| ADR-009 | Accepted | Realized lot cost uses deterministic cumulative apportionment and explicit completeness |
 
 If a future decision changes one of these, add a new ADR and mark the earlier one Superseded by the new ADR. Do not rewrite accepted history.

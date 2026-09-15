@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using WealthLedger.Application.LocalData;
@@ -29,7 +29,7 @@ public sealed class SqliteLocalBackupTests
         Assert.True(result.Succeeded);
         Assert.EndsWith(".wlbackup", result.Value!.FilePath);
         Assert.Equal(LocalBackupTestHarness.OperationTime, result.Value.CreatedAtUtc);
-        Assert.Equal(6, result.Value.AppliedMigrations.Count);
+        Assert.Equal(7, result.Value.AppliedMigrations.Count);
         Assert.Equal("PLAINTEXT", result.Value.EncryptionMode);
         Assert.Equal(12, result.Value.DigestPrefix.Length);
 

@@ -46,7 +46,7 @@ Statuses used here:
 | M005 | Verified | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Ten decision gates accepted and implementation verified 2026-09-02 |
 | M006 | Verified | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; verified 2026-09-08 |
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
-| M008 | Proposed | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen Recommended decisions and Proposed ADR-009 await explicit human acceptance |
+| M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
 | M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
 | M010 | Planned | Transaction search, position inventory, reconciliation, and evidence capture | Core entry workflows |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
@@ -117,9 +117,9 @@ history at the Draft-to-Posted boundary. Verification includes 676 tests, three
 real-Chromium journeys, no formatter or EF-model drift, and a retained synthetic
 backup/restore drill.
 
-M008 is the next delivery candidate. Its bounded milestone contract and
-ADR-009 are Proposed; their decisions require explicit human review and
-acceptance before implementation.
+M008 was verified on 2026-09-15. M009, the complete physical-gold lifecycle,
+is the next Planned candidate and needs its own bounded contract and explicit
+human acceptance before implementation.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -197,10 +197,10 @@ milestone becomes Accepted:
 | Master projection fields, current-label semantics, cursor contract, recent-ledger boundary, and invalid position-scope behavior | M005 | Resolved by accepted M005 on 2026-09-02; no ADR was required |
 | UI framework, single-host topology, readiness modes, direct Application boundary, exact presentation, and browser verification | M006 | Resolved by accepted M006 on 2026-09-03 and ADR-008 |
 | Opening reference scope, semantic duplicate/history rules, lot/cost/gold/date semantics, verification, contracts, and correction | M007 | Resolved by all fifteen accepted M007 decisions on 2026-09-10; no new ADR was required |
-| Completed Fund-trade scope, cash/cost equations, price reconciliation, custody-aware FIFO, stale-plan protection, compatibility, and correction UI | M008 | Eighteen Recommended decisions in the Proposed M008 contract await explicit human acceptance |
+| Completed Fund-trade scope, cash/cost equations, price reconciliation, custody-aware FIFO, stale-plan protection, compatibility, and correction UI | M008 | Resolved by all eighteen accepted M008 decisions on 2026-09-12, including the amended price formula, post-time cash check, and provenance precedence |
 | Remote or home-server access, authentication, authorization, and transport security | after M006 | New milestone and ADR; ADR-008 keeps normal operation loopback-only |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
-| Partial lot-cost apportionment, Unknown completeness, currency grouping, and correction behavior | M008/M012 | Proposed ADR-009 awaits explicit human acceptance; M008 implements only Fund realized-cost derivation |
+| Partial lot-cost apportionment, Unknown completeness, currency grouping, and correction behavior | M008/M012 | Resolved by ADR-009, accepted 2026-09-12; M008 implements only Fund realized-cost derivation |
 | Agent read-contract and human approval boundary | M013 | ADR |
 
 ## Deferred capabilities
