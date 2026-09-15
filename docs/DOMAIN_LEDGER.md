@@ -351,6 +351,25 @@ Invalid combinations such as Unknown plus an amount are rejected.
 
 Cost basis belongs to acquisition lineage. Realized cost basis for a partial disposal is derived from allocations and the accepted lot-selection/accounting policy. Arithmetic and rounding must be deterministic and tested.
 
+M008 implements that policy for Fund sales through ADR-009. For one lot with
+original positive quantity `Q` and Known cost `C`, the effective sale
+allocations are ordered by posting time and each is assigned
+`round_half_to_even(C * D(i) / Q) - round_half_to_even(C * D(i-1) / Q)` over
+the cumulative disposed quantity `D`. Rounding the running total rather than
+each sale conserves `C` exactly when the lot closes. Intermediates use
+`Int128`, which is provably wide enough for any `Int64` cost and quantity.
+
+Only a Posted Fund Sell with no Posted reversal is effective. A reversed sale
+and its reversal remain audit history but leave the sequence, so a correction
+can move a minor unit of derived cost between the remaining effective sales.
+Every result therefore states its method code and the time it was derived.
+
+Fund sale allocation uses custody-scoped first-in-first-out. `AssetLot` still
+carries no account or portfolio, so availability is derived from allocations
+whose transaction entries fall inside the selected portfolio and account;
+`AssetLot.CurrentQuantity` is a household-wide figure and is never used as
+custody availability.
+
 ## AssetLot aggregate
 
 AssetLot contains:

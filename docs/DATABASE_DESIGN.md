@@ -529,3 +529,28 @@ Their eventual schemas must reference the ledger rather than duplicating it and 
 - reject unrelated quantity netting as a substitute for reversal lineage;
 - reject and atomically roll back a reversal when a new dependency appears
   after Application eligibility evaluation.
+
+## Fund-trade posting guards (migration 007)
+
+`007_FundTradeLifecycleGuards` adds one trigger,
+`TR_LedgerTransaction_ValidateFundTradeBeforePosting`, on the draft-to-posted
+transition of a Buy or Sell whose principal entry is a Fund. It governs new
+postings only and never reinterprets history posted under M001-M007.
+
+It enforces the fund-trade entry shape and signs, exactly one principal and
+one consideration entry, at most one aggregated fee and one aggregated tax
+entry, one portfolio, active same-household references, an investment or
+pension account for the fund leg, one currency across the trade, the accepted
+cost vocabulary, exact agreement between the fee and tax entries and the
+additional-outflow components, allocation reconciliation, the purchase-lot
+cost equation, and scope-correct sale availability.
+
+Two candidate objects were measured and dropped rather than shipped. An index
+on `LotEntryAllocation("AssetLotId")` is unnecessary because the query plan
+shows the existing `UX_LotEntryAllocation_Lot_Entry` already makes the per-lot
+sum an index search. A non-negative lot-balance trigger is unnecessary because
+M001's `TR_LotEntryAllocation_ValidateInsert` already enforces it and fires
+first.
+
+The migration adds no realized-cost, remaining-quantity, current-position,
+valuation or market-data table. Down removes only the trigger it created.

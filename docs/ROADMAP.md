@@ -46,7 +46,7 @@ Statuses used here:
 | M005 | Verified | [Master-data and ledger navigation](milestones/M005_master_data_and_ledger_navigation.md) with stable human-oriented pages, a recent Posted feed, and valid position scopes | Ten decision gates accepted and implementation verified 2026-09-02 |
 | M006 | Verified | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; verified 2026-09-08 |
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
-| M008 | In Progress | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; implementation in progress |
+| M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
 | M009 | Planned | Complete physical-gold lifecycle, including weight, fineness, pieces, making-charge treatment, custody, purchase, transfer, and sale | Opening lots and correction path |
 | M010 | Planned | Transaction search, position inventory, reconciliation, and evidence capture | Core entry workflows |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
@@ -117,9 +117,9 @@ history at the Draft-to-Posted boundary. Verification includes 676 tests, three
 real-Chromium journeys, no formatter or EF-model drift, and a retained synthetic
 backup/restore drill.
 
-M008 is the active delivery milestone. Its bounded contract and ADR-009 were
-accepted on 2026-09-12 with four technical amendments and three explicit
-resolutions; implementation is in progress and has not yet been verified.
+M008 was verified on 2026-09-15. M009, the complete physical-gold lifecycle,
+is the next Planned candidate and needs its own bounded contract and explicit
+human acceptance before implementation.
 
 No later roadmap item should be implemented merely because it appears in this
 file.

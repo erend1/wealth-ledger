@@ -1,15 +1,85 @@
 # M008: Complete Investment-Fund Lifecycle
 
-Status: In Progress
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-09-12
+Last reviewed: 2026-09-15
 
-Accepted on 2026-09-12. The human owner accepted all eighteen Recommended
-decisions and ADR-009, with the four technical amendments and three explicit
-resolutions recorded under "Acceptance record". Implementation began on
-2026-09-12 on branch `m008/complete-investment-fund-lifecycle`.
+Accepted on 2026-09-12 and verified on 2026-09-15. The human owner accepted
+all eighteen Recommended decisions and ADR-009, with the four technical
+amendments and three explicit resolutions recorded under "Acceptance record".
+
+## Verification record
+
+Verified on 2026-09-15 on branch `m008/complete-investment-fund-lifecycle`.
+
+Complete solution suite: 837 passing, up from the 676 baseline. Domain 160,
+Application 212, Infrastructure against real SQLite 224, UI presentation 71,
+API/UI host 144, Operations 23, Playwright Chromium 3.
+
+- `dotnet test WealthLedger.slnx --no-restore` passes in full.
+- `dotnet ef migrations has-pending-model-changes` reports no pending changes.
+- The 001-007 chain applies to a disposable database, 007 reverts to 006 and
+  re-applies, and the restored schema keeps all thirty triggers with
+  `PRAGMA integrity_check` returning ok.
+- Direct-SQL negative tests prove an invalid Fund Buy or Sell cannot reach
+  Posted: a cross-household cash leg, entries in different portfolios, a fund
+  leg in a cash account, a cash leg in a physical-vault account, a lot-tracked
+  cash asset, a mismatched executed-price currency, a mismatched cost-component
+  currency, an inactive asset, an inactive institution on the fund account, an
+  execution date before the account opened, and inverted signs. Separate
+  accounts at different institutions post normally, which the guard must allow.
+- A real concurrency test races two sales of forty units against a holding of
+  fifty, on independent connections and contexts with different idempotency
+  keys, released from one barrier. Exactly one commits, the loser leaves no
+  transaction, allocation or receipt, the derived balance stays non-negative,
+  and no `SqliteException` or `DbUpdateException` reaches the caller.
+- Query plans were captured before adding any index. Both proposed database
+  objects proved redundant and were dropped rather than shipped; see
+  Decision 18 as amended.
+- A disposable recovery drill migrated, seeded a synthetic purchase and two
+  partial sales, created and verified a backup, staged a restore to a separate
+  path, and read the restored copy back from a fresh process with the
+  cumulative cost basis intact. The workspace was deleted.
+- The real-browser journey runs the whole monthly path with JavaScript
+  disabled at a 390-pixel viewport: contribution, two purchases, a sale across
+  two undated opening lots and two purchase lots, then a correction from the
+  receipt through reversal to a separately reviewed replacement.
+- Logs were inspected for notes, references, fingerprints, SQL and resolved
+  paths; none appear.
+
+Four defects surfaced during implementation and verification, and were fixed:
+
+1. Every `ComputeV1` hashed the moving `CurrentVersion` constant. Raising it
+   for Decision 16 would have changed the version-1 hash and turned every
+   legitimate legacy retry into an idempotency conflict. Fixed in all four
+   fingerprints before any version-2 work, pinned by a regression test.
+2. The fund-sale use case never called `Post` before handing its transaction
+   to the store, so every sale would have been rejected as an unvalidated
+   graph. Found by the real-SQLite tests and fixed.
+3. Sale preview computed realized cost as an independent proportional share
+   against the lot's remaining quantity. That agrees with ADR-009 only for the
+   first sale from a lot; afterwards review and receipt disagreed, in one case
+   showing 50 where the receipt would record 34. Preview now loads the lot's
+   effective disposal sequence and applies the same cumulative calculator the
+   receipt uses, so the two cannot diverge.
+4. The verification read model accepted any Buy or Sell. An equity trade would
+   have been explained as a fund trade, complete with FIFO and realized-cost
+   sections that do not apply to it. It now fails closed with the same
+   not-found answer any unreadable transaction receives.
+
+Three gaps were closed in the migration-007 guard after auditing it against
+the accepted reference rules: an active institution is now required for
+investment and pension accounts, the execution date may not precede an
+account's opening date, a closed account may not receive a trade, and cost
+components must use the trade currency.
+
+One pre-existing baseline finding remains and is not an M008 regression:
+`dotnet format --verify-no-changes` reports three WHITESPACE findings in
+`src/WealthLedger.Domain/Ledger/LedgerTransaction.cs` at lines 469, 471 and
+472. They are present on `main` at commit `f769453`, in M003 code this
+milestone does not touch.
 
 ## Acceptance record
 
