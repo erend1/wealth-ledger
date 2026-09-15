@@ -12,11 +12,14 @@ namespace WealthLedger.Domain.Lots
 
         public QuantityDelta QuantityDelta { get; }
 
+        public PhysicalGoldLotAllocationDetail? PhysicalGoldDetail { get; }
+
         internal LotEntryAllocation(
             Guid id,
             Guid assetLotId,
             Guid transactionEntryId,
-            QuantityDelta quantityDelta)
+            QuantityDelta quantityDelta,
+            int? physicalGoldPieceDelta = null)
         {
             if (id == Guid.Empty)
             {
@@ -50,6 +53,12 @@ namespace WealthLedger.Domain.Lots
             AssetLotId = assetLotId;
             TransactionEntryId = transactionEntryId;
             QuantityDelta = quantityDelta;
+            PhysicalGoldDetail = physicalGoldPieceDelta is null
+                ? null
+                : new PhysicalGoldLotAllocationDetail(
+                    id,
+                    quantityDelta,
+                    physicalGoldPieceDelta.Value);
         }
     }
 }

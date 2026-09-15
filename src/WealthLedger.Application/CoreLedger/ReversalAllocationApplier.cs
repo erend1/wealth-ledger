@@ -72,11 +72,22 @@ namespace WealthLedger.Application.CoreLedger
                     reversalBySequence[
                         source.OriginalEntry.Sequence];
 
-                source.Lot.Allocate(
-                    reversalEntry,
-                    source.Allocation
-                        .QuantityDelta
-                        .Negate());
+                var reversedQuantity =
+                    source.Allocation.QuantityDelta.Negate();
+
+                if (source.Allocation.PhysicalGoldDetail is { } gold)
+                {
+                    source.Lot.Allocate(
+                        reversalEntry,
+                        reversedQuantity,
+                        gold.Negate());
+                }
+                else
+                {
+                    source.Lot.Allocate(
+                        reversalEntry,
+                        reversedQuantity);
+                }
             }
         }
     }

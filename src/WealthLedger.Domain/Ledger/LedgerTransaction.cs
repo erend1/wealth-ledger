@@ -34,6 +34,8 @@ namespace WealthLedger.Domain.Ledger
 
         public CashFlowDetail? CashFlowDetail { get; private set; }
 
+        public PhysicalGoldTradeDetail? PhysicalGoldTradeDetail { get; private set; }
+
         public IReadOnlyCollection<TransactionEntry> Entries => _entries;
 
         public IReadOnlyCollection<TransactionCostComponent> Costs => _costs;
@@ -135,7 +137,8 @@ namespace WealthLedger.Domain.Ledger
             string? note,
             IReadOnlyCollection<LedgerTransactionEntrySnapshot> entries,
             IReadOnlyCollection<LedgerTransactionCostSnapshot> costs,
-            LedgerCashFlowSnapshot? cashFlowDetail)
+            LedgerCashFlowSnapshot? cashFlowDetail,
+            Guid? physicalGoldCounterpartyInstitutionId = null)
         {
             ArgumentNullException.ThrowIfNull(entries);
             ArgumentNullException.ThrowIfNull(costs);
@@ -256,6 +259,12 @@ namespace WealthLedger.Domain.Ledger
                         cashFlowDetail.HouseholdMemberId);
             }
 
+            if (physicalGoldCounterpartyInstitutionId is not null)
+            {
+                transaction.AttachPhysicalGoldTradeDetail(
+                    physicalGoldCounterpartyInstitutionId);
+            }
+
             transaction.ValidateForPosting();
 
             transaction.Status =
@@ -348,6 +357,30 @@ namespace WealthLedger.Domain.Ledger
             CashFlowDetail = new CashFlowDetail(
                 category,
                 householdMemberId);
+        }
+
+        public void AttachPhysicalGoldTradeDetail(
+            Guid? counterpartyInstitutionId)
+        {
+            EnsureMutable();
+
+            if (Type is not TransactionType.Buy
+                and not TransactionType.Sell)
+            {
+                throw new DomainRuleViolationException(
+                    "Physical-gold trade detail is valid only for buy and sell transactions.");
+            }
+
+            if (PhysicalGoldTradeDetail is not null)
+            {
+                throw new DomainRuleViolationException(
+                    "Physical-gold trade detail has already been attached.");
+            }
+
+            PhysicalGoldTradeDetail =
+                new PhysicalGoldTradeDetail(
+                    Id,
+                    counterpartyInstitutionId);
         }
 
         public void SetDates(
@@ -936,6 +969,12 @@ namespace WealthLedger.Domain.Ledger
             {
                 throw new DomainRuleViolationException(
                     "A reversal transaction cannot contain an external reference.");
+            }
+
+            if (PhysicalGoldTradeDetail is not null)
+            {
+                throw new DomainRuleViolationException(
+                    "A reversal transaction cannot contain physical-gold trade detail.");
             }
         }
 
