@@ -153,32 +153,10 @@ internal static class PhysicalGoldCanonicalizer
         => selections.OrderBy(x => x.AssetLotId).ToArray();
 
     internal static string ToCostTypeCode(CostType type)
-        => type switch
-        {
-            CostType.MakingCharge => "MAKING_CHARGE",
-            CostType.Commission => "COMMISSION",
-            CostType.OtherTax => "OTHER_TAX",
-            CostType.Insurance => "INSURANCE",
-            CostType.Other => "OTHER",
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(type),
-                type,
-                "Unsupported physical-gold cost type.")
-        };
+        => PhysicalGoldCodes.ToCostTypeCode(type);
 
     internal static string ToTreatmentCode(CostTreatment treatment)
-        => treatment switch
-        {
-            CostTreatment.AdditionalCashOutflow =>
-                "ADDITIONAL_CASH_OUTFLOW",
-            CostTreatment.WithheldFromProceeds =>
-                "WITHHELD_FROM_PROCEEDS",
-            CostTreatment.IncludedInConsideration =>
-                "INCLUDED_IN_CONSIDERATION",
-            CostTreatment.InformationalOnly =>
-                "INFORMATIONAL_ONLY",
-            _ => throw new ArgumentOutOfRangeException(nameof(treatment))
-        };
+        => PhysicalGoldCodes.ToTreatmentCode(treatment);
 }
 
 internal static class PhysicalGoldCashConversion
