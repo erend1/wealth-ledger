@@ -325,20 +325,20 @@ public sealed partial class EfCoreLedgerPostingStore
 
         var result = new List<PhysicalGoldCustodyLot>();
         foreach (var group in facts.GroupBy(x => new
-                 {
-                     x.Id,
-                     x.AssetId,
-                     x.AcquiredOn,
-                     x.CreatedAtUtc,
-                     x.CostBasisStatus,
-                     x.OriginalCostBasisMinor,
-                     x.CostBasisCurrencyCode,
-                     x.ActualFinenessPpm,
-                     x.PieceCount,
-                     x.Hallmark,
-                     x.CertificateReference,
-                     x.Note
-                 }))
+        {
+            x.Id,
+            x.AssetId,
+            x.AcquiredOn,
+            x.CreatedAtUtc,
+            x.CostBasisStatus,
+            x.OriginalCostBasisMinor,
+            x.CostBasisCurrencyCode,
+            x.ActualFinenessPpm,
+            x.PieceCount,
+            x.Hallmark,
+            x.CertificateReference,
+            x.Note
+        }))
         {
             long globalGross = 0;
             var globalPieces = 0;

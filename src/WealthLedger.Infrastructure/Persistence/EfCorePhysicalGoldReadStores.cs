@@ -322,23 +322,23 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
 
         var positions = new List<PhysicalGoldCustodyPosition>();
         foreach (var group in facts.GroupBy(x => new
-                 {
-                     x.PortfolioId,
-                     x.PortfolioName,
-                     x.AccountId,
-                     x.AccountName,
-                     x.AssetId,
-                     x.AssetCode,
-                     x.AssetName,
-                     x.LotId,
-                     x.ActualFinenessPpm,
-                     x.AcquiredOn,
-                     x.CostBasisStatus,
-                     x.OriginalCostBasisMinor,
-                     x.CostBasisCurrencyCode,
-                     x.Hallmark,
-                     x.CertificateReference
-                 }))
+        {
+            x.PortfolioId,
+            x.PortfolioName,
+            x.AccountId,
+            x.AccountName,
+            x.AssetId,
+            x.AssetCode,
+            x.AssetName,
+            x.LotId,
+            x.ActualFinenessPpm,
+            x.AcquiredOn,
+            x.CostBasisStatus,
+            x.OriginalCostBasisMinor,
+            x.CostBasisCurrencyCode,
+            x.Hallmark,
+            x.CertificateReference
+        }))
         {
             long gross = 0;
             var pieces = 0;
