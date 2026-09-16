@@ -2,7 +2,7 @@
 
 Status: Canonical architecture
 
-Last distilled: 2026-09-08
+Last distilled: 2026-09-16
 
 ## Dependency direction
 
@@ -155,10 +155,12 @@ It may not write SQLite directly, post silently, or replace deterministic alloca
     LedgerTransaction
     ├── TransactionEntry
     ├── TransactionCostComponent
-    └── CashFlowDetail
+    ├── CashFlowDetail
+    └── PhysicalGoldTradeDetail
 
     AssetLot
     ├── LotEntryAllocation
+    │   └── PhysicalGoldLotAllocationDetail
     └── PhysicalGoldLotDetail
 
 LedgerTransaction protects the lifecycle and economic consistency of one event.
@@ -353,3 +355,42 @@ Plan freshness is deliberately an Application concern. A database trigger has
 no knowledge of what a user was shown, so it cannot judge whether a plan is
 stale; what the database guarantees is that quantity never goes negative and
 that the posted shape matches the accepted contract.
+
+## Physical-gold composition (M009)
+
+Physical gold uses the same inward dependency direction while preserving facts
+that cannot be represented by generic quantity alone.
+
+- Domain owns exact gross raw-E8 quantity, immutable fineness, derived fine
+  weight, signed whole-piece movement, physical activity cost rules, exact
+  reversal construction, and ADR-009 realized-cost apportionment over selected
+  gross allocations. Gross and pieces remain independent facts.
+- Application owns reference/account compatibility, purchase economics,
+  explicit sale and transfer selection, canonical fingerprints, stale-plan
+  review, command replay, and completeness-aware verification. It never
+  substitutes Fund FIFO for a physical selection.
+- Infrastructure persists the transaction and acquisition aggregates,
+  allocation piece details, optional counterparty trade detail, command
+  receipt, and final posting in one SQLite transaction. The write transaction
+  re-derives source-custody gross and pieces before accepting a reviewed sale
+  or transfer.
+- Migration 008 preflights and backfills only provable M007 history, dispatches
+  Buy/Sell validation by principal asset family, protects both global and
+  custody-scoped availability, and retains the corrected M008 Fund guard as a
+  separate contract.
+- API exposes exact versioned transport contracts and stable sanitized errors.
+  Razor PageModels call Application directly; they do not loop back through the
+  co-hosted JSON API. Both boundaries remain Ready-only and loopback-only.
+
+Fund and physical-gold verification are intentionally separate read contracts:
+each rejects the other asset family. Receipts rebuild from persisted facts
+before any reference or custody re-evaluation, so an equivalent retry returns
+the original result even when later history changed current choices. Posted
+correction is always an exact immutable reversal followed, when needed, by a
+separate normal reviewed command.
+
+The real-browser layer covers the complete purchase, selected sale, custody
+transfer, reversal/replacement, replay, and restart sequence with JavaScript
+disabled and keyboard-only variants. The recovery layer verifies a disposable
+backup independently, stages it to a separate database, and reads exact M009
+facts from a fresh process; neither layer retains household data or artifacts.

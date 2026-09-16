@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-16
 
 ## How to read this roadmap
 
@@ -47,7 +47,7 @@ Statuses used here:
 | M006 | Verified | [Local UI shell and guided first run](milestones/M006_ui_shell_and_guided_first_run.md) with fail-closed startup modes, exact value presentation, and browser verification | Eleven decision gates accepted 2026-09-03 and recorded by ADR-008, Decision 4 as amended; verified 2026-09-08 |
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
 | M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
-| M009 | In Progress | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; implementation started from verified M008 on 2026-09-15 |
+| M009 | Verified | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; migration 008, 930-test suite, browser, and recovery evidence verified 2026-09-16 |
 | M010 | Planned | Transaction search, position inventory, reconciliation, and evidence capture | Core entry workflows |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
 | M012 | Planned | Goal, reserve, allocation policy, deterministic performance, and monthly review | Reliable ledger and valuation data |
@@ -120,9 +120,11 @@ backup/restore drill.
 M008 was verified and merged through PR #12 on 2026-09-15, including resolution
 of every prerequisite finding recorded during M009 planning. M009 was accepted
 on 2026-09-14 after the human owners approved all twenty Recommended decisions
-without amendment. ADR-010 records allocation-level physical-gold piece
-movement and extends ADR-009 cumulative realized-cost apportionment to physical
-gold. M009 became the sole In Progress milestone on 2026-09-15.
+without amendment and was verified on 2026-09-16. ADR-010 records
+allocation-level physical-gold piece movement and extends ADR-009 cumulative
+realized-cost apportionment to physical gold. Migration 008, the 930-test
+suite, three real-Chromium journeys, and the disposable recovery drill prove
+the complete lifecycle. M010 is the next Planned candidate and has not started.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -133,12 +135,14 @@ Do not treat WealthLedger as the sole record of real household assets until all
 of the following are verified:
 
 - duplicate submissions cannot create duplicate transactions — verified by
-  M002 and preserved for M007 opening/reversal browser and concurrency paths;
+  M002 and preserved through M009 browser, replay, and concurrency paths;
 - every posted transaction can be read back and inspected — verified for the
-  currently supported contribution, fund-purchase, reversal, and opening-
-  balance workflows by M002, M003, and M007;
+  currently supported contribution, opening-balance, Fund trade, physical-gold
+  purchase, selected sale, custody transfer, and reversal workflows through
+  M009;
 - posted mistakes can be reversed through the supported workflow — verified by
-  M003 and exposed for M007 openings with dependency-aware UI;
+  M003 and exposed with dependency-aware UI for M007 openings, M008 Fund
+  trades, and M009 physical-gold activity;
 - the live database is outside the repository and ignored by source control —
   verified by M004;
 - backup and restore have a user-visible, tested workflow — verified locally by
@@ -157,21 +161,23 @@ of the following are verified:
   verified by M006 for rendered pages, error pages, and captured logs across
   every startup mode, and by M007 for opening forms, conflicts, receipts,
   reversals, API errors, and captured logs. Governed exports do not exist yet,
-  and screenshots taken by an operator remain an operator duty;
+  and screenshots taken by an operator remain an operator duty. M008 and M009
+  extend the same privacy checks across their APIs, forms, receipts, conflicts,
+  browser journeys, and recovery diagnostics;
 - the user can reconcile an imported or entered position with independent
   evidence — **not yet satisfied**; it needs the M010 search, inventory, and
   reconciliation work.
 
-One bullet therefore remains open. M007 opening recording is now verified, but
-reliance on real household data still needs independent reconciliation and the
-applicable M008/M009 lifecycle coverage, so WealthLedger should not yet be the
-sole record of real assets.
+One bullet therefore remains open. The M002-M009 entry lifecycle is verified,
+but reliance on real household data still needs M010 independent evidence and
+reconciliation, so WealthLedger should not yet be the sole record of real
+assets.
 
 This gate does not block development with synthetic test data.
 
 ## First usable product slice
 
-The first user-operable release spans M002 through M009. It should support this
+The first user-operable release spans M002 through M009. It now supports this
 complete path:
 
 1. Create or select protected local storage.
@@ -180,10 +186,12 @@ complete path:
 4. Record opening cash, foreign-currency, fund, equity, and physical-gold
    positions.
 5. Record a contribution.
-6. Record a fund or physical-gold purchase with all relevant costs.
-7. Inspect the resulting transaction, lot, and position.
-8. Correct a mistake through reversal and replacement.
-9. Close the application and recover the same state after restart.
+6. Record a Fund or physical-gold purchase with all relevant costs.
+7. Record a Fund sale or explicitly selected physical-gold sale and move exact
+   gold lots and pieces between custody scopes without creating an acquisition.
+8. Inspect the persisted transaction, lot, custody, cost, and receipt evidence.
+9. Correct a mistake through reversal and a separately reviewed replacement.
+10. Close the application and recover the same state after restart.
 
 Analytics that cannot yet satisfy this path must not delay it.
 

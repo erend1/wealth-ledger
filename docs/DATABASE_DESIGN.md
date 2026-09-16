@@ -1,6 +1,6 @@
 # WealthLedger Database Design
 
-Status: Canonical implemented persistence design through M007
+Status: Canonical implemented persistence design through M009
 
 Target: EF Core with SQLite
 
@@ -11,8 +11,10 @@ Migrations:
 - `20260902112549_004_LedgerNavigationQueries`
 - `20260903075104_005_WorkspaceIdentity`
 - `20260910101810_006_OpeningBalanceCutoverGuards`
+- `20260913054039_007_FundTradeLifecycleGuards`
+- `20260915082550_008_PhysicalGoldLifecycle`
 
-Last distilled: 2026-09-11
+Last distilled: 2026-09-16
 
 ## Design goals
 
@@ -48,10 +50,14 @@ SQLite INTEGER is signed 64-bit. Calculations that can overflow, require scaling
     LedgerTransaction
         ├── TransactionEntry ──> LotEntryAllocation <── AssetLot
         ├── TransactionCostComponent
-        └── CashFlowDetail
+        ├── CashFlowDetail
+        └── PhysicalGoldTradeDetail
 
     AssetLot
         └── PhysicalGoldLotDetail
+
+    LotEntryAllocation
+        └── PhysicalGoldLotAllocationDetail
 
 Master references:
 
@@ -298,6 +304,34 @@ The database must reject a lot/entry asset mismatch and an allocation sign that 
 
 GrossWeight and FineGoldWeight are deliberately absent.
 
+`PieceCount` is immutable acquisition evidence. Current global and
+custody-scoped piece counts are derived from signed allocation details rather
+than updating this row.
+
+### PhysicalGoldLotAllocationDetail
+
+| Column | Type | Rules |
+|---|---|---|
+| LotEntryAllocationId | TEXT | primary key and restrictive FK to LotEntryAllocation |
+| PieceDelta | INTEGER | required, non-zero signed whole-piece movement |
+
+Every allocation whose lot asset is PhysicalGold has exactly one row; every
+other allocation has none. `PieceDelta` and `QuantityDeltaE8` have matching
+signs but independent magnitudes. The database never infers average piece
+weight or derives either fact from the other.
+
+### PhysicalGoldTradeDetail
+
+| Column | Type | Rules |
+|---|---|---|
+| LedgerTransactionId | TEXT | primary key and restrictive FK to LedgerTransaction |
+| CounterpartyInstitutionId | TEXT | nullable restrictive FK to global Institution |
+
+The row exists only for supported PhysicalGold Buy and Sell transactions. Its
+optional counterparty records seller or buyer evidence and is separate from
+the physical-vault custody account. Transfer and reversal do not fabricate a
+trade-detail copy.
+
 ## Stable code sets
 
 At minimum, explicit converters/checks are required for:
@@ -331,7 +365,11 @@ The first migration should include and integration-test:
 7. lot/entry asset equality;
 8. allocation/entry sign equality;
 9. uniqueness of lot-entry allocation;
-10. restrictive deletion of lots and allocations that participate in history.
+10. restrictive deletion of lots and allocations that participate in history;
+11. exactly one signed piece detail for every PhysicalGold allocation and none
+    for other asset families; and
+12. non-negative global and custody-scoped physical-gold gross quantity and
+    piece count.
 
 SQLite triggers that read other tables must have both insert and relevant update variants. Trigger behavior and error messages are part of integration tests.
 
@@ -493,7 +531,8 @@ Views or rebuildable projections may use similar names only when their non-autho
 Not part of 001_CoreLedger:
 
 - market quotes and historical reference data;
-- asset-family detail tables beyond physical-gold lot detail;
+- asset-family detail tables beyond the implemented physical-gold
+  lot/allocation/trade details;
 - goals and allocation policies;
 - reconciliation/import staging;
 - analysis and agent-decision history;
@@ -529,13 +568,24 @@ Their eventual schemas must reference the ledger rather than duplicating it and 
 - reject unrelated quantity netting as a substitute for reversal lineage;
 - reject and atomically roll back a reversal when a new dependency appears
   after Application eligibility evaluation.
+- post a physical-gold purchase, explicitly selected-lot partial sale, custody
+  transfer, and exact reversals, then reconstruct gross, pieces, fine weight,
+  cash, cost, and custody after restart;
+- reject direct-SQL physical-gold graphs with missing/forged piece detail,
+  incompatible accounts or currency, negative scoped availability, or unequal
+  transfer movement;
+- migrate provable M007 opening and reversal history, reject unprovable piece
+  history before mutation, and pass 007 -> 008 -> 007 -> 008;
+- arbitrate concurrent physical-gold sale and transfer races from independent
+  SQLite connections without over-consuming gross quantity or pieces.
 
 ## Fund-trade posting guards (migration 007)
 
-`007_FundTradeLifecycleGuards` adds one trigger,
+At the migration-007 head, `007_FundTradeLifecycleGuards` adds one trigger,
 `TR_LedgerTransaction_ValidateFundTradeBeforePosting`, on the draft-to-posted
-transition of a Buy or Sell whose principal entry is a Fund. It governs new
-postings only and never reinterprets history posted under M001-M007.
+transition of each Buy or Sell. Its accepted graph is the Fund-trade graph, so
+other principal asset families fail closed. It governs new postings only and
+never reinterprets history posted under M001-M007.
 
 It enforces the fund-trade entry shape and signs, exactly one principal and
 one consideration entry, at most one aggregated fee and one aggregated tax
@@ -554,3 +604,45 @@ first.
 
 The migration adds no realized-cost, remaining-quantity, current-position,
 valuation or market-data table. Down removes only the trigger it created.
+
+## Physical-gold lifecycle guards (migration 008)
+
+`008_PhysicalGoldLifecycle` preflights existing PhysicalGold allocations before
+creating either new table or replacing posting behavior. It backfills an M007
+opening allocation from that lot's immutable positive `PieceCount`, and an
+exact reversal only from the inverse opening relationship. Any other existing
+allocation history without independently provable pieces aborts the migration;
+the migration never divides gross weight by piece count or infers average piece
+weight.
+
+The migration replaces migration 007's all-Buy/Sell Fund-only behavior with
+explicit principal-asset dispatch:
+
+- Fund Buy and Sell preserve every corrected M008 shape, cost, cash, currency,
+  account, allocation, and scoped-availability rule;
+- PhysicalGold Buy and Sell use the M009 purchase or selected-sale graph;
+- unsupported Buy/Sell principal asset families fail closed; and
+- PhysicalGold Transfer has its own same-lot, equal-and-opposite gross and
+  piece movement rules without consideration, new lot, or acquisition cost.
+
+Companion triggers require piece-detail presence/absence and matching signs,
+protect posted piece and counterparty evidence from mutation, reconcile exact
+purchase/sale/transfer movement, enforce active same-household account and
+currency compatibility, and prevent negative household-wide or
+portfolio/account-scoped gross quantity and pieces. Purchase creates one
+complete homogeneous Known-cost lot. Sale consumes only its persisted selected
+allocations. Optional seller/buyer is a global Institution and is never
+interpreted as custody or Household ownership.
+
+Reversal continues to mirror entries and lot allocations through the existing
+immutable reversal graph; every inverse PhysicalGold allocation carries the
+exact opposite `PieceDelta`. Original cost rows and trade detail remain on the
+original transaction, so reversal creates neither copied costs nor a
+replacement link.
+
+The migration adds no position, remaining-quantity, realized-cost, valuation,
+or market-data authority. Its Down path removes only M009 tables and triggers,
+then restores the exact corrected migration-007 Fund guard. Real-SQLite tests
+cover fresh Up, M007 backfill, fail-closed preflight, direct-SQL refusal, Fund
+regression, concurrent races, Down/Up, 007 -> 008 -> 007 -> 008, foreign-key
+integrity, and EF model agreement.
