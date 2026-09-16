@@ -76,6 +76,7 @@ public sealed class PreviewPhysicalGoldSaleUseCase
             validated.SettlementDate,
             validated.GrossWeight.RawE8,
             validated.PieceCount,
+            validated.ExecutedUnitPrice?.RawE8,
             validated.Counterparty?.InstitutionId,
             validated.Counterparty?.Name,
             validated.Economics,

@@ -35,6 +35,7 @@ public sealed class PhysicalGoldApiTests
         Assert.Equal(20_00000000L, purchasePreview.GrossWeightRawE8);
         Assert.Equal(916_000, purchasePreview.FinenessPpm);
         Assert.Equal(18.32m, purchasePreview.FineWeightGrams);
+        Assert.Null(purchasePreview.ExecutedUnitPriceRawE8);
         Assert.Equal(201_000, purchasePreview.Economics.AcquisitionLotCostMinorUnits);
 
         await using (var beforePost = factory.CreateDbContext())

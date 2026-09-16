@@ -85,6 +85,7 @@ public sealed class PreviewPhysicalGoldPurchaseUseCase
             fineness.Ppm,
             detail.CalculateFineWeightGrams(validated.GrossWeight),
             validated.PieceCount,
+            validated.ExecutedUnitPrice?.RawE8,
             validated.Counterparty?.InstitutionId,
             validated.Counterparty?.Name,
             validated.Economics,

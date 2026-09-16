@@ -229,6 +229,8 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
             transaction.Note,
             reversedBy,
             sourcePrincipal.AssetId,
+            goldAsset.Code,
+            goldAsset.Name,
             cashAssetId,
             currencyCode,
             tradeDetail?.CounterpartyInstitutionId,
@@ -288,6 +290,10 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
                 on entry.TransactionId equals transaction.Id
             join asset in _dbContext.Assets.AsNoTracking()
                 on lot.AssetId equals asset.Id
+            join portfolio in _dbContext.Portfolios.AsNoTracking()
+                on entry.PortfolioId equals portfolio.Id
+            join account in _dbContext.Accounts.AsNoTracking()
+                on entry.AccountId equals account.Id
             where transaction.HouseholdId == householdId
                   && transaction.Status == TransactionStatus.Posted
                   && asset.Type == AssetType.PhysicalGold
@@ -296,8 +302,12 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
             select new
             {
                 entry.PortfolioId,
+                PortfolioName = portfolio.Name,
                 entry.AccountId,
+                AccountName = account.Name,
                 lot.AssetId,
+                AssetCode = asset.Code,
+                AssetName = asset.Name,
                 LotId = lot.Id,
                 allocation.QuantityDeltaE8,
                 piece.PieceDelta,
@@ -314,8 +324,12 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
         foreach (var group in facts.GroupBy(x => new
                  {
                      x.PortfolioId,
+                     x.PortfolioName,
                      x.AccountId,
+                     x.AccountName,
                      x.AssetId,
+                     x.AssetCode,
+                     x.AssetName,
                      x.LotId,
                      x.ActualFinenessPpm,
                      x.AcquiredOn,
@@ -351,8 +365,12 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
                              / Fineness.MaximumPpm;
             positions.Add(new PhysicalGoldCustodyPosition(
                 group.Key.PortfolioId,
+                group.Key.PortfolioName,
                 group.Key.AccountId,
+                group.Key.AccountName,
                 group.Key.AssetId,
+                group.Key.AssetCode,
+                group.Key.AssetName,
                 group.Key.LotId,
                 gross,
                 pieces,
@@ -388,13 +406,19 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
                 on lot.Id equals detail.AssetLotId
             join entry in _dbContext.TransactionEntries.AsNoTracking()
                 on allocation.TransactionEntryId equals entry.Id
+            join portfolio in _dbContext.Portfolios.AsNoTracking()
+                on entry.PortfolioId equals portfolio.Id
+            join account in _dbContext.Accounts.AsNoTracking()
+                on entry.AccountId equals account.Id
             where entry.TransactionId == transactionId
             select new
             {
                 allocation.AssetLotId,
                 AllocationId = allocation.Id,
                 entry.PortfolioId,
+                PortfolioName = portfolio.Name,
                 entry.AccountId,
+                AccountName = account.Name,
                 allocation.QuantityDeltaE8,
                 piece.PieceDelta,
                 lot.AcquiredOn,
@@ -412,7 +436,9 @@ public sealed class EfCorePhysicalGoldVerificationReadStore
             x.AssetLotId,
             x.AllocationId,
             x.PortfolioId,
+            x.PortfolioName,
             x.AccountId,
+            x.AccountName,
             x.QuantityDeltaE8,
             x.PieceDelta,
             x.AcquiredOn,
