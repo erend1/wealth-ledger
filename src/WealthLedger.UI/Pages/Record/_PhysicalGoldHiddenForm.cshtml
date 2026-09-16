@@ -1,0 +1,44 @@
+@model WealthLedger.UI.Pages.Record.PhysicalGoldPageModel
+
+<input type="hidden" asp-for="Input.PortfolioId" />
+<input type="hidden" asp-for="Input.GoldAccountId" />
+<input type="hidden" asp-for="Input.CashAccountId" />
+<input type="hidden" asp-for="Input.GoldAssetId" />
+<input type="hidden" asp-for="Input.CashAssetId" />
+<input type="hidden" asp-for="Input.CounterpartyInstitutionId" />
+<input type="hidden" asp-for="Input.SourcePortfolioId" />
+<input type="hidden" asp-for="Input.SourceGoldAccountId" />
+<input type="hidden" asp-for="Input.DestinationPortfolioId" />
+<input type="hidden" asp-for="Input.DestinationGoldAccountId" />
+<input type="hidden" asp-for="Input.CashPortfolioId" />
+<input type="hidden" asp-for="Input.ExecutionDate" />
+<input type="hidden" asp-for="Input.OrderDate" />
+<input type="hidden" asp-for="Input.SettlementDate" />
+<input type="hidden" asp-for="Input.GrossWeight" />
+<input type="hidden" asp-for="Input.FinenessChoice" />
+<input type="hidden" asp-for="Input.CustomFinenessPermille" />
+<input type="hidden" asp-for="Input.PieceCount" />
+<input type="hidden" asp-for="Input.UnitPrice" />
+<input type="hidden" asp-for="Input.CashConsideration" />
+<input type="hidden" asp-for="Input.Hallmark" />
+<input type="hidden" asp-for="Input.CertificateReference" />
+<input type="hidden" asp-for="Input.LotNote" />
+<input type="hidden" asp-for="Input.ExternalReference" />
+<input type="hidden" asp-for="Input.Note" />
+<input type="hidden" asp-for="Input.IdempotencyKey" />
+<input type="hidden" asp-for="Input.ReviewedPlanFingerprint" />
+
+@for (var index = 0; index < Model.Input.SelectedLots.Count; index++)
+{
+    <input type="hidden" asp-for="Input.SelectedLots[index].AssetLotId" />
+    <input type="hidden" asp-for="Input.SelectedLots[index].GrossWeight" />
+    <input type="hidden" asp-for="Input.SelectedLots[index].PieceCount" />
+}
+
+@for (var index = 0; index < Model.Input.Costs.Count; index++)
+{
+    <input type="hidden" asp-for="Input.Costs[index].TypeCode" />
+    <input type="hidden" asp-for="Input.Costs[index].TreatmentCode" />
+    <input type="hidden" asp-for="Input.Costs[index].Amount" />
+    <input type="hidden" asp-for="Input.Costs[index].Note" />
+}

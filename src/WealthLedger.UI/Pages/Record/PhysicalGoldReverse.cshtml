@@ -1,0 +1,109 @@
+@page "/record/physical-gold/{transactionId}/reverse"
+@model WealthLedger.UI.Pages.Record.PhysicalGoldReverseModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["GoldReverse_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="gold-reverse-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Gold_Eyebrow"]</p>
+        <h1 id="gold-reverse-heading">@Text["GoldReverse_Title"]</h1>
+        <p class="lede">@Text["GoldReverse_Introduction"]</p>
+    </header>
+    <partial name="_ValidationSummary" />
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["GoldReceipt_InvalidTitle"]</h2><p>@Text["GoldReceipt_InvalidExplanation"]</p></section>
+    }
+    else if (Model.ActivityNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["GoldReceipt_NotFoundTitle"]</h2><p>@Text["GoldReceipt_NotFoundExplanation"]</p></section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Ready_Household_StateTitle"]</h2><p>@Text[Model.HouseholdStateResourceKey]</p></section>
+    }
+    else if (Model.LoadUnavailable || Model.Verification is null || Model.Preview is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Gold_LoadErrorTitle"]</h2><p>@Text["Gold_LoadErrorExplanation"]</p></section>
+    }
+    else
+    {
+        var facts = Model.Verification.Facts;
+        <section class="panel flow" aria-labelledby="gold-reverse-original-heading">
+            <h2 id="gold-reverse-original-heading">@Text["GoldReverse_OriginalTitle"]</h2>
+            <dl class="fact-grid">
+                <div><dt>@Text["GoldReceipt_TransactionId"]</dt><dd class="technical-id"><code>@facts.TransactionId.ToString("D")</code></dd></div>
+                <div><dt>@Text["Gold_ExecutionDateLabel"]</dt><dd>@Model.Values.BusinessDate(facts.ExecutionDate).Text</dd></div>
+                <div><dt>@Text["Gold_GrossWeightLabel"]</dt><dd>@Model.Values.Quantity(facts.GrossWeight.RawE8, WealthLedger.Domain.Assets.AssetUnit.GrossGram, WealthLedger.UI.Presentation.QuantitySign.Absolute).Text</dd></div>
+                <div><dt>@Text["Gold_PieceCountLabel"]</dt><dd>@facts.PieceCount</dd></div>
+            </dl>
+        </section>
+
+        <section class="panel flow" aria-labelledby="gold-reverse-effects-heading">
+            <h2 id="gold-reverse-effects-heading">@Text["GoldReverse_EffectsTitle"]</h2>
+            <p class="state-text">@Text[WealthLedger.UI.Pages.Record.PhysicalGoldReverseModel.EligibilityResourceKey(Model.Preview.EligibilityCode)]</p>
+            @if (Model.Preview.CanReverse)
+            {
+                <table class="data-table">
+                    <thead><tr><th scope="col">@Text["GoldReverse_Sequence"]</th><th scope="col">@Text["GoldReverse_Role"]</th><th scope="col">@Text["GoldReverse_QuantityEffect"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var entry in Model.Preview.InverseEntries.OrderBy(x => x.Sequence))
+                    {
+                        <tr>
+                            <td data-label="@Text["GoldReverse_Sequence"]">@entry.Sequence</td>
+                            <td data-label="@Text["GoldReverse_Role"]"><code>@entry.Role</code></td>
+                            <td data-label="@Text["GoldReverse_QuantityEffect"]" aria-label="@Model.PresentEntry(entry).AssistiveText">@Model.PresentEntry(entry).Text</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+
+                <h3>@Text["GoldReverse_LotEffectsTitle"]</h3>
+                <table class="data-table">
+                    <thead><tr><th scope="col">@Text["Gold_LotId"]</th><th scope="col">@Text["GoldReceipt_GrossDelta"]</th><th scope="col">@Text["GoldReceipt_PieceDelta"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var allocation in Model.Preview.InverseLotAllocations)
+                    {
+                        <tr>
+                            <td data-label="@Text["Gold_LotId"]" class="technical-id"><code>@allocation.AssetLotId.ToString("D")</code></td>
+                            <td data-label="@Text["GoldReceipt_GrossDelta"]">@Model.Values.Quantity(allocation.QuantityDelta.RawE8, WealthLedger.Domain.Assets.AssetUnit.GrossGram, WealthLedger.UI.Presentation.QuantitySign.SignedDelta).Text</td>
+                            <td data-label="@Text["GoldReceipt_PieceDelta"]">@(allocation.PhysicalGoldPieceDelta > 0 ? "+" : string.Empty)@allocation.PhysicalGoldPieceDelta</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        @if (Model.Preview.CanReverse)
+        {
+            <form method="post" asp-page-handler="Reverse" asp-route-transactionId="@Model.TransactionId.ToString("D")" class="flow" novalidate>
+                <input type="hidden" asp-for="Input.IdempotencyKey" />
+                <fieldset class="field-group flow">
+                    <legend>@Text["GoldReverse_ReasonLegend"]</legend>
+                    <div class="field">
+                        <label asp-for="Input.Reason">@Text["GoldReverse_ReasonLabel"]</label>
+                        <textarea asp-for="Input.Reason" maxlength="2000" rows="3" aria-describedby="Input_Reason-help Input_Reason-error"></textarea>
+                        <p id="Input_Reason-help" class="field-help">@Text["GoldReverse_ReasonHelp"]</p>
+                        <span id="Input_Reason-error" class="field-error" asp-validation-for="Input.Reason"></span>
+                    </div>
+                </fieldset>
+                <button class="button button--danger" type="submit" data-final-submit>@Text["GoldReverse_PostAction"]</button>
+            </form>
+        }
+
+        <section class="panel flow" aria-labelledby="gold-reverse-next-heading">
+            <h2 id="gold-reverse-next-heading">@Text["GoldReverse_NextTitle"]</h2>
+            <ul class="plain-list">
+                <li><a class="card-link" asp-page="/Record/PhysicalGoldReceipt" asp-route-transactionId="@Model.TransactionId.ToString("D")">@Text["GoldReverse_BackToReceipt"]</a></li>
+                <li><a class="card-link" asp-page="@(Model.IsPurchase ? "/Record/PhysicalGoldPurchase" : Model.IsSale ? "/Record/PhysicalGoldSale" : "/Record/PhysicalGoldTransfer")">@Text["GoldReverse_StartReplacement"]</a></li>
+            </ul>
+            <p class="help">@Text["GoldReverse_ReplacementHelp"]</p>
+        </section>
+    }
+</article>
