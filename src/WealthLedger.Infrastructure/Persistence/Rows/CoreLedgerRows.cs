@@ -235,6 +235,20 @@ internal sealed class PhysicalGoldLotDetailRow
     public string? Note { get; set; }
 }
 
+internal sealed class PhysicalGoldLotAllocationDetailRow
+{
+    public Guid LotEntryAllocationId { get; set; }
+
+    public int PieceDelta { get; set; }
+}
+
+internal sealed class PhysicalGoldTradeDetailRow
+{
+    public Guid LedgerTransactionId { get; set; }
+
+    public Guid? CounterpartyInstitutionId { get; set; }
+}
+
 internal sealed class CommandReceiptRow
 {
     public Guid HouseholdId { get; set; }

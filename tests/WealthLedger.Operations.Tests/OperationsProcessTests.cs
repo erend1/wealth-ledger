@@ -101,7 +101,7 @@ public sealed class OperationsProcessTests : IDisposable
             "StartingMigration: 20260827072019_002_CommandReceipt",
             migrated.StandardOutput);
         Assert.Contains(
-            "EndingMigration: 20260913054039_007_FundTradeLifecycleGuards",
+            "EndingMigration: 20260915082550_008_PhysicalGoldLifecycle",
             migrated.StandardOutput);
         var preMigrationBackup = ReadOutputPath(
             migrated,

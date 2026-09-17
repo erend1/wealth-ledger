@@ -1,0 +1,117 @@
+@page "/record/physical-gold-transfer"
+@model WealthLedger.UI.Pages.Record.PhysicalGoldTransferModel
+@inject UiText Text
+@using WealthLedger.Application.PhysicalGold
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["GoldTransfer_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="gold-transfer-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Gold_Eyebrow"]</p>
+        <h1 id="gold-transfer-heading">@Text["GoldTransfer_Title"]</h1>
+        <p class="lede">@Text["GoldTransfer_Introduction"]</p>
+    </header>
+    <partial name="_ValidationSummary" />
+
+    @if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Ready_Household_StateTitle"]</h2><p>@Text[Model.HouseholdStateResourceKey]</p></section>
+    }
+    else if (Model.LoadUnavailable || Model.Choices is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Gold_LoadErrorTitle"]</h2><p>@Text["Gold_LoadErrorExplanation"]</p></section>
+    }
+    else
+    {
+        @if (Model.RequiresFreshReview)
+        {
+            <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Gold_StaleTitle"]</h2><p>@Text["Gold_StaleExplanation"]</p></section>
+        }
+        <form method="post" class="flow" novalidate>
+            @if (Model.IsReview && Model.Preview is not null)
+            {
+                <partial name="_PhysicalGoldHiddenForm" model="Model" />
+                var preview = Model.Preview;
+
+                <section class="panel review-panel flow" aria-labelledby="gold-transfer-review-heading">
+                    <p class="status-mark">@Text["Gold_ReviewStatus"]</p>
+                    <h2 id="gold-transfer-review-heading">@Text["Gold_ReviewTitle"]</h2>
+                    <p>@Text["GoldTransfer_ReviewExplanation"]</p>
+                    <dl class="fact-grid">
+                        <div><dt>@Text["Gold_SourceScopeLabel"]</dt><dd>@preview.SourcePortfolioName / @preview.SourceAccountName</dd></div>
+                        <div><dt>@Text["Gold_DestinationScopeLabel"]</dt><dd>@preview.DestinationPortfolioName / @preview.DestinationAccountName</dd></div>
+                        <div><dt>@Text["Gold_AssetLabel"]</dt><dd>@preview.GoldAssetName (@preview.GoldAssetCode)</dd></div>
+                        <div><dt>@Text["Gold_ExecutionDateLabel"]</dt><dd>@Model.Values.BusinessDate(preview.ExecutionDate).Text</dd></div>
+                        <div><dt>@Text["Gold_MovedGrossLabel"]</dt><dd>@Model.PresentGross(preview.GrossWeightRawE8).Text</dd></div>
+                        <div><dt>@Text["Gold_MovedPiecesLabel"]</dt><dd>@preview.PieceCount</dd></div>
+                        <div><dt>@Text["Gold_FineWeightLabel"]</dt><dd>@Model.PresentFineWeight(preview.FineWeightGrams)</dd></div>
+                        <div><dt>@Text["Gold_HouseholdTotalLabel"]</dt><dd>@Text["Gold_Unchanged"]</dd></div>
+                        <div><dt>@Text["Gold_NetCashEffectLabel"]</dt><dd>@Model.PresentMoney(preview.Economics.NetCashEffect.MinorUnits, preview.CurrencyCode, preview.MinorUnitDigits).Text</dd></div>
+                    </dl>
+
+                    <h3>@Text["Gold_SelectedPlanTitle"]</h3>
+                    <table class="data-table">
+                        <thead><tr><th scope="col">@Text["Gold_LotId"]</th><th scope="col">@Text["Gold_SourceEffectLabel"]</th><th scope="col">@Text["Gold_DestinationEffectLabel"]</th><th scope="col">@Text["Gold_RemainingGrossLabel"]</th><th scope="col">@Text["Gold_FinenessLabel"]</th><th scope="col">@Text["Gold_CostKnowledgeLabel"]</th></tr></thead>
+                        <tbody>
+                        @foreach (var line in preview.Plan)
+                        {
+                            <tr>
+                                <td data-label="@Text["Gold_LotId"]"><code>@line.AssetLotId.ToString("D")</code></td>
+                                <td data-label="@Text["Gold_SourceEffectLabel"]">@Model.PresentGross(-line.MovedGrossWeightRawE8, signed: true).Text / -@line.MovedPieceCount</td>
+                                <td data-label="@Text["Gold_DestinationEffectLabel"]">@Model.PresentGross(line.MovedGrossWeightRawE8, signed: true).Text / +@line.MovedPieceCount</td>
+                                <td data-label="@Text["Gold_RemainingGrossLabel"]">@Model.PresentGross(line.RemainingGrossWeightRawE8).Text / @line.RemainingPieceCount</td>
+                                <td data-label="@Text["Gold_FinenessLabel"]">@Model.PresentFineness(line.FinenessPpm)</td>
+                                <td data-label="@Text["Gold_CostKnowledgeLabel"]"><code>@Model.CostStatusCode(line.CostStatus)</code></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+
+                    @if (preview.Costs.Count > 0)
+                    {
+                        <h3>@Text["Gold_CostsTitle"]</h3>
+                        <table class="data-table">
+                            <thead><tr><th scope="col">@Text["Gold_CostTypeLabel"]</th><th scope="col">@Text["Gold_CostTreatmentLabel"]</th><th scope="col">@Text["Gold_CostAmountLabel"]</th></tr></thead>
+                            <tbody>
+                            @foreach (var cost in preview.Costs)
+                            {
+                                <tr>
+                                    <td data-label="@Text["Gold_CostTypeLabel"]"><code>@PhysicalGoldCodes.ToCostTypeCode(cost.Type)</code></td>
+                                    <td data-label="@Text["Gold_CostTreatmentLabel"]"><code>@PhysicalGoldCodes.ToTreatmentCode(cost.Treatment)</code></td>
+                                    <td data-label="@Text["Gold_CostAmountLabel"]">@Model.PresentMoney(cost.Amount.MinorUnits, preview.CurrencyCode, preview.MinorUnitDigits).Text</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+
+                    @if (preview.WarningCodes.Count > 0)
+                    {
+                        <section class="summary-card summary-card--warning flow" role="status">
+                            <h3>@Text["Gold_WarningsTitle"]</h3>
+                            <ul class="plain-list">
+                            @foreach (var warning in preview.WarningCodes)
+                            {
+                                <li>@Text[$"Gold_Warning_{warning}"]</li>
+                            }
+                            </ul>
+                        </section>
+                    }
+
+                    <button class="button" type="submit" asp-page-handler="Post" data-final-submit>@Text["GoldTransfer_PostAction"]</button>
+                    <a class="card-link" asp-page="/Record/PhysicalGoldTransfer">@Text["Gold_EditAction"]</a>
+                </section>
+            }
+            else
+            {
+                <input type="hidden" asp-for="Input.IdempotencyKey" />
+                <input type="hidden" asp-for="Input.ReviewedPlanFingerprint" />
+                <partial name="_PhysicalGoldFields" model="Model" />
+                <button class="button" type="submit" asp-page-handler="Review">@Text["Gold_ReviewAction"]</button>
+            }
+        </form>
+    }
+</article>

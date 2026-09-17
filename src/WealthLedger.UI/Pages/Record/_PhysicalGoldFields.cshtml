@@ -1,0 +1,419 @@
+@model WealthLedger.UI.Pages.Record.PhysicalGoldPageModel
+@inject UiText Text
+@{
+    var choices = Model.Choices!;
+}
+
+<fieldset class="field-group flow">
+    <legend>@Text["Gold_Legend_Identify"]</legend>
+
+    @if (Model.IsTransfer)
+    {
+        <div class="field">
+            <label asp-for="Input.SourcePortfolioId">@Text["Gold_SourcePortfolioLabel"]</label>
+            <select asp-for="Input.SourcePortfolioId" aria-describedby="Input_SourcePortfolioId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.Portfolios.Items)
+                {
+                    <option value="@item.PortfolioId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_SourcePortfolioId-error" class="field-error"
+                  asp-validation-for="Input.SourcePortfolioId"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.SourceGoldAccountId">@Text["Gold_SourceAccountLabel"]</label>
+            <select asp-for="Input.SourceGoldAccountId" aria-describedby="Input_SourceGoldAccountId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.GoldAccounts.Items)
+                {
+                    <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_SourceGoldAccountId-error" class="field-error"
+                  asp-validation-for="Input.SourceGoldAccountId"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.DestinationPortfolioId">@Text["Gold_DestinationPortfolioLabel"]</label>
+            <select asp-for="Input.DestinationPortfolioId" aria-describedby="Input_DestinationPortfolioId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.Portfolios.Items)
+                {
+                    <option value="@item.PortfolioId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_DestinationPortfolioId-error" class="field-error"
+                  asp-validation-for="Input.DestinationPortfolioId"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.DestinationGoldAccountId">@Text["Gold_DestinationAccountLabel"]</label>
+            <select asp-for="Input.DestinationGoldAccountId" aria-describedby="Input_DestinationGoldAccountId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.GoldAccounts.Items)
+                {
+                    <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_DestinationGoldAccountId-error" class="field-error"
+                  asp-validation-for="Input.DestinationGoldAccountId"></span>
+        </div>
+    }
+    else
+    {
+        <div class="field">
+            <label asp-for="Input.PortfolioId">@Text["Gold_PortfolioLabel"]</label>
+            <select asp-for="Input.PortfolioId" aria-describedby="Input_PortfolioId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.Portfolios.Items)
+                {
+                    <option value="@item.PortfolioId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_PortfolioId-error" class="field-error"
+                  asp-validation-for="Input.PortfolioId"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.GoldAccountId">@Text["Gold_GoldAccountLabel"]</label>
+            <select asp-for="Input.GoldAccountId" aria-describedby="Input_GoldAccountId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.GoldAccounts.Items)
+                {
+                    <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_GoldAccountId-error" class="field-error"
+                  asp-validation-for="Input.GoldAccountId"></span>
+        </div>
+    }
+
+    <div class="field">
+        <label asp-for="Input.GoldAssetId">@Text["Gold_AssetLabel"]</label>
+        <select asp-for="Input.GoldAssetId" aria-describedby="Input_GoldAssetId-error">
+            <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+            @foreach (var item in choices.GoldAssets.Items)
+            {
+                <option value="@item.AssetId.ToString("D")">@item.Name (@item.Code)</option>
+            }
+        </select>
+        <span id="Input_GoldAssetId-error" class="field-error"
+              asp-validation-for="Input.GoldAssetId"></span>
+    </div>
+
+    @if (!Model.IsTransfer)
+    {
+        <div class="field">
+            <label asp-for="Input.CashAccountId">@Text["Gold_CashAccountLabel"]</label>
+            <select asp-for="Input.CashAccountId" aria-describedby="Input_CashAccountId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.CashAccounts.Items)
+                {
+                    <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_CashAccountId-error" class="field-error"
+                  asp-validation-for="Input.CashAccountId"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.CashAssetId">@Text["Gold_CashAssetLabel"]</label>
+            <select asp-for="Input.CashAssetId" aria-describedby="Input_CashAssetId-error">
+                <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                @foreach (var item in choices.CashAssets.Items)
+                {
+                    <option value="@item.AssetId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <span id="Input_CashAssetId-error" class="field-error"
+                  asp-validation-for="Input.CashAssetId"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.CounterpartyInstitutionId">@Text["Gold_CounterpartyLabel"]</label>
+            <select asp-for="Input.CounterpartyInstitutionId" aria-describedby="Input_CounterpartyInstitutionId-help Input_CounterpartyInstitutionId-error">
+                <option value="">@Text["Gold_CounterpartyUnknown"]</option>
+                @foreach (var item in choices.Counterparties.Items)
+                {
+                    <option value="@item.InstitutionId.ToString("D")">@item.Name (@item.Code)</option>
+                }
+            </select>
+            <p id="Input_CounterpartyInstitutionId-help" class="field-help">@Text["Gold_CounterpartyHelp"]</p>
+            <span id="Input_CounterpartyInstitutionId-error" class="field-error"
+                  asp-validation-for="Input.CounterpartyInstitutionId"></span>
+        </div>
+    }
+
+    <p class="field-help">
+        @Text["Gold_MissingReferenceHelp"]
+        <a asp-page="/Record/OpeningBalance">@Text["Gold_CreateReferenceAction"]</a>
+    </p>
+
+    @if (!Model.IsPurchase)
+    {
+        <button type="submit" asp-page-handler="LoadLots" class="button button--secondary">
+            @Text["Gold_LoadLotsAction"]
+        </button>
+    }
+</fieldset>
+
+<fieldset class="field-group flow">
+    <legend>@Text["Gold_Legend_SourceFacts"]</legend>
+
+    @if (Model.IsPurchase)
+    {
+        <div class="field">
+            <label asp-for="Input.GrossWeight">@Text["Gold_GrossWeightLabel"]</label>
+            <input asp-for="Input.GrossWeight" inputmode="decimal" maxlength="32"
+                   aria-describedby="Input_GrossWeight-help Input_GrossWeight-error" />
+            <p id="Input_GrossWeight-help" class="field-help">@Text["Gold_GrossWeightHelp"]</p>
+            <span id="Input_GrossWeight-error" class="field-error"
+                  asp-validation-for="Input.GrossWeight"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.FinenessChoice">@Text["Gold_FinenessLabel"]</label>
+            <select asp-for="Input.FinenessChoice" aria-describedby="Input_FinenessChoice-help Input_FinenessChoice-error">
+                @foreach (var option in Model.FinenessChoices)
+                {
+                    <option value="@option.Value">@Text[option.ResourceKey]</option>
+                }
+            </select>
+            <p id="Input_FinenessChoice-help" class="field-help">@Text["Gold_FinenessHelp"]</p>
+            <span id="Input_FinenessChoice-error" class="field-error"
+                  asp-validation-for="Input.FinenessChoice"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.CustomFinenessPermille">@Text["Gold_CustomFinenessLabel"]</label>
+            <input asp-for="Input.CustomFinenessPermille" inputmode="decimal" maxlength="16"
+                   aria-describedby="Input_CustomFinenessPermille-help Input_CustomFinenessPermille-error" />
+            <p id="Input_CustomFinenessPermille-help" class="field-help">@Text["Gold_CustomFinenessHelp"]</p>
+            <span id="Input_CustomFinenessPermille-error" class="field-error"
+                  asp-validation-for="Input.CustomFinenessPermille"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.PieceCount">@Text["Gold_PieceCountLabel"]</label>
+            <input asp-for="Input.PieceCount" inputmode="numeric" maxlength="10"
+                   aria-describedby="Input_PieceCount-help Input_PieceCount-error" />
+            <p id="Input_PieceCount-help" class="field-help">@Text["Gold_PieceCountHelp"]</p>
+            <span id="Input_PieceCount-error" class="field-error"
+                  asp-validation-for="Input.PieceCount"></span>
+        </div>
+    }
+    else
+    {
+        <div id="Input_SelectedLots" class="flow">
+            <h2>@Text["Gold_SelectedLotsTitle"]</h2>
+            <p class="field-help">@Text["Gold_SelectedLotsHelp"]</p>
+            <span class="field-error" asp-validation-for="Input.SelectedLots"></span>
+
+            @if (Model.Input.SelectedLots.Count == 0)
+            {
+                <p class="state-text state-text--unavailable">@Text["Gold_NoLots"]</p>
+            }
+            @for (var index = 0; index < Model.Input.SelectedLots.Count; index++)
+            {
+                var lot = Model.FindCustodyLot(Model.Input.SelectedLots[index].AssetLotId);
+                <section class="fact-card flow" data-gold-lot="@Model.Input.SelectedLots[index].AssetLotId">
+                    <input type="hidden" asp-for="Input.SelectedLots[index].AssetLotId" />
+                    <h3>@Text["Gold_LotTitle"] @(index + 1)</h3>
+                    @if (lot is not null)
+                    {
+                        <dl class="fact-grid">
+                            <div><dt>@Text["Gold_LotId"]</dt><dd><code>@lot.AssetLotId.ToString("D")</code></dd></div>
+                            <div><dt>@Text["Gold_AvailableGross"]</dt><dd>@Model.PresentGross(lot.GrossWeightRawE8).Text</dd></div>
+                            <div><dt>@Text["Gold_AvailablePieces"]</dt><dd>@lot.PieceCount</dd></div>
+                            <div><dt>@Text["Gold_FinenessLabel"]</dt><dd>@Model.PresentFineness(lot.FinenessPpm)</dd></div>
+                            <div><dt>@Text["Gold_FineWeightLabel"]</dt><dd>@Model.PresentFineWeight(lot.FineWeightGrams)</dd></div>
+                        </dl>
+                    }
+                    else
+                    {
+                        <p class="state-text state-text--unavailable">@Text["Gold_LotChanged"]</p>
+                    }
+                    <div class="field">
+                        <label asp-for="Input.SelectedLots[index].GrossWeight">@Text["Gold_MovedGrossLabel"]</label>
+                        <input asp-for="Input.SelectedLots[index].GrossWeight" inputmode="decimal" maxlength="32"
+                               aria-describedby="Input_SelectedLots_@(index)__GrossWeight-error" />
+                        <span id="Input_SelectedLots_@(index)__GrossWeight-error" class="field-error"
+                              asp-validation-for="Input.SelectedLots[index].GrossWeight"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Input.SelectedLots[index].PieceCount">@Text["Gold_MovedPiecesLabel"]</label>
+                        <input asp-for="Input.SelectedLots[index].PieceCount" inputmode="numeric" maxlength="10"
+                               aria-describedby="Input_SelectedLots_@(index)__PieceCount-error" />
+                        <span id="Input_SelectedLots_@(index)__PieceCount-error" class="field-error"
+                              asp-validation-for="Input.SelectedLots[index].PieceCount"></span>
+                    </div>
+                </section>
+            }
+        </div>
+    }
+
+    <div class="field">
+        <label asp-for="Input.ExecutionDate">@Text["Gold_ExecutionDateLabel"]</label>
+        <input asp-for="Input.ExecutionDate" type="date" aria-describedby="Input_ExecutionDate-error" />
+        <span id="Input_ExecutionDate-error" class="field-error"
+              asp-validation-for="Input.ExecutionDate"></span>
+    </div>
+
+    @if (!Model.IsTransfer)
+    {
+        <div class="field">
+            <label asp-for="Input.CashConsideration">
+                @(Model.IsSale ? Text["Gold_ProceedsLabel"] : Text["Gold_ConsiderationLabel"])
+            </label>
+            <input asp-for="Input.CashConsideration" inputmode="decimal" maxlength="32"
+                   aria-describedby="Input_CashConsideration-help Input_CashConsideration-error" />
+            <p id="Input_CashConsideration-help" class="field-help">@Text["Gold_ConsiderationHelp"]</p>
+            <span id="Input_CashConsideration-error" class="field-error"
+                  asp-validation-for="Input.CashConsideration"></span>
+        </div>
+    }
+</fieldset>
+
+<details class="panel" open="@(Model.ShouldExpandAdvanced)">
+    <summary>@Text["Gold_AdvancedTitle"]</summary>
+
+    @if (!Model.IsTransfer)
+    {
+        <fieldset class="field-group flow">
+            <legend>@Text["Gold_Legend_PriceDates"]</legend>
+            <div class="field">
+                <label asp-for="Input.UnitPrice">@Text["Gold_UnitPriceLabel"]</label>
+                <input asp-for="Input.UnitPrice" inputmode="decimal" maxlength="32"
+                       aria-describedby="Input_UnitPrice-help Input_UnitPrice-error" />
+                <p id="Input_UnitPrice-help" class="field-help">@Text["Gold_UnitPriceHelp"]</p>
+                <span id="Input_UnitPrice-error" class="field-error"
+                      asp-validation-for="Input.UnitPrice"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.OrderDate">@Text["Gold_OrderDateLabel"]</label>
+                <input asp-for="Input.OrderDate" type="date" aria-describedby="Input_OrderDate-error" />
+                <span id="Input_OrderDate-error" class="field-error" asp-validation-for="Input.OrderDate"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.SettlementDate">@Text["Gold_SettlementDateLabel"]</label>
+                <input asp-for="Input.SettlementDate" type="date" aria-describedby="Input_SettlementDate-error" />
+                <span id="Input_SettlementDate-error" class="field-error" asp-validation-for="Input.SettlementDate"></span>
+            </div>
+        </fieldset>
+    }
+
+    <fieldset class="field-group flow">
+        <legend>@Text["Gold_Legend_Costs"]</legend>
+        <p class="field-help">@Text["Gold_CostsHelp"]</p>
+        @for (var index = 0; index < Model.Input.Costs.Count; index++)
+        {
+            <section class="fact-card flow">
+                <h3>@Text["Gold_CostRowTitle"] @(index + 1)</h3>
+                <div class="field">
+                    <label asp-for="Input.Costs[index].TypeCode">@Text["Gold_CostTypeLabel"]</label>
+                    <select asp-for="Input.Costs[index].TypeCode" aria-describedby="Input_Costs_@(index)__TypeCode-error">
+                        <option value="">@Text["Gold_CostNone"]</option>
+                        @foreach (var option in Model.CostTypes)
+                        {
+                            <option value="@option.Value">@Text[option.ResourceKey]</option>
+                        }
+                    </select>
+                    <span id="Input_Costs_@(index)__TypeCode-error" class="field-error"
+                          asp-validation-for="Input.Costs[index].TypeCode"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Costs[index].TreatmentCode">@Text["Gold_CostTreatmentLabel"]</label>
+                    <select asp-for="Input.Costs[index].TreatmentCode" aria-describedby="Input_Costs_@(index)__TreatmentCode-error">
+                        @foreach (var option in Model.CostTreatments)
+                        {
+                            <option value="@option.Value">@Text[option.ResourceKey]</option>
+                        }
+                    </select>
+                    <span id="Input_Costs_@(index)__TreatmentCode-error" class="field-error"
+                          asp-validation-for="Input.Costs[index].TreatmentCode"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Costs[index].Amount">@Text["Gold_CostAmountLabel"]</label>
+                    <input asp-for="Input.Costs[index].Amount" inputmode="decimal" maxlength="32"
+                           aria-describedby="Input_Costs_@(index)__Amount-error" />
+                    <span id="Input_Costs_@(index)__Amount-error" class="field-error"
+                          asp-validation-for="Input.Costs[index].Amount"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Costs[index].Note">@Text["Gold_CostNoteLabel"]</label>
+                    <input asp-for="Input.Costs[index].Note" maxlength="1000" />
+                </div>
+            </section>
+        }
+        <button type="submit" asp-page-handler="AddCost" class="button button--secondary">
+            @Text["Gold_AddCostAction"]
+        </button>
+    </fieldset>
+
+    @if (Model.IsTransfer)
+    {
+        <fieldset class="field-group flow">
+            <legend>@Text["Gold_TransferCashScopeTitle"]</legend>
+            <p class="field-help">@Text["Gold_TransferCashScopeHelp"]</p>
+            <div class="field">
+                <label asp-for="Input.CashPortfolioId">@Text["Gold_CashPortfolioLabel"]</label>
+                <select asp-for="Input.CashPortfolioId">
+                    <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                    @foreach (var item in choices.Portfolios.Items)
+                    {
+                        <option value="@item.PortfolioId.ToString("D")">@item.Name (@item.Code)</option>
+                    }
+                </select>
+                <span class="field-error" asp-validation-for="Input.CashPortfolioId"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.CashAccountId">@Text["Gold_CashAccountLabel"]</label>
+                <select asp-for="Input.CashAccountId">
+                    <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                    @foreach (var item in choices.CashAccounts.Items)
+                    {
+                        <option value="@item.AccountId.ToString("D")">@item.Name (@item.Code)</option>
+                    }
+                </select>
+                <span class="field-error" asp-validation-for="Input.CashAccountId"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.CashAssetId">@Text["Gold_CashAssetLabel"]</label>
+                <select asp-for="Input.CashAssetId">
+                    <option value="">@Text["Gold_ChoosePlaceholder"]</option>
+                    @foreach (var item in choices.CashAssets.Items)
+                    {
+                        <option value="@item.AssetId.ToString("D")">@item.Name (@item.Code)</option>
+                    }
+                </select>
+                <span class="field-error" asp-validation-for="Input.CashAssetId"></span>
+            </div>
+        </fieldset>
+    }
+
+    @if (Model.IsPurchase)
+    {
+        <fieldset class="field-group flow">
+            <legend>@Text["Gold_Legend_ItemEvidence"]</legend>
+            <div class="field">
+                <label asp-for="Input.Hallmark">@Text["Gold_HallmarkLabel"]</label>
+                <input asp-for="Input.Hallmark" maxlength="128" />
+            </div>
+            <div class="field">
+                <label asp-for="Input.CertificateReference">@Text["Gold_CertificateLabel"]</label>
+                <input asp-for="Input.CertificateReference" maxlength="256" />
+            </div>
+            <div class="field">
+                <label asp-for="Input.LotNote">@Text["Gold_LotNoteLabel"]</label>
+                <textarea asp-for="Input.LotNote" maxlength="1000" rows="2"></textarea>
+            </div>
+        </fieldset>
+    }
+</details>
+
+<fieldset class="field-group flow">
+    <legend>@Text["Gold_Legend_Provenance"]</legend>
+    <div class="field">
+        <label asp-for="Input.ExternalReference">@Text["Gold_ExternalReferenceLabel"]</label>
+        <input asp-for="Input.ExternalReference" maxlength="256" />
+    </div>
+    <div class="field">
+        <label asp-for="Input.Note">@Text["Gold_NoteLabel"]</label>
+        <textarea asp-for="Input.Note" maxlength="2000" rows="3" aria-describedby="Input_Note-help Input_Note-error"></textarea>
+        <p id="Input_Note-help" class="field-help">@Text["Gold_NoteHelp"]</p>
+        <span id="Input_Note-error" class="field-error" asp-validation-for="Input.Note"></span>
+    </div>
+</fieldset>

@@ -159,7 +159,10 @@ namespace WealthLedger.Application.CoreLedger
                                             entry.Sequence,
                                             allocation
                                                 .QuantityDelta
-                                                .Negate());
+                                                .Negate(),
+                                            allocation
+                                                .PhysicalGoldDetail
+                                                ?.Negate());
                                 }))
                     .OrderBy(x => x.EntrySequence)
                     .ThenBy(x => x.AssetLotId)

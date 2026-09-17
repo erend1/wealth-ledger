@@ -510,6 +510,22 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldLotAllocationDetailRow", b =>
+                {
+                    b.Property<string>("LotEntryAllocationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PieceDelta")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("LotEntryAllocationId");
+
+                    b.ToTable("PhysicalGoldLotAllocationDetail", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PhysicalGoldLotAllocationDetail_PieceDelta", "\"PieceDelta\" <> 0 AND \"PieceDelta\" BETWEEN -2147483647 AND 2147483647");
+                        });
+                });
+
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldLotDetailRow", b =>
                 {
                     b.Property<string>("AssetLotId")
@@ -541,6 +557,21 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_PhysicalGoldLotDetail_PieceCount", "\"PieceCount\" > 0");
                         });
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldTradeDetailRow", b =>
+                {
+                    b.Property<string>("LedgerTransactionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CounterpartyInstitutionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("LedgerTransactionId");
+
+                    b.HasIndex("CounterpartyInstitutionId");
+
+                    b.ToTable("PhysicalGoldTradeDetail", (string)null);
                 });
 
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PortfolioRow", b =>
@@ -836,11 +867,34 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldLotAllocationDetailRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.LotEntryAllocationRow", null)
+                        .WithOne()
+                        .HasForeignKey("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldLotAllocationDetailRow", "LotEntryAllocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldLotDetailRow", b =>
                 {
                     b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AssetLotRow", null)
                         .WithOne()
                         .HasForeignKey("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldLotDetailRow", "AssetLotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldTradeDetailRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.InstitutionRow", null)
+                        .WithMany()
+                        .HasForeignKey("CounterpartyInstitutionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.LedgerTransactionRow", null)
+                        .WithOne()
+                        .HasForeignKey("WealthLedger.Infrastructure.Persistence.Rows.PhysicalGoldTradeDetailRow", "LedgerTransactionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

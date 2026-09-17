@@ -5,6 +5,7 @@ using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.OpeningBalances;
+using WealthLedger.Application.PhysicalGold;
 using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Common;
 
@@ -47,6 +48,16 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
             })
         {
             extensions["relatedTransactionId"] = relatedFundTradeId;
+        }
+
+        if (extensions is not null
+            && exception is PhysicalGoldException
+            {
+                RelatedTransactionId: Guid relatedPhysicalGoldActivityId
+            })
+        {
+            extensions["relatedTransactionId"] =
+                relatedPhysicalGoldActivityId;
         }
 
         await Results.Problem(
@@ -147,6 +158,32 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
                     },
                     fundTradeException.Message,
                     fundTradeException.ErrorCode),
+            PhysicalGoldException physicalGoldException =>
+                new ApiFailure(
+                    physicalGoldException.Category switch
+                    {
+                        PhysicalGoldErrorCategory.NotFound =>
+                            StatusCodes.Status404NotFound,
+                        PhysicalGoldErrorCategory.Conflict =>
+                            StatusCodes.Status409Conflict,
+                        PhysicalGoldErrorCategory.Validation =>
+                            StatusCodes.Status422UnprocessableEntity,
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(physicalGoldException.Category))
+                    },
+                    physicalGoldException.Category switch
+                    {
+                        PhysicalGoldErrorCategory.NotFound =>
+                            "Physical-gold activity not found",
+                        PhysicalGoldErrorCategory.Conflict =>
+                            "Physical-gold activity conflict",
+                        PhysicalGoldErrorCategory.Validation =>
+                            "Physical-gold validation failed",
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(physicalGoldException.Category))
+                    },
+                    physicalGoldException.Message,
+                    physicalGoldException.ErrorCode),
             NavigationPersistenceException => new ApiFailure(
                 StatusCodes.Status409Conflict,
                 "Navigation data unavailable",

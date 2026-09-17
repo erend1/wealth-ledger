@@ -4,9 +4,19 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
+using WealthLedger.Api.Contracts;
+using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
+using WealthLedger.Application.OpeningBalances;
+using WealthLedger.Application.PhysicalGold;
 using WealthLedger.Application.Setup;
+using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Ledger;
+using WealthLedger.Domain.Lots;
+using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.ValueObjects;
 using WealthLedger.Infrastructure.LocalData;
 using WealthLedger.Infrastructure.Persistence;
 using WealthLedger.Infrastructure;
@@ -187,6 +197,86 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         Assert.Equal(
             HttpStatusCode.OK,
             restartedResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task
+        LocalHosting_PhysicalGoldBackupStagesAndReadsBackFromFreshProcess()
+    {
+        await PrepareReadyWorkspaceAsync();
+        var evidence = await CreatePhysicalGoldRecoveryEvidenceAsync();
+
+        Assert.True(File.Exists(evidence.BackupFilePath));
+        Assert.True(File.Exists(evidence.RestoredDatabasePath));
+
+        await using var process = ApiProcess.Start(
+            evidence.RestoredDatabasePath,
+            _backupDirectory);
+        var baseAddress = new Uri(await process.WaitForListeningUrlAsync());
+        using var client = new HttpClient { BaseAddress = baseAddress };
+
+        var custody = await client.GetFromJsonAsync<
+            PhysicalGoldCustodyInventoryResponse>(
+            $"/api/households/{evidence.HouseholdId:D}/physical-gold/custody");
+        Assert.NotNull(custody);
+        var positions = custody.Items
+            .Where(x => x.AssetLotId == evidence.AssetLotId)
+            .OrderBy(x => x.AccountId)
+            .ToArray();
+        Assert.Equal(2, positions.Length);
+        Assert.Contains(
+            positions,
+            x => x.AccountId == evidence.SourceVaultId
+                 && x.GrossWeightRawE8 == 16_00000000L
+                 && x.PieceCount == 1
+                 && x.FineWeightGrams == 14.656m);
+        Assert.Contains(
+            positions,
+            x => x.AccountId == evidence.DestinationVaultId
+                 && x.GrossWeightRawE8 == 8_00000000L
+                 && x.PieceCount == 1
+                 && x.FineWeightGrams == 7.328m);
+
+        var originalSale = await ReadGoldVerificationAsync(
+            client,
+            evidence.HouseholdId,
+            evidence.OriginalSaleTransactionId);
+        Assert.Equal(100_000, originalSale.Economics.NetCashEffectMinorUnits);
+        Assert.NotNull(originalSale.ReversedByTransactionId);
+        Assert.False(originalSale.RealizedCost!.SourceSaleIsEffective);
+
+        var correctedSale = await ReadGoldVerificationAsync(
+            client,
+            evidence.HouseholdId,
+            evidence.CorrectedSaleTransactionId);
+        Assert.Equal(60_000, correctedSale.Economics.NetCashEffectMinorUnits);
+        Assert.Equal(
+            60_000,
+            Assert.Single(correctedSale.RealizedCost!.KnownAmounts).MinorUnits);
+        Assert.True(correctedSale.RealizedCost.SourceSaleIsEffective);
+
+        var transfer = await ReadGoldVerificationAsync(
+            client,
+            evidence.HouseholdId,
+            evidence.TransferTransactionId);
+        Assert.Equal(0, transfer.Economics.NetCashEffectMinorUnits);
+        Assert.Equal(2, transfer.Allocations.Count);
+        Assert.Equal(
+            0,
+            transfer.Allocations.Sum(x => x.GrossWeightDeltaRawE8));
+        Assert.Equal(0, transfer.Allocations.Sum(x => x.PieceDelta));
+
+        Assert.Contains(
+            "Local startup mode: Ready",
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            evidence.RestoredDatabasePath,
+            process.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("RECOVERY-GOLD", process.CombinedOutput);
+        Assert.DoesNotContain("Data Source=", process.CombinedOutput);
+        Assert.DoesNotContain("SELECT ", process.CombinedOutput);
     }
 
     [Fact]
@@ -463,6 +553,290 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             backupResult.Succeeded,
             backupResult.Failure?.Message);
     }
+
+    private async Task<PhysicalGoldRecoveryEvidence>
+        CreatePhysicalGoldRecoveryEvidenceAsync()
+    {
+        var configuration =
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["Storage:DatabasePath"] = _databasePath,
+                        ["Backup:Directory"] = _backupDirectory,
+                        ["Backup:DestinationSeparationConfirmed"] = "true",
+                        ["Backup:DestinationEncryptionConfirmed"] = "true"
+                    })
+                .Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddWealthLedgerInfrastructure(
+            configuration,
+            new LocalDataRuntimeContext(
+                "Testing",
+                Directory.GetCurrentDirectory()));
+        services.AddScoped<CreateOpeningBalanceAccountUseCase>();
+        services.AddScoped<CreateOpeningBalanceAssetUseCase>();
+        services.AddScoped<RecordPhysicalGoldPurchaseUseCase>();
+        services.AddScoped<PreviewPhysicalGoldSaleUseCase>();
+        services.AddScoped<RecordPhysicalGoldSaleUseCase>();
+        services.AddScoped<PreviewPhysicalGoldTransferUseCase>();
+        services.AddScoped<RecordPhysicalGoldTransferUseCase>();
+        services.AddScoped<ReversePostedTransactionUseCase>();
+        services.AddScoped<CreateLocalBackupUseCase>();
+        services.AddScoped<VerifyLocalBackupUseCase>();
+        services.AddScoped<StageLocalRestoreUseCase>();
+
+        await using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateScopes = true,
+                ValidateOnBuild = true
+            });
+
+        Guid householdId;
+        Guid portfolioId;
+        Guid cashAccountId;
+        Guid cashAssetId;
+        Guid sourceVaultId;
+        Guid destinationVaultId;
+        Guid goldAssetId;
+        Guid assetLotId;
+        Guid originalSaleTransactionId;
+        Guid correctedSaleTransactionId;
+        Guid transferTransactionId;
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider
+                .GetRequiredService<WealthLedgerDbContext>();
+            householdId = await context.Households
+                .Select(x => x.Id)
+                .SingleAsync();
+            portfolioId = await context.Portfolios
+                .Select(x => x.Id)
+                .SingleAsync();
+            cashAccountId = await context.Accounts
+                .Where(x => x.Code == "PRIMARY")
+                .Select(x => x.Id)
+                .SingleAsync();
+            cashAssetId = await context.Assets
+                .Where(x => x.Code == "SYNTHETIC_CASH")
+                .Select(x => x.Id)
+                .SingleAsync();
+
+            var createAccount = scope.ServiceProvider
+                .GetRequiredService<CreateOpeningBalanceAccountUseCase>();
+            sourceVaultId = (await createAccount.ExecuteAsync(
+                    new CreateOpeningBalanceAccountCommand(
+                        householdId,
+                        InstitutionId: null,
+                        "RECOVERY_VAULT_A",
+                        "Synthetic Recovery Vault A",
+                        AccountType.PhysicalVault,
+                        new DateOnly(2026, 1, 1))))
+                .Reference.AccountId;
+            destinationVaultId = (await createAccount.ExecuteAsync(
+                    new CreateOpeningBalanceAccountCommand(
+                        householdId,
+                        InstitutionId: null,
+                        "RECOVERY_VAULT_B",
+                        "Synthetic Recovery Vault B",
+                        AccountType.PhysicalVault,
+                        new DateOnly(2026, 1, 1))))
+                .Reference.AccountId;
+            goldAssetId = (await scope.ServiceProvider
+                    .GetRequiredService<CreateOpeningBalanceAssetUseCase>()
+                    .ExecuteAsync(
+                        new CreateOpeningBalanceAssetCommand(
+                            "RECOVERY_GOLD",
+                            "Synthetic Recovery Gold",
+                            AssetType.PhysicalGold,
+                            CurrencyCode.TRY,
+                            LotTrackingMode.Required)))
+                .Reference.AssetId;
+
+            var purchase = await scope.ServiceProvider
+                .GetRequiredService<RecordPhysicalGoldPurchaseUseCase>()
+                .ExecuteAsync(
+                    Guid.NewGuid().ToString("D"),
+                    new PhysicalGoldPurchaseCommand(
+                        householdId,
+                        portfolioId,
+                        sourceVaultId,
+                        cashAccountId,
+                        goldAssetId,
+                        cashAssetId,
+                        Quantity.FromDecimal(30m),
+                        new Fineness(916_000),
+                        PieceCount: 3,
+                        Money.FromMinorUnits(300_000, CurrencyCode.TRY),
+                        new DateOnly(2026, 9, 15),
+                        ExternalReference: "RECOVERY-GOLD-PURCHASE",
+                        Note: "Synthetic recovery purchase evidence."));
+            assetLotId = purchase.AssetLotId;
+
+            var saleSelection = new PhysicalGoldSelectedLot(
+                assetLotId,
+                Quantity.FromDecimal(10m),
+                PieceCount: 1);
+            var originalSaleCommand = new PhysicalGoldSaleCommand(
+                householdId,
+                portfolioId,
+                sourceVaultId,
+                cashAccountId,
+                goldAssetId,
+                cashAssetId,
+                Quantity.FromDecimal(10m),
+                PieceCount: 1,
+                [saleSelection],
+                Money.FromMinorUnits(100_000, CurrencyCode.TRY),
+                new DateOnly(2026, 9, 15),
+                ExternalReference: "RECOVERY-GOLD-SALE-ORIGINAL",
+                Note: "Synthetic recovery original sale.");
+            var salePreview = await scope.ServiceProvider
+                .GetRequiredService<PreviewPhysicalGoldSaleUseCase>()
+                .ExecuteAsync(originalSaleCommand);
+            originalSaleCommand = originalSaleCommand with
+            {
+                ReviewedPlanFingerprint = salePreview.PlanFingerprint
+            };
+            originalSaleTransactionId = (await scope.ServiceProvider
+                    .GetRequiredService<RecordPhysicalGoldSaleUseCase>()
+                    .ExecuteAsync(
+                        Guid.NewGuid().ToString("D"),
+                        originalSaleCommand))
+                .TransactionId;
+
+            _ = await scope.ServiceProvider
+                .GetRequiredService<ReversePostedTransactionUseCase>()
+                .ExecuteAsync(
+                    Guid.NewGuid().ToString("D"),
+                    new ReversePostedTransactionCommand(
+                        originalSaleTransactionId,
+                        "Synthetic recovery correction reason."));
+
+            var correctedSelection = new PhysicalGoldSelectedLot(
+                assetLotId,
+                Quantity.FromDecimal(6m),
+                PieceCount: 1);
+            var correctedSaleCommand = originalSaleCommand with
+            {
+                GrossWeight = Quantity.FromDecimal(6m),
+                CashConsideration = Money.FromMinorUnits(
+                    60_000,
+                    CurrencyCode.TRY),
+                SelectedLots = [correctedSelection],
+                ExternalReference = "RECOVERY-GOLD-SALE-CORRECTED",
+                Note = "Synthetic recovery corrected sale.",
+                ReviewedPlanFingerprint = null
+            };
+            salePreview = await scope.ServiceProvider
+                .GetRequiredService<PreviewPhysicalGoldSaleUseCase>()
+                .ExecuteAsync(correctedSaleCommand);
+            correctedSaleCommand = correctedSaleCommand with
+            {
+                ReviewedPlanFingerprint = salePreview.PlanFingerprint
+            };
+            correctedSaleTransactionId = (await scope.ServiceProvider
+                    .GetRequiredService<RecordPhysicalGoldSaleUseCase>()
+                    .ExecuteAsync(
+                        Guid.NewGuid().ToString("D"),
+                        correctedSaleCommand))
+                .TransactionId;
+
+            var transferSelection = new PhysicalGoldSelectedLot(
+                assetLotId,
+                Quantity.FromDecimal(8m),
+                PieceCount: 1);
+            var transferCommand = new PhysicalGoldTransferCommand(
+                householdId,
+                portfolioId,
+                sourceVaultId,
+                portfolioId,
+                destinationVaultId,
+                goldAssetId,
+                Quantity.FromDecimal(8m),
+                PieceCount: 1,
+                [transferSelection],
+                new DateOnly(2026, 9, 15),
+                ExternalReference: "RECOVERY-GOLD-TRANSFER",
+                Note: "Synthetic recovery transfer.");
+            var transferPreview = await scope.ServiceProvider
+                .GetRequiredService<PreviewPhysicalGoldTransferUseCase>()
+                .ExecuteAsync(transferCommand);
+            transferCommand = transferCommand with
+            {
+                ReviewedPlanFingerprint = transferPreview.PlanFingerprint
+            };
+            transferTransactionId = (await scope.ServiceProvider
+                    .GetRequiredService<RecordPhysicalGoldTransferUseCase>()
+                    .ExecuteAsync(
+                        Guid.NewGuid().ToString("D"),
+                        transferCommand))
+                .TransactionId;
+        }
+
+        string backupFilePath;
+        var restoredDatabasePath = Path.Combine(
+            _testRoot,
+            "physical-gold-restore-drill",
+            "restored.db");
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var backup = await scope.ServiceProvider
+                .GetRequiredService<CreateLocalBackupUseCase>()
+                .ExecuteAsync();
+            Assert.True(backup.Succeeded, backup.Failure?.Message);
+            backupFilePath = backup.Value!.FilePath;
+
+            var verification = await scope.ServiceProvider
+                .GetRequiredService<VerifyLocalBackupUseCase>()
+                .ExecuteAsync(backupFilePath);
+            Assert.True(
+                verification.Succeeded,
+                verification.Failure?.Message);
+
+            var restore = await scope.ServiceProvider
+                .GetRequiredService<StageLocalRestoreUseCase>()
+                .ExecuteAsync(backupFilePath, restoredDatabasePath);
+            Assert.True(restore.Succeeded, restore.Failure?.Message);
+        }
+
+        return new PhysicalGoldRecoveryEvidence(
+            householdId,
+            sourceVaultId,
+            destinationVaultId,
+            assetLotId,
+            originalSaleTransactionId,
+            correctedSaleTransactionId,
+            transferTransactionId,
+            backupFilePath,
+            restoredDatabasePath);
+    }
+
+    private static async Task<PhysicalGoldActivityVerificationResponse>
+        ReadGoldVerificationAsync(
+            HttpClient client,
+            Guid householdId,
+            Guid transactionId)
+    {
+        var result = await client.GetFromJsonAsync<
+            PhysicalGoldActivityVerificationResponse>(
+            $"/api/households/{householdId:D}/ledger/physical-gold-activities/{transactionId:D}/verification");
+        return Assert.IsType<PhysicalGoldActivityVerificationResponse>(result);
+    }
+
+    private sealed record PhysicalGoldRecoveryEvidence(
+        Guid HouseholdId,
+        Guid SourceVaultId,
+        Guid DestinationVaultId,
+        Guid AssetLotId,
+        Guid OriginalSaleTransactionId,
+        Guid CorrectedSaleTransactionId,
+        Guid TransferTransactionId,
+        string BackupFilePath,
+        string RestoredDatabasePath);
 
     private sealed class ApiProcess : IAsyncDisposable
     {

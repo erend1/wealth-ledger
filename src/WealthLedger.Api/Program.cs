@@ -8,6 +8,7 @@ using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Positions;
+using WealthLedger.Application.PhysicalGold;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure;
 using WealthLedger.Infrastructure.LocalData;
@@ -64,6 +65,17 @@ builder.Services.AddScoped<PreviewFundPurchaseUseCase>();
 builder.Services.AddScoped<PreviewFundSaleUseCase>();
 builder.Services.AddScoped<RecordFundSaleUseCase>();
 builder.Services.AddScoped<GetFundTradeVerificationUseCase>();
+
+// M009 physical-gold lifecycle.
+builder.Services.AddScoped<ListPhysicalGoldChoicesUseCase>();
+builder.Services.AddScoped<PreviewPhysicalGoldPurchaseUseCase>();
+builder.Services.AddScoped<RecordPhysicalGoldPurchaseUseCase>();
+builder.Services.AddScoped<PreviewPhysicalGoldSaleUseCase>();
+builder.Services.AddScoped<RecordPhysicalGoldSaleUseCase>();
+builder.Services.AddScoped<PreviewPhysicalGoldTransferUseCase>();
+builder.Services.AddScoped<RecordPhysicalGoldTransferUseCase>();
+builder.Services.AddScoped<GetPhysicalGoldActivityVerificationUseCase>();
+builder.Services.AddScoped<GetPhysicalGoldCustodyInventoryUseCase>();
 
 var app = builder.Build();
 
@@ -140,6 +152,7 @@ switch (startupSelection.Mode)
         app.MapPositionEndpoints();
         app.MapOpeningBalanceEndpoints();
         app.MapFundTradeEndpoints();
+        app.MapPhysicalGoldEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:

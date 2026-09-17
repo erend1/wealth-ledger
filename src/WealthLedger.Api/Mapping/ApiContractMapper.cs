@@ -189,7 +189,8 @@ internal static class ApiContractMapper
                             allocation.AssetLotId,
                             allocation.OriginalTransactionEntryId,
                             allocation.EntrySequence,
-                            allocation.QuantityDelta.RawE8))
+                            allocation.QuantityDelta.RawE8,
+                            allocation.PhysicalGoldPieceDelta))
                 .ToArray());
     }
 

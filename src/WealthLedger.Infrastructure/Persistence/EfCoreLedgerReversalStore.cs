@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Common;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
@@ -305,6 +306,24 @@ namespace WealthLedger.Infrastructure.Persistence
                                             allocation)))
                     .ToArray();
 
+            var physicalAllocationRows =
+                affectedLots
+                    .SelectMany(
+                        lot => lot.Allocations
+                            .Where(allocation =>
+                                reversalEntryIds.Contains(
+                                    allocation.TransactionEntryId)
+                                && allocation.PhysicalGoldDetail is not null)
+                            .Select(allocation =>
+                                new PhysicalGoldLotAllocationDetailRow
+                                {
+                                    LotEntryAllocationId = allocation.Id,
+                                    PieceDelta = allocation
+                                        .PhysicalGoldDetail!
+                                        .PieceDelta
+                                }))
+                    .ToArray();
+
             var receiptRow =
                 MapReceipt(receipt);
 
@@ -327,6 +346,9 @@ namespace WealthLedger.Infrastructure.Persistence
 
                     _dbContext.LotEntryAllocations.AddRange(
                         allocationRows);
+
+                    _dbContext.PhysicalGoldLotAllocationDetails.AddRange(
+                        physicalAllocationRows);
 
                     await _dbContext.SaveChangesAsync(
                         cancellationToken);
@@ -518,6 +540,8 @@ namespace WealthLedger.Infrastructure.Persistence
                 return [];
             }
 
+            var blockerIds = new HashSet<Guid>();
+
             var openedLotIds =
                 await _dbContext.AssetLots
                     .AsNoTracking()
@@ -529,16 +553,77 @@ namespace WealthLedger.Infrastructure.Persistence
                     .ToArrayAsync(
                         cancellationToken);
 
-            if (openedLotIds.Length == 0)
+            if (openedLotIds.Length != 0)
             {
-                return [];
+                var acquisitionBlockerIds =
+                    await (
+                        from allocation
+                            in _dbContext.LotEntryAllocations
+                                .AsNoTracking()
+                        join entry
+                            in _dbContext.TransactionEntries
+                                .AsNoTracking()
+                            on allocation.TransactionEntryId
+                            equals entry.Id
+                        join transaction
+                            in _dbContext.LedgerTransactions
+                                .AsNoTracking()
+                            on entry.TransactionId
+                            equals transaction.Id
+                        where
+                            openedLotIds.Contains(
+                                allocation.AssetLotId)
+                            && transaction.Status
+                                == TransactionStatus.Posted
+                            && transaction.Type
+                                != TransactionType.Reversal
+                            && transaction.Id
+                                != originalTransactionId
+                            && !_dbContext.LedgerTransactions
+                                .Any(
+                                    reversal =>
+                                        reversal.Type
+                                            == TransactionType.Reversal
+                                        && reversal.Status
+                                            == TransactionStatus.Posted
+                                        && reversal
+                                            .ReversalOfTransactionId
+                                            == transaction.Id)
+                        select transaction.Id
+                    )
+                    .Distinct()
+                    .ToArrayAsync(
+                        cancellationToken);
+
+                blockerIds.UnionWith(
+                    acquisitionBlockerIds);
             }
 
-            var blockerIds =
+            blockerIds.UnionWith(
+                await FindPhysicalGoldTransferBlockersAsync(
+                    originalTransactionId,
+                    cancellationToken));
+
+            return blockerIds
+                .OrderBy(x => x)
+                .ToArray();
+        }
+
+        private async Task<IReadOnlyList<Guid>>
+            FindPhysicalGoldTransferBlockersAsync(
+                Guid originalTransactionId,
+                CancellationToken cancellationToken)
+        {
+            var destinationRequirements =
                 await (
                     from allocation
                         in _dbContext.LotEntryAllocations
                             .AsNoTracking()
+                    join piece
+                        in _dbContext.PhysicalGoldLotAllocationDetails
+                            .AsNoTracking()
+                        on allocation.Id
+                        equals piece.LotEntryAllocationId
                     join entry
                         in _dbContext.TransactionEntries
                             .AsNoTracking()
@@ -549,33 +634,138 @@ namespace WealthLedger.Infrastructure.Persistence
                             .AsNoTracking()
                         on entry.TransactionId
                         equals transaction.Id
-                    where
-                        openedLotIds.Contains(
+                    join lot
+                        in _dbContext.AssetLots
+                            .AsNoTracking()
+                        on allocation.AssetLotId
+                        equals lot.Id
+                    join asset
+                        in _dbContext.Assets
+                            .AsNoTracking()
+                        on lot.AssetId
+                        equals asset.Id
+                    where transaction.Id == originalTransactionId
+                        && transaction.Type == TransactionType.Transfer
+                        && entry.Role == EntryRole.Transfer
+                        && asset.Type == AssetType.PhysicalGold
+                        && allocation.QuantityDeltaE8 > 0
+                        && piece.PieceDelta > 0
+                    select new
+                    {
+                        allocation.AssetLotId,
+                        entry.PortfolioId,
+                        entry.AccountId,
+                        GrossWeightRawE8 = allocation.QuantityDeltaE8,
+                        PieceCount = piece.PieceDelta
+                    })
+                    .ToArrayAsync(cancellationToken);
+
+            if (destinationRequirements.Length == 0)
+            {
+                return [];
+            }
+
+            var affectedLotIds = destinationRequirements
+                .Select(x => x.AssetLotId)
+                .Distinct()
+                .ToArray();
+
+            var postedFacts =
+                await (
+                    from allocation
+                        in _dbContext.LotEntryAllocations
+                            .AsNoTracking()
+                    join piece
+                        in _dbContext.PhysicalGoldLotAllocationDetails
+                            .AsNoTracking()
+                        on allocation.Id
+                        equals piece.LotEntryAllocationId
+                    join entry
+                        in _dbContext.TransactionEntries
+                            .AsNoTracking()
+                        on allocation.TransactionEntryId
+                        equals entry.Id
+                    join transaction
+                        in _dbContext.LedgerTransactions
+                            .AsNoTracking()
+                        on entry.TransactionId
+                        equals transaction.Id
+                    where affectedLotIds.Contains(
                             allocation.AssetLotId)
                         && transaction.Status
                             == TransactionStatus.Posted
-                        && transaction.Type
-                            != TransactionType.Reversal
-                        && transaction.Id
-                            != originalTransactionId
-                        && !_dbContext.LedgerTransactions
-                            .Any(
-                                reversal =>
-                                    reversal.Type
-                                        == TransactionType.Reversal
-                                    && reversal.Status
-                                        == TransactionStatus.Posted
-                                    && reversal
-                                        .ReversalOfTransactionId
-                                        == transaction.Id)
-                    select transaction.Id
-                )
-                .Distinct()
-                .OrderBy(x => x)
-                .ToArrayAsync(
-                    cancellationToken);
+                    select new
+                    {
+                        allocation.AssetLotId,
+                        entry.PortfolioId,
+                        entry.AccountId,
+                        allocation.QuantityDeltaE8,
+                        piece.PieceDelta,
+                        TransactionId = transaction.Id,
+                        transaction.Type,
+                        transaction.ReversalOfTransactionId
+                    })
+                    .ToArrayAsync(cancellationToken);
 
-            return blockerIds;
+            var reversedTransactionIds = postedFacts
+                .Where(x => x.Type == TransactionType.Reversal)
+                .Select(x => x.ReversalOfTransactionId)
+                .OfType<Guid>()
+                .ToHashSet();
+            var blockers = new HashSet<Guid>();
+
+            foreach (var requirement in destinationRequirements)
+            {
+                var scopedFacts = postedFacts
+                    .Where(x =>
+                        x.AssetLotId == requirement.AssetLotId
+                        && x.PortfolioId == requirement.PortfolioId
+                        && x.AccountId == requirement.AccountId)
+                    .ToArray();
+
+                var currentGross = scopedFacts.Aggregate(
+                    0L,
+                    (total, fact) => checked(
+                        total + fact.QuantityDeltaE8));
+                var currentPieces = scopedFacts.Aggregate(
+                    0,
+                    (total, fact) => checked(
+                        total + fact.PieceDelta));
+
+                if (currentGross >= requirement.GrossWeightRawE8
+                    && currentPieces >= requirement.PieceCount)
+                {
+                    continue;
+                }
+
+                var effectiveNegativeFacts = scopedFacts
+                    .Where(x =>
+                        x.TransactionId != originalTransactionId
+                        && (x.QuantityDeltaE8 < 0
+                            || x.PieceDelta < 0)
+                        && (x.Type == TransactionType.Reversal
+                            || !reversedTransactionIds.Contains(
+                                x.TransactionId)))
+                    .ToArray();
+
+                if (effectiveNegativeFacts.Length == 0)
+                {
+                    effectiveNegativeFacts = scopedFacts
+                        .Where(x =>
+                            x.TransactionId != originalTransactionId
+                            && (x.QuantityDeltaE8 < 0
+                                || x.PieceDelta < 0))
+                        .ToArray();
+                }
+
+                blockers.UnionWith(
+                    effectiveNegativeFacts.Select(
+                        x => x.TransactionId));
+            }
+
+            return blockers
+                .OrderBy(x => x)
+                .ToArray();
         }
 
         private async Task<IReadOnlyCollection<AssetLot>>
@@ -662,6 +852,21 @@ namespace WealthLedger.Infrastructure.Persistence
                     .ToArrayAsync(
                         cancellationToken);
 
+            var allocationIds = allocationRows
+                .Select(x => x.Id)
+                .ToArray();
+
+            var goldAllocationRows =
+                await _dbContext.PhysicalGoldLotAllocationDetails
+                    .AsNoTracking()
+                    .Where(x => allocationIds.Contains(
+                        x.LotEntryAllocationId))
+                    .ToArrayAsync(cancellationToken);
+
+            var goldAllocationById =
+                goldAllocationRows.ToDictionary(
+                    x => x.LotEntryAllocationId);
+
             var goldByLot =
                 goldRows.ToDictionary(
                     x => x.AssetLotId);
@@ -684,7 +889,8 @@ namespace WealthLedger.Infrastructure.Persistence
                                     []),
                             goldByLot
                                 .GetValueOrDefault(
-                                    row.Id)))
+                                    row.Id),
+                            goldAllocationById))
                 .ToArray();
         }
 
@@ -757,7 +963,9 @@ namespace WealthLedger.Infrastructure.Persistence
             AssetLotRow lot,
             IReadOnlyCollection<LotEntryAllocationRow>
                 allocations,
-            PhysicalGoldLotDetailRow? gold)
+            PhysicalGoldLotDetailRow? gold,
+            IReadOnlyDictionary<Guid, PhysicalGoldLotAllocationDetailRow>
+                goldAllocationById)
         {
             return AssetLot.Reconstitute(
                 lot.Id,
@@ -783,7 +991,10 @@ namespace WealthLedger.Infrastructure.Persistence
                                 x.Id,
                                 x.TransactionEntryId,
                                 QuantityDelta.FromRaw(
-                                    x.QuantityDeltaE8)))
+                                    x.QuantityDeltaE8),
+                                goldAllocationById
+                                    .GetValueOrDefault(x.Id)
+                                    ?.PieceDelta))
                     .ToArray());
         }
 
@@ -1116,7 +1327,16 @@ namespace WealthLedger.Infrastructure.Persistence
                     StringComparison.OrdinalIgnoreCase)
                 || sqlite.Message.Contains(
                     "Lot quantity cannot become negative",
-                    StringComparison.OrdinalIgnoreCase);
+                    StringComparison.OrdinalIgnoreCase)
+                || sqlite.Message.Contains(
+                    "effective lot quantity negative",
+                    StringComparison.OrdinalIgnoreCase)
+                || sqlite.Message.Contains(
+                    "WL_M009_PHYSICAL_GOLD_GLOBAL_QUANTITY_OR_PIECE_NEGATIVE",
+                    StringComparison.Ordinal)
+                || sqlite.Message.Contains(
+                    "WL_M009_PHYSICAL_GOLD_SCOPED_QUANTITY_OR_PIECE_NEGATIVE",
+                    StringComparison.Ordinal);
         }
 
         private static bool IsUnsupportedPersistedShape(

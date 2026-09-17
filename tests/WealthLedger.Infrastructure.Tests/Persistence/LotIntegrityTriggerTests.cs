@@ -243,6 +243,22 @@ public sealed class LotIntegrityTriggerTests
 
         await AssertSqliteFailureAsync(
             () => database.ExecuteNonQueryAsync(
+                "UPDATE PhysicalGoldLotAllocationDetail SET PieceDelta = 2 WHERE LotEntryAllocationId = $id;",
+                new SqliteParameter(
+                    "$id",
+                    postedLot.AllocationId.ToString("D"))),
+            "immutable");
+
+        await AssertSqliteFailureAsync(
+            () => database.ExecuteNonQueryAsync(
+                "DELETE FROM PhysicalGoldLotAllocationDetail WHERE LotEntryAllocationId = $id;",
+                new SqliteParameter(
+                    "$id",
+                    postedLot.AllocationId.ToString("D"))),
+            "immutable");
+
+        await AssertSqliteFailureAsync(
+            () => database.ExecuteNonQueryAsync(
                 "UPDATE LotEntryAllocation SET QuantityDeltaE8 = 999 WHERE Id = $id;",
                 new SqliteParameter("$id", postedLot.AllocationId.ToString("D"))),
             "immutable");
@@ -1346,6 +1362,13 @@ public sealed class LotIntegrityTriggerTests
                 ActualFinenessPpm = 916_000,
                 PieceCount = 1
             });
+
+            context.PhysicalGoldLotAllocationDetails.Add(
+                new PhysicalGoldLotAllocationDetailRow
+                {
+                    LotEntryAllocationId = allocationId,
+                    PieceDelta = 1
+                });
         }
 
         await context.SaveChangesAsync();

@@ -2,7 +2,7 @@
 
 Status: Canonical domain model
 
-Last distilled: 2026-09-11
+Last distilled: 2026-09-16
 
 ## Numerical language
 
@@ -351,24 +351,33 @@ Invalid combinations such as Unknown plus an amount are rejected.
 
 Cost basis belongs to acquisition lineage. Realized cost basis for a partial disposal is derived from allocations and the accepted lot-selection/accounting policy. Arithmetic and rounding must be deterministic and tested.
 
-M008 implements that policy for Fund sales through ADR-009. For one lot with
-original positive quantity `Q` and Known cost `C`, the effective sale
+M008 implements that policy for Fund sales and M009 extends it to PhysicalGold
+sales through ADR-009 and ADR-010. For one lot with original positive quantity
+`Q` and Known cost `C`, the effective sale
 allocations are ordered by posting time and each is assigned
 `round_half_to_even(C * D(i) / Q) - round_half_to_even(C * D(i-1) / Q)` over
 the cumulative disposed quantity `D`. Rounding the running total rather than
 each sale conserves `C` exactly when the lot closes. Intermediates use
 `Int128`, which is provably wide enough for any `Int64` cost and quantity.
 
-Only a Posted Fund Sell with no Posted reversal is effective. A reversed sale
-and its reversal remain audit history but leave the sequence, so a correction
-can move a minor unit of derived cost between the remaining effective sales.
-Every result therefore states its method code and the time it was derived.
+Only a Posted sale with no Posted reversal is effective. A reversed sale and
+its reversal remain audit history but leave the sequence, so a correction can
+move a minor unit of derived cost between the remaining effective sales. Every
+result therefore states its method code and the time it was derived. Unknown
+lot cost remains Unknown, and known amounts in unlike currencies remain
+separate completeness-aware currency buckets.
 
 Fund sale allocation uses custody-scoped first-in-first-out. `AssetLot` still
 carries no account or portfolio, so availability is derived from allocations
 whose transaction entries fall inside the selected portfolio and account;
 `AssetLot.CurrentQuantity` is a household-wide figure and is never used as
 custody availability.
+
+PhysicalGold sale allocation never reuses Fund FIFO. The reviewed command
+names each acquisition lot and supplies its exact gross raw-E8 quantity and
+whole-piece movement. ADR-009 cost apportionment uses gross raw-E8 quantity as
+`Q` and `D`; piece count is independent physical evidence and is never the cost
+denominator.
 
 ## AssetLot aggregate
 
@@ -414,6 +423,12 @@ Each allocation contains:
 - non-zero signed QuantityDelta;
 - creation timestamp in persistence.
 
+Every allocation whose lot asset is PhysicalGold also has exactly one
+`PhysicalGoldLotAllocationDetail` containing a non-zero signed whole-number
+`PieceDelta`. Non-PhysicalGold allocations have no piece detail. Gross
+quantity and piece movement are independent facts: neither may be inferred
+from the other, and their signs must match.
+
 The pair AssetLotId plus TransactionEntryId is unique.
 
 Allocation invariants:
@@ -432,11 +447,19 @@ Current quantity:
 
     sum of all LotEntryAllocation.QuantityDelta for the lot
 
+Current physical-gold piece count:
+
+    sum of all PhysicalGoldLotAllocationDetail.PieceDelta for the lot
+
 IsClosed is derived from current quantity being zero.
 
 ### Custody derivation
 
-Lot custody is derived by joining allocations to transaction entries and grouping by Account and Portfolio. A transfer supplies offsetting negative and positive allocations for the same lot, so acquisition date and cost basis remain unchanged.
+Lot custody is derived by joining allocations to transaction entries and
+grouping by Account and Portfolio. A physical-gold transfer supplies exact
+equal-and-opposite quantity and piece allocations for the same acquisition lot,
+so household totals, acquisition date, fineness, and cost basis remain
+unchanged. It creates no new lot, consideration, or acquisition cost.
 
 ### FIFO allocation
 
@@ -463,7 +486,12 @@ Contains:
 - optional CertificateReference;
 - optional Note.
 
-Gross weight is the lot quantity. Fine-gold weight is derived:
+`PieceCount` is immutable original acquisition evidence. It is not a mutable
+current inventory count; current global and custody-scoped pieces derive from
+signed allocation details.
+
+Gross weight is the exact raw-E8 lot-allocation quantity. Fine-gold weight is
+derived:
 
     gross raw E8 × fineness ppm / 100,000,000 / 1,000,000
 

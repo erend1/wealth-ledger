@@ -1,12 +1,16 @@
 # M009: Complete Physical-Gold Lifecycle
 
-Status: Accepted
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-16
 
 Accepted: 2026-09-14
+
+Implementation started: 2026-09-15
+
+Verified: 2026-09-16
 
 ## Acceptance record and implementation gate
 
@@ -37,6 +41,60 @@ review findings:
 These fixes remain M008 behavior, not M009 scope. M009 must consume their
 corrected contracts and keep focused regression tests around the
 Fund-versus-PhysicalGold boundary.
+
+## Implementation verification
+
+M009 is implemented through commits `b9cb227` through `60af322` on the isolated
+`m009/complete-physical-gold-lifecycle` branch. The delivered slice includes
+signed allocation-level piece movement, exact purchase evidence, explicitly
+selected-lot sale, lineage-preserving custody transfer, persisted verification
+and receipts, immutable reversal, and separately reviewed replacement.
+
+Migration `20260915082550_008_PhysicalGoldLifecycle` adds
+`PhysicalGoldLotAllocationDetail` and `PhysicalGoldTradeDetail`, preflights
+existing physical-gold history, backfills only provable M007 opening and exact
+reversal piece movements, and fails before mutation when history is not
+provable. Its asset-family dispatch preserves the corrected M008 Fund rules,
+applies the accepted PhysicalGold Buy/Sell/Transfer guards, fails closed for
+unsupported principal families, and restores the exact M008 behavior on Down.
+
+The final repository suite proves these project counts:
+
+- Domain: 193 passed;
+- Application: 226 passed;
+- Infrastructure against real SQLite: 245 passed;
+- Operations: 23 passed;
+- UI presentation and contracts: 81 passed;
+- API/UI host against real SQLite: 159 passed;
+- Playwright Chromium: 3 passed; and
+- total: 930 passed, 0 failed, 0 skipped.
+
+Focused verification includes 12
+`PhysicalGoldLifecycleMigrationTests`, including M007 backfill, unprovable
+history rejection, Fund dispatch regression, and 007 -> 008 -> 007 -> 008; one
+fresh-process physical-gold backup/restore test; real independent-connection
+sale and transfer races; direct-SQL refusal; the repository-pinned Playwright
+Chromium installation; and the complete three-journey browser suite. The
+browser evidence covers two purchases, partial selected-lot sale, custody
+transfer, reversal plus corrected replacement, actual browser replay, restart
+readback, JavaScript-disabled and keyboard operation, narrow and desktop
+layouts, loopback-only access, and artifact cleanup.
+
+The required full test command passed, EF reports no pending model changes,
+and the disposable recovery drill independently verified a backup, staged it
+to a separate database, then read exact cash, gross, fine-weight, piece,
+custody, and reversal facts from a fresh host process. Formatting verification
+reports only the three pre-existing `LedgerTransaction.cs` whitespace findings
+now at lines 502, 504, and 505; `git blame` attributes them to `cbfa303a`.
+
+Focused commands used for the migration, browser prerequisite, and disposable
+recovery evidence were:
+
+```powershell
+dotnet test tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj --no-restore --filter FullyQualifiedName~PhysicalGoldLifecycleMigrationTests --verbosity minimal
+pwsh tests/WealthLedger.UI.BrowserTests/bin/Debug/net10.0/playwright.ps1 install chromium
+dotnet test tests/WealthLedger.Api.Tests/WealthLedger.Api.Tests.csproj --no-restore --filter FullyQualifiedName~LocalHosting_PhysicalGoldBackupStagesAndReadsBackFromFreshProcess --verbosity minimal
+```
 
 ## Objective
 

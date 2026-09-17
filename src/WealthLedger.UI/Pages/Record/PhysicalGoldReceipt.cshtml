@@ -1,0 +1,236 @@
+@page "/record/physical-gold/{transactionId}/receipt"
+@model WealthLedger.UI.Pages.Record.PhysicalGoldReceiptModel
+@inject UiText Text
+@using WealthLedger.Application.PhysicalGold
+@using WealthLedger.Domain.Lots
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["GoldReceipt_Title"];
+    ViewData["ActiveNavigation"] = "Record";
+}
+
+<article class="flow" aria-labelledby="gold-receipt-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Gold_Eyebrow"]</p>
+        <h1 id="gold-receipt-heading">@Text["GoldReceipt_Title"]</h1>
+        <p class="lede">@Text["GoldReceipt_Introduction"]</p>
+    </header>
+
+    @if (Model.InvalidIdentifier)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["GoldReceipt_InvalidTitle"]</h2><p>@Text["GoldReceipt_InvalidExplanation"]</p></section>
+    }
+    else if (Model.ReceiptNotFound)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["GoldReceipt_NotFoundTitle"]</h2><p>@Text["GoldReceipt_NotFoundExplanation"]</p></section>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.HouseholdStateResourceKey))
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Ready_Household_StateTitle"]</h2><p>@Text[Model.HouseholdStateResourceKey]</p></section>
+    }
+    else if (Model.LoadUnavailable || Model.Verification is null)
+    {
+        <section class="summary-card summary-card--warning flow" role="alert"><h2>@Text["Gold_LoadErrorTitle"]</h2><p>@Text["Gold_LoadErrorExplanation"]</p></section>
+    }
+    else
+    {
+        var verification = Model.Verification;
+        var facts = verification.Facts;
+        var economics = verification.Economics;
+        var activityTitle = Model.IsPurchase
+            ? Text["GoldPurchase_Title"]
+            : Model.IsSale
+                ? Text["GoldSale_Title"]
+                : Text["GoldTransfer_Title"];
+
+        <section class="panel flow" aria-labelledby="gold-receipt-summary-heading">
+            <p class="status-mark">@Text["GoldReceipt_PostedStatus"]</p>
+            <h2 id="gold-receipt-summary-heading">@activityTitle</h2>
+            <p>@Text["GoldReceipt_PersistedExplanation"]</p>
+            <dl class="fact-grid">
+                <div><dt>@Text["GoldReceipt_TransactionId"]</dt><dd class="technical-id"><code>@facts.TransactionId.ToString("D")</code></dd></div>
+                <div><dt>@Text["GoldReceipt_PostedAt"]</dt><dd>@Model.Values.UtcTimestamp(facts.PostedAtUtc).Text</dd></div>
+                <div><dt>@Text["Gold_ExecutionDateLabel"]</dt><dd>@Model.Values.BusinessDate(facts.ExecutionDate).Text</dd></div>
+                <div><dt>@Text["Gold_AssetLabel"]</dt><dd>@facts.GoldAssetName (@facts.GoldAssetCode)</dd></div>
+                <div><dt>@Text["Gold_GrossWeightLabel"]</dt><dd>@Model.PresentGross(facts.GrossWeight.RawE8).Text</dd></div>
+                <div><dt>@Text["Gold_PieceCountLabel"]</dt><dd>@facts.PieceCount</dd></div>
+                @if (facts.ExecutedUnitPrice is not null)
+                {
+                    <div><dt>@Text["Gold_UnitPriceLabel"]</dt><dd>@Model.Values.UnitPrice(facts.ExecutedUnitPrice.RawE8, facts.CurrencyCode).Text</dd></div>
+                }
+                @if (facts.CashConsideration is not null)
+                {
+                    <div><dt>@(Model.IsSale ? Text["Gold_ProceedsLabel"] : Text["Gold_ConsiderationLabel"])</dt><dd>@Model.PresentMoney(facts.CashConsideration.MinorUnits, facts.CurrencyCode).Text</dd></div>
+                }
+                <div><dt>@Text["Gold_NetCashEffectLabel"]</dt><dd>@Model.PresentMoney(economics.NetCashEffect.MinorUnits, facts.CurrencyCode).Text</dd></div>
+                <div><dt>@Text["Gold_CounterpartyLabel"]</dt><dd>@(facts.CounterpartyName ?? Text["State_Unknown"])</dd></div>
+                @if (facts.CreatedAssetLotId is Guid createdLotId)
+                {
+                    <div><dt>@Text["GoldReceipt_CreatedLot"]</dt><dd class="technical-id"><code>@createdLotId.ToString("D")</code></dd></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(facts.ExternalReference))
+                {
+                    <div><dt>@Text["Gold_ExternalReferenceLabel"]</dt><dd>@facts.ExternalReference</dd></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(facts.Note))
+                {
+                    <div><dt>@Text["Gold_NoteLabel"]</dt><dd>@facts.Note</dd></div>
+                }
+                @if (facts.ReversedByTransactionId is Guid reversalId)
+                {
+                    <div><dt>@Text["GoldReceipt_ReversalId"]</dt><dd class="technical-id"><a asp-page="/Ledger/Details" asp-route-transactionId="@reversalId.ToString("D")"><code>@reversalId.ToString("D")</code></a></dd></div>
+                }
+            </dl>
+        </section>
+
+        <section class="panel flow" aria-labelledby="gold-receipt-movements-heading">
+            <h2 id="gold-receipt-movements-heading">@Text["GoldReceipt_MovementsTitle"]</h2>
+            <p class="help">@Text["GoldReceipt_MovementsExplanation"]</p>
+            <table class="data-table">
+                <thead><tr><th scope="col">@Text["Gold_LotId"]</th><th scope="col">@Text["GoldReceipt_Scope"]</th><th scope="col">@Text["GoldReceipt_GrossDelta"]</th><th scope="col">@Text["GoldReceipt_PieceDelta"]</th><th scope="col">@Text["Gold_FinenessLabel"]</th><th scope="col">@Text["Gold_FineWeightLabel"]</th><th scope="col">@Text["Gold_CostKnowledgeLabel"]</th></tr></thead>
+                <tbody>
+                @foreach (var allocation in facts.Allocations)
+                {
+                    <tr>
+                        <td data-label="@Text["Gold_LotId"]" class="technical-id"><code>@allocation.AssetLotId.ToString("D")</code></td>
+                        <td data-label="@Text["GoldReceipt_Scope"]">@allocation.PortfolioName / @allocation.AccountName<details><summary>@Text["GoldReceipt_TechnicalIds"]</summary><code class="technical-id">@allocation.PortfolioId.ToString("D")</code><br /><code class="technical-id">@allocation.AccountId.ToString("D")</code></details></td>
+                        <td data-label="@Text["GoldReceipt_GrossDelta"]">@Model.PresentGross(allocation.GrossWeightDeltaRawE8, signed: true).Text</td>
+                        <td data-label="@Text["GoldReceipt_PieceDelta"]">@(allocation.PieceDelta > 0 ? "+" : string.Empty)@allocation.PieceDelta</td>
+                        <td data-label="@Text["Gold_FinenessLabel"]">@Model.PresentFineness(allocation.FinenessPpm)</td>
+                        <td data-label="@Text["Gold_FineWeightLabel"]">@Model.PresentFineWeight(allocation.FineWeightDeltaGrams)</td>
+                        <td data-label="@Text["Gold_CostKnowledgeLabel"]"><code>@Model.CostStatusCode(allocation.CostStatus)</code></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+
+        @if (facts.Allocations.Any(x => x.Hallmark is not null || x.CertificateReference is not null || x.LotNote is not null))
+        {
+            <section class="panel flow" aria-labelledby="gold-receipt-evidence-heading">
+                <h2 id="gold-receipt-evidence-heading">@Text["GoldReceipt_EvidenceTitle"]</h2>
+                @foreach (var allocation in facts.Allocations.DistinctBy(x => x.AssetLotId))
+                {
+                    <article class="fact-card flow">
+                        <h3 class="technical-id"><code>@allocation.AssetLotId.ToString("D")</code></h3>
+                        <dl class="fact-grid">
+                            <div><dt>@Text["Gold_OriginalPiecesLabel"]</dt><dd>@allocation.OriginalPieceCount</dd></div>
+                            <div><dt>@Text["Gold_HallmarkLabel"]</dt><dd>@(allocation.Hallmark ?? Text["State_Unknown"])</dd></div>
+                            <div><dt>@Text["Gold_CertificateLabel"]</dt><dd>@(allocation.CertificateReference ?? Text["State_Unknown"])</dd></div>
+                            <div><dt>@Text["Gold_LotNoteLabel"]</dt><dd>@(allocation.LotNote ?? Text["State_Unknown"])</dd></div>
+                        </dl>
+                    </article>
+                }
+            </section>
+        }
+
+        @if (facts.Costs.Count > 0)
+        {
+            <section class="panel flow" aria-labelledby="gold-receipt-costs-heading">
+                <h2 id="gold-receipt-costs-heading">@Text["Gold_CostsTitle"]</h2>
+                <table class="data-table">
+                    <thead><tr><th scope="col">@Text["Gold_CostTypeLabel"]</th><th scope="col">@Text["Gold_CostTreatmentLabel"]</th><th scope="col">@Text["Gold_CostAmountLabel"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var cost in facts.Costs)
+                    {
+                        <tr>
+                            <td data-label="@Text["Gold_CostTypeLabel"]"><code>@PhysicalGoldCodes.ToCostTypeCode(cost.Type)</code></td>
+                            <td data-label="@Text["Gold_CostTreatmentLabel"]"><code>@PhysicalGoldCodes.ToTreatmentCode(cost.Treatment)</code></td>
+                            <td data-label="@Text["Gold_CostAmountLabel"]">@Model.PresentMoney(cost.Amount.MinorUnits, cost.Amount.Currency.Value).Text</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @if (verification.WarningCodes.Count > 0)
+        {
+            <section class="summary-card summary-card--warning flow" role="status" aria-labelledby="gold-receipt-warnings-heading">
+                <h2 id="gold-receipt-warnings-heading">@Text["Gold_WarningsTitle"]</h2>
+                <ul class="plain-list">
+                @foreach (var warning in verification.WarningCodes)
+                {
+                    <li>@Text[$"Gold_Warning_{warning}"]</li>
+                }
+                </ul>
+            </section>
+        }
+
+        @if (verification.RealizedCost is not null)
+        {
+            var realized = verification.RealizedCost;
+            <section class="panel flow" aria-labelledby="gold-receipt-realized-heading">
+                <h2 id="gold-receipt-realized-heading">@Text["Gold_RealizedCostTitle"]</h2>
+                <p class="help">@Text["GoldReceipt_RealizedExplanation"]</p>
+                <dl class="fact-grid">
+                    <div><dt>@Text["Gold_CompletenessLabel"]</dt><dd><code>@Model.CompletenessCode(realized.Completeness)</code></dd></div>
+                    <div><dt>@Text["Gold_KnownGrossLabel"]</dt><dd>@Model.PresentGross(realized.KnownQuantityRawE8).Text</dd></div>
+                    <div><dt>@Text["Gold_UnknownGrossLabel"]</dt><dd>@Model.PresentGross(realized.UnknownQuantityRawE8).Text</dd></div>
+                    <div><dt>@Text["Gold_MethodLabel"]</dt><dd><code>@realized.MethodCode</code></dd></div>
+                    <div><dt>@Text["GoldReceipt_RealizedEffective"]</dt><dd>@(realized.SourceSaleIsEffective ? Text["GoldReceipt_Effective"] : Text["GoldReceipt_NotEffective"])</dd></div>
+                </dl>
+                @if (realized.Completeness == RealizedCostCompleteness.Unknown)
+                {
+                    <p class="state-text state-text--unavailable">@Text["Gold_UnknownCostExplanation"]</p>
+                }
+                else
+                {
+                    @if (realized.Completeness == RealizedCostCompleteness.PartiallyKnown)
+                    {
+                        <p class="state-text">@Text["Gold_PartialCostExplanation"]</p>
+                    }
+                    <ul class="plain-list">
+                    @foreach (var amount in realized.KnownAmounts)
+                    {
+                        <li>@Model.PresentMoney(amount.MinorUnits, amount.CurrencyCode).Text</li>
+                    }
+                    </ul>
+                }
+            </section>
+        }
+
+        <section class="panel flow" aria-labelledby="gold-receipt-custody-heading">
+            <h2 id="gold-receipt-custody-heading">@Text["GoldReceipt_CurrentCustodyTitle"]</h2>
+            @if (verification.CurrentCustody.Count == 0)
+            {
+                <p class="state-text state-text--unavailable">@Text["GoldReceipt_NoCurrentCustody"]</p>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead><tr><th scope="col">@Text["Gold_LotId"]</th><th scope="col">@Text["GoldReceipt_Scope"]</th><th scope="col">@Text["Gold_GrossWeightLabel"]</th><th scope="col">@Text["Gold_PieceCountLabel"]</th><th scope="col">@Text["Gold_FineWeightLabel"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var position in verification.CurrentCustody)
+                    {
+                        <tr>
+                            <td data-label="@Text["Gold_LotId"]" class="technical-id"><code>@position.AssetLotId.ToString("D")</code></td>
+                            <td data-label="@Text["GoldReceipt_Scope"]">@position.PortfolioName / @position.AccountName<details><summary>@Text["GoldReceipt_TechnicalIds"]</summary><code class="technical-id">@position.PortfolioId.ToString("D")</code><br /><code class="technical-id">@position.AccountId.ToString("D")</code></details></td>
+                            <td data-label="@Text["Gold_GrossWeightLabel"]">@Model.PresentGross(position.GrossWeightRawE8).Text</td>
+                            <td data-label="@Text["Gold_PieceCountLabel"]">@position.PieceCount</td>
+                            <td data-label="@Text["Gold_FineWeightLabel"]">@Model.PresentFineWeight(position.FineWeightGrams)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        <section class="panel flow" aria-labelledby="gold-receipt-next-heading">
+            <h2 id="gold-receipt-next-heading">@Text["GoldReceipt_NextTitle"]</h2>
+            <ul class="plain-list">
+                <li><a class="card-link" asp-page="/Ledger/Details" asp-route-transactionId="@facts.TransactionId.ToString("D")">@Text["GoldReceipt_OpenTransaction"]</a></li>
+                @if (Model.IsReversed)
+                {
+                    <li class="state-text">@Text["GoldReceipt_AlreadyReversed"]</li>
+                }
+                else
+                {
+                    <li><a class="card-link" asp-page="/Record/PhysicalGoldReverse" asp-route-transactionId="@facts.TransactionId.ToString("D")">@Text["GoldReceipt_ReverseAction"]</a></li>
+                }
+                <li><a class="card-link" asp-page="@(Model.IsPurchase ? "/Record/PhysicalGoldPurchase" : Model.IsSale ? "/Record/PhysicalGoldSale" : "/Record/PhysicalGoldTransfer")">@Text["GoldReceipt_StartCorrection"]</a></li>
+            </ul>
+            <p class="help">@Text["GoldReceipt_CorrectionHelp"]</p>
+        </section>
+    }
+</article>

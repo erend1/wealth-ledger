@@ -828,6 +828,68 @@ internal sealed class PhysicalGoldLotDetailConfiguration
     }
 }
 
+internal sealed class PhysicalGoldLotAllocationDetailConfiguration
+    : IEntityTypeConfiguration<PhysicalGoldLotAllocationDetailRow>
+{
+    public void Configure(
+        EntityTypeBuilder<PhysicalGoldLotAllocationDetailRow> builder)
+    {
+        builder.ToTable(
+            "PhysicalGoldLotAllocationDetail",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_PhysicalGoldLotAllocationDetail_PieceDelta",
+                    "\"PieceDelta\" <> 0 AND \"PieceDelta\" BETWEEN -2147483647 AND 2147483647");
+            });
+
+        builder.HasKey(x => x.LotEntryAllocationId);
+
+        builder.Property(x => x.LotEntryAllocationId)
+            .HasUuidTextConversion()
+            .ValueGeneratedNever();
+
+        builder.Property(x => x.PieceDelta)
+            .HasColumnType("INTEGER");
+
+        builder.HasOne<LotEntryAllocationRow>()
+            .WithOne()
+            .HasForeignKey<PhysicalGoldLotAllocationDetailRow>(
+                x => x.LotEntryAllocationId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class PhysicalGoldTradeDetailConfiguration
+    : IEntityTypeConfiguration<PhysicalGoldTradeDetailRow>
+{
+    public void Configure(
+        EntityTypeBuilder<PhysicalGoldTradeDetailRow> builder)
+    {
+        builder.ToTable("PhysicalGoldTradeDetail");
+
+        builder.HasKey(x => x.LedgerTransactionId);
+
+        builder.Property(x => x.LedgerTransactionId)
+            .HasUuidTextConversion()
+            .ValueGeneratedNever();
+
+        builder.Property(x => x.CounterpartyInstitutionId)
+            .HasUuidTextConversion();
+
+        builder.HasOne<LedgerTransactionRow>()
+            .WithOne()
+            .HasForeignKey<PhysicalGoldTradeDetailRow>(
+                x => x.LedgerTransactionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<InstitutionRow>()
+            .WithMany()
+            .HasForeignKey(x => x.CounterpartyInstitutionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class CommandReceiptConfiguration
     : IEntityTypeConfiguration<CommandReceiptRow>
 {

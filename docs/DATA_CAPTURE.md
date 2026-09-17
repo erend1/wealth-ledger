@@ -2,7 +2,7 @@
 
 Status: Proposed canonical capture requirements
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-16
 
 ## Purpose
 
@@ -139,17 +139,20 @@ proceeds. Every new trade requires an external reference or a note.
 
 ## Physical-gold purchase
 
+M009 records one completed cash purchase as one homogeneous acquisition lot.
 Capture:
 
 - physical-gold asset or product identity;
 - physical-vault account and portfolio;
-- seller or institution;
+- optional seller Institution, separately from custody;
 - purchase date;
-- gross weight;
-- actual fineness;
-- piece count;
+- authoritative exact gross raw-E8 weight;
+- immutable actual fineness in integer ppm;
+- positive original whole-piece count;
 - total cash consideration and currency;
-- source cash account when tracked;
+- source cash account and cash asset;
+- optional observed executed price per gross gram, never an inferred per-piece
+  or fine-gram price;
 - making charge and whether it is included in consideration or an additional
   cash outflow;
 - hallmark, certificate reference, product/form label, note, and evidence when
@@ -159,6 +162,18 @@ Capture:
 Derive fine-gold weight from gross weight and fineness. Do not duplicate it as
 an independently editable authoritative field.
 
+Gross quantity and pieces are independent evidence. A purchase allocation
+stores both positive facts and creates exactly one Known-cost lot whose cost is
+cash consideration plus additional cash outflow, counting included cost only
+once. Seller is optional global Institution evidence; it neither owns the lot
+nor replaces the selected PhysicalVault custody.
+
+Preview preserves exact price/consideration discrepancies rather than
+rewriting either fact. A difference beyond the accepted one-minor-unit rounding
+tolerance requires explanatory provenance. Post revalidates the reviewed facts
+atomically, stores a versioned command fingerprint, and returns the persisted
+receipt on an equivalent retry.
+
 Jewelry wording such as "no making-charge loss" is not a numerical source fact.
 Actual executable buy and sell observations are market/reference data and must
 be captured separately if spread analysis is desired.
@@ -167,27 +182,55 @@ be captured separately if spread analysis is desired.
 
 Capture:
 
-- exact lots or deterministic allocation policy;
-- disposed gross quantity and pieces where whole-piece rules apply;
-- buyer or institution;
+- each explicitly selected acquisition lot;
+- exact positive gross raw-E8 quantity and exact positive whole-piece count for
+  every selected lot;
+- optional buyer Institution, separately from custody;
 - sale date;
 - cash proceeds and currency;
-- observed execution price;
+- optional observed execution price per gross gram;
 - fees, taxes, assay deductions, or other deductions with treatment;
 - reference, note, and evidence.
 
-The workflow must prevent disposal beyond the effective remaining lot quantity.
-Any whole-piece restriction must be a tested product rule, not an assumption
-derived from PieceCount alone.
+PhysicalGold sale never silently applies the Fund FIFO policy. Gross quantity
+and piece movement are recorded independently with matching negative signs.
+For a partial grouped lot, both facts must come from evidence or measurement;
+never infer one from the other or divide original gross weight by original
+pieces.
+
+Preview derives availability in the selected Account/Portfolio custody scope
+and returns a deterministic versioned plan fingerprint. Post re-derives gross
+and piece availability inside the write transaction and refuses a stale plan
+without writing. Realized cost extends ADR-009 over the selected lot's gross
+raw-E8 disposal sequence, never its pieces. Unknown cost remains Unknown, and
+mixed currencies remain separate completeness-aware buckets; sale capture does
+not ask the user for realized cost, gain, tax, or valuation.
 
 ## Transfer
 
-Capture source and destination accounts, source and destination portfolio
-purposes when different, asset, quantity, transfer date, lot allocations for
-lot-tracked assets, reference, note, and evidence.
+For a physical-gold transfer, capture distinct source and destination
+PhysicalVault accounts, source and destination portfolio purposes, the
+PhysicalGold asset, each explicitly selected acquisition lot, exact moved
+gross raw-E8 quantity, exact moved whole pieces, transfer date, reference,
+note, and evidence. Optional accepted transfer costs retain their explicit
+treatment; the transfer itself has no consideration entry.
 
 An internal transfer preserves total household quantity and acquisition
-lineage. It does not create income, return, or a new acquisition price.
+lineage. M009 writes equal-and-opposite quantity and piece allocations against
+the same acquisition lot. It does not create income, return, a new lot, a new
+cost basis, or a new acquisition price. Only an accepted
+`AdditionalCashOutflow` transfer cost can produce a separate negative Fee/Tax
+cash effect; informational cost does not.
+
+Transfer preview and post use the same versioned stale-plan protection as sale.
+Post checks the source custody again inside the write transaction and never
+draws from another scope merely because household-wide lot quantity exists.
+
+Purchase, sale, and transfer receipts are reconstructed from persisted facts
+after redirect, retry, direct navigation, or restart. Correction never edits a
+posted activity: it posts an exact reversal of entries, lot allocations, and
+piece movement, leaves original costs and trade evidence on the original, and
+records any corrected replacement through a separate normal reviewed command.
 
 ## Opening balance
 

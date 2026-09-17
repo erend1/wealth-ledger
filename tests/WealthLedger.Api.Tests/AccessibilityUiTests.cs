@@ -19,6 +19,9 @@ public sealed partial class AccessibilityUiTests
                          "/ledger",
                          $"/ledger/{fixture.PurchaseTransactionId:D}",
                          "/record/opening-balance",
+                         "/record/physical-gold-purchase",
+                         "/record/physical-gold-sale",
+                         "/record/physical-gold-transfer",
                          "/settings",
                          "/settings/master-data",
                          "/settings/data-safety"
@@ -128,6 +131,15 @@ public sealed partial class AccessibilityUiTests
             await AssertFormControlsAsync(
                 client,
                 "/record/opening-balance");
+            await AssertFormControlsAsync(
+                client,
+                "/record/physical-gold-purchase");
+            await AssertFormControlsAsync(
+                client,
+                "/record/physical-gold-sale");
+            await AssertFormControlsAsync(
+                client,
+                "/record/physical-gold-transfer");
         }
     }
 

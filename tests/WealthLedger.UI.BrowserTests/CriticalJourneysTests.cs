@@ -29,7 +29,8 @@ public sealed class CriticalJourneysTests
                 ExerciseOpeningCutover: true,
                 ViewportWidth: 390,
                 ViewportHeight: 844,
-                ExerciseFundLifecycle: true));
+                ExerciseFundLifecycle: true,
+                ExercisePhysicalGoldLifecycle: true));
 
     [Fact]
     public Task FirstRunAndLedgerNavigation_WorkByKeyboardWithValidationFocus()
@@ -392,6 +393,30 @@ public sealed class CriticalJourneysTests
                 workspace,
                 baseAddress,
                 options);
+        }
+
+        if (options.ExercisePhysicalGoldLifecycle)
+        {
+            baseAddress = await RunPhysicalGoldLifecycleAsync(
+                page,
+                workspace,
+                baseAddress,
+                options);
+        }
+
+        await GoToAsync(page, baseAddress, "/record");
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        foreach (var destination in new[]
+                 {
+                     "/record/physical-gold-purchase",
+                     "/record/physical-gold-sale",
+                     "/record/physical-gold-transfer"
+                 })
+        {
+            Assert.Equal(
+                1,
+                await page.Locator($"a[href=\"{destination}\"]").CountAsync());
         }
 
         var transactionId = await SeedContributionAsync(baseAddress);
@@ -975,6 +1000,565 @@ public sealed class CriticalJourneysTests
     }
 
     /// <summary>
+    /// Records, moves, corrects, restarts, and independently reads back exact
+    /// physical-gold custody using only the reviewed Razor write workflows.
+    /// </summary>
+    private static async Task<Uri> RunPhysicalGoldLifecycleAsync(
+        IPage page,
+        BrowserTestWorkspace workspace,
+        Uri baseAddress,
+        JourneyOptions options)
+    {
+        await CreateGoldReferencesAsync(page, baseAddress);
+
+        var bracelet = await RecordPhysicalGoldPurchaseAsync(
+            page,
+            baseAddress,
+            grossWeight: "10",
+            finenessCode: "916",
+            pieceCount: "1",
+            unitPrice: "95",
+            consideration: "1000",
+            executionDate: "2026-09-12",
+            reference: "BROWSER-GOLD-PURCHASE-BRACELET",
+            hallmark: "BROWSER-916",
+            certificate: "BROWSER-CERTIFICATE-1",
+            lotNote: "One synthetic 22K bracelet.",
+            includePurchaseCosts: true,
+            exerciseKeyboardSubmission: true);
+
+        var group = await RecordPhysicalGoldPurchaseAsync(
+            page,
+            baseAddress,
+            grossWeight: "20",
+            finenessCode: "750",
+            pieceCount: "2",
+            unitPrice: "120",
+            consideration: "2400",
+            executionDate: "2026-09-13",
+            reference: "BROWSER-GOLD-PURCHASE-GROUP",
+            hallmark: "BROWSER-750",
+            certificate: "BROWSER-CERTIFICATE-2",
+            lotNote: "Two synthetic homogeneous gold pieces.",
+            includePurchaseCosts: false,
+            exerciseKeyboardSubmission: false);
+
+        Assert.NotEqual(bracelet.ReceiptPath, group.ReceiptPath);
+        Assert.NotEqual(bracelet.AssetLotId, group.AssetLotId);
+
+        var saleReceipt = await RecordPhysicalGoldSaleAsync(
+            page,
+            baseAddress,
+            group.AssetLotId,
+            grossWeight: "8",
+            pieceCount: "1",
+            unitPrice: "150",
+            consideration: "1200",
+            executionDate: "2026-09-14",
+            reference: "BROWSER-GOLD-SALE-ORIGINAL");
+
+        var transferReceipt = await RecordPhysicalGoldTransferAsync(
+            page,
+            baseAddress,
+            bracelet.AssetLotId,
+            grossWeight: "10",
+            pieceCount: "1",
+            executionDate: "2026-09-14");
+
+        await GoToAsync(page, baseAddress, saleReceipt);
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Ters kayıt uygunluğunu incele",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#gold-reverse-heading").WaitForAsync();
+        Assert.Contains(
+            "Uygun",
+            await page.Locator("main").InnerTextAsync());
+
+        // The correction submission is exercised by keyboard with JavaScript off.
+        await page.Locator("#Input_Reason")
+            .FillAsync("Synthetic browser correction for the physical-gold sale.");
+        await TabToAsync(page, "button[data-final-submit]");
+        await page.Keyboard.PressAsync("Enter");
+        await page.Locator("#gold-receipt-heading").WaitForAsync();
+        Assert.Contains(
+            "ayrı bir ters kayıtla düzeltilmiş",
+            await page.Locator("main").InnerTextAsync());
+
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Ayrı bir düzeltilmiş işlem başlat",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#gold-sale-heading").WaitForAsync();
+
+        var correctedSaleReceipt = await RecordPhysicalGoldSaleAsync(
+            page,
+            baseAddress,
+            group.AssetLotId,
+            grossWeight: "6",
+            pieceCount: "1",
+            unitPrice: "150",
+            consideration: "900",
+            executionDate: "2026-09-15",
+            reference: "BROWSER-GOLD-SALE-CORRECTED",
+            navigate: false);
+
+        await page.ReloadAsync(
+            new PageReloadOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+        Assert.Equal(
+            correctedSaleReceipt,
+            new Uri(page.Url).AbsolutePath);
+        Assert.Equal(1, await page.Locator("#gold-receipt-heading").CountAsync());
+
+        await workspace.StopHostAsync();
+        baseAddress = await workspace.StartHostAsync();
+
+        foreach (var receiptPath in new[]
+                 {
+                     bracelet.ReceiptPath,
+                     group.ReceiptPath,
+                     saleReceipt,
+                     transferReceipt,
+                     correctedSaleReceipt
+                 })
+        {
+            await GoToAsync(page, baseAddress, receiptPath);
+            Assert.Equal(
+                1,
+                await page.Locator("#gold-receipt-heading").CountAsync());
+        }
+
+        await AssertPhysicalGoldReadbackAsync(
+            baseAddress,
+            bracelet,
+            group,
+            saleReceipt,
+            transferReceipt,
+            correctedSaleReceipt);
+
+        return baseAddress;
+    }
+
+    private static async Task CreateGoldReferencesAsync(
+        IPage page,
+        Uri baseAddress)
+    {
+        await GoToAsync(page, baseAddress, "/record/opening-balance");
+        await OpenReferenceCreateAsync(page);
+        await page.Locator("#InstitutionInput_Code")
+            .FillAsync("BROWSER_JEWELER");
+        await page.Locator("#InstitutionInput_Name")
+            .FillAsync("Browser Test Jeweler");
+        await page.Locator("#InstitutionInput_TypeCode")
+            .SelectOptionAsync("JEWELER");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Kurumu oluştur",
+                    Exact = true
+                })
+            .ClickAsync();
+
+        await OpenReferenceCreateAsync(page);
+        await page.Locator("#AccountInput_Code")
+            .FillAsync("BROWSER_SECOND_VAULT");
+        await page.Locator("#AccountInput_Name")
+            .FillAsync("Browser Test Second Vault");
+        await page.Locator("#AccountInput_TypeCode")
+            .SelectOptionAsync("PHYSICAL_VAULT");
+        await page.Locator("#AccountInput_OpenedOn")
+            .FillAsync("2026-01-01");
+        await page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = "Hesabı oluştur ve kullan",
+                    Exact = true
+                })
+            .ClickAsync();
+        Assert.Contains(
+            "BROWSER_SECOND_VAULT",
+            await page.Locator("#Input_AccountId option:checked").InnerTextAsync());
+    }
+
+    private static async Task<GoldBrowserReceipt>
+        RecordPhysicalGoldPurchaseAsync(
+            IPage page,
+            Uri baseAddress,
+            string grossWeight,
+            string finenessCode,
+            string pieceCount,
+            string unitPrice,
+            string consideration,
+            string executionDate,
+            string reference,
+            string hallmark,
+            string certificate,
+            string lotNote,
+            bool includePurchaseCosts,
+            bool exerciseKeyboardSubmission)
+    {
+        await GoToAsync(page, baseAddress, "/record/physical-gold-purchase");
+        await FillPhysicalGoldTradeScopeAsync(page);
+        await page.Locator("#Input_FinenessChoice")
+            .SelectOptionAsync(finenessCode);
+        await page.Locator("#Input_PieceCount").FillAsync(pieceCount);
+        await page.Locator("#Input_CashConsideration")
+            .FillAsync(consideration);
+        await page.Locator("#Input_ExecutionDate").FillAsync(executionDate);
+        await page.Locator("#Input_ExternalReference").FillAsync(reference);
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser physical-gold purchase evidence.");
+        await OpenGoldAdvancedAsync(page);
+        await page.Locator("#Input_UnitPrice").FillAsync(unitPrice);
+        await page.Locator("#Input_Hallmark").FillAsync(hallmark);
+        await page.Locator("#Input_CertificateReference")
+            .FillAsync(certificate);
+        await page.Locator("#Input_LotNote").FillAsync(lotNote);
+
+        if (includePurchaseCosts)
+        {
+            await page.Locator("#Input_Costs_0__TypeCode")
+                .SelectOptionAsync("MAKING_CHARGE");
+            await page.Locator("#Input_Costs_0__TreatmentCode")
+                .SelectOptionAsync("INCLUDED_IN_CONSIDERATION");
+            await page.Locator("#Input_Costs_0__Amount").FillAsync("50");
+            await ClickGoldButtonAsync(page, "Bir masraf daha ekle");
+            await page.Locator("#Input_Costs_1__TypeCode").WaitForAsync();
+            await page.Locator("#Input_Costs_1__TypeCode")
+                .SelectOptionAsync("COMMISSION");
+            await page.Locator("#Input_Costs_1__TreatmentCode")
+                .SelectOptionAsync("ADDITIONAL_CASH_OUTFLOW");
+            await page.Locator("#Input_Costs_1__Amount").FillAsync("10");
+        }
+
+        await page.Locator("#Input_GrossWeight").FillAsync(grossWeight);
+        if (exerciseKeyboardSubmission)
+        {
+            await TabToAsync(page, "button:has-text(\"Etkiyi gözden geçir\")");
+            await page.Keyboard.PressAsync("Enter");
+        }
+        else
+        {
+            await ClickGoldButtonAsync(page, "Etkiyi gözden geçir");
+        }
+        await page.Locator("#gold-purchase-review-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        Assert.Equal(
+            1,
+            await page.Locator("#gold-purchase-review-heading").CountAsync());
+
+        var reviewText = await page.Locator("main").InnerTextAsync();
+        Assert.Contains("Kesin etkiyi gözden geçirin", reviewText);
+        Assert.Contains("BROWSER_GOLD", reviewText);
+        if (finenessCode == "916")
+        {
+            Assert.Contains("9,16 gram saf altın", reviewText);
+            Assert.Contains("MAKING_CHARGE", reviewText);
+            Assert.Contains("COMMISSION", reviewText);
+        }
+        else
+        {
+            Assert.Contains("15 gram saf altın", reviewText);
+        }
+
+        await ClickGoldButtonAsync(page, "Altın alımını kaydet");
+        await page.Locator("#gold-receipt-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        Assert.Equal(1, await page.Locator("#gold-receipt-heading").CountAsync());
+        var receiptPath = new Uri(page.Url).AbsolutePath;
+        var lotIdText = await page
+            .Locator("#gold-receipt-movements-heading")
+            .Locator("xpath=following::table[1]//tbody/tr[1]/td[1]/code")
+            .InnerTextAsync();
+        var assetLotId = Guid.Parse(lotIdText.Trim());
+
+        if (exerciseKeyboardSubmission)
+        {
+            // Returning to the reviewed POST and submitting the same hidden
+            // idempotency key must replay the original receipt, not add a lot.
+            await page.GoBackAsync(
+                new PageGoBackOptions
+                {
+                    WaitUntil = WaitUntilState.DOMContentLoaded
+                });
+            await page.Locator("#gold-purchase-review-heading").WaitForAsync();
+            await ClickGoldButtonAsync(page, "Altın alımını kaydet");
+            await page.Locator("#gold-receipt-heading").WaitForAsync();
+            Assert.Equal(receiptPath, new Uri(page.Url).AbsolutePath);
+        }
+
+        return new GoldBrowserReceipt(
+            receiptPath,
+            assetLotId);
+    }
+
+    private static async Task<string> RecordPhysicalGoldSaleAsync(
+        IPage page,
+        Uri baseAddress,
+        Guid assetLotId,
+        string grossWeight,
+        string pieceCount,
+        string unitPrice,
+        string consideration,
+        string executionDate,
+        string reference,
+        bool navigate = true)
+    {
+        if (navigate)
+        {
+            await GoToAsync(page, baseAddress, "/record/physical-gold-sale");
+        }
+
+        await FillPhysicalGoldTradeScopeAsync(page);
+        await ClickGoldButtonAsync(page, "Bu kapsamdaki lotları getir");
+        var lot = page.Locator($"[data-gold-lot=\"{assetLotId:D}\"]");
+        Assert.Equal(1, await lot.CountAsync());
+        await lot.Locator("input[name$='.GrossWeight']")
+            .FillAsync(grossWeight);
+        await lot.Locator("input[name$='.PieceCount']")
+            .FillAsync(pieceCount);
+        await page.Locator("#Input_CashConsideration")
+            .FillAsync(consideration);
+        await page.Locator("#Input_ExecutionDate").FillAsync(executionDate);
+        await page.Locator("#Input_ExternalReference").FillAsync(reference);
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser selected-lot gold sale.");
+        await OpenGoldAdvancedAsync(page);
+        await page.Locator("#Input_UnitPrice").FillAsync(unitPrice);
+
+        await ClickGoldButtonAsync(page, "Etkiyi gözden geçir");
+        await page.Locator("#gold-sale-review-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        Assert.Equal(1, await page.Locator("#gold-sale-review-heading").CountAsync());
+        Assert.Equal(
+            1,
+            await page.Locator(
+                    "#gold-sale-review-heading ~ table:first-of-type tbody tr")
+                .CountAsync());
+        var reviewText = await page.Locator("main").InnerTextAsync();
+        Assert.Contains(assetLotId.ToString("D"), reviewText);
+        Assert.Contains("ADR009_CUMULATIVE_ROUND_HALF_TO_EVEN_V1", reviewText);
+        Assert.Contains("KNOWN", reviewText);
+
+        await ClickGoldButtonAsync(page, "Altın satışını kaydet");
+        await page.Locator("#gold-receipt-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        Assert.Equal(1, await page.Locator("#gold-receipt-heading").CountAsync());
+        return new Uri(page.Url).AbsolutePath;
+    }
+
+    private static async Task<string> RecordPhysicalGoldTransferAsync(
+        IPage page,
+        Uri baseAddress,
+        Guid assetLotId,
+        string grossWeight,
+        string pieceCount,
+        string executionDate)
+    {
+        await GoToAsync(page, baseAddress, "/record/physical-gold-transfer");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_SourcePortfolioId"),
+            "Browser Test Portfolio");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_DestinationPortfolioId"),
+            "Browser Test Portfolio");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_SourceGoldAccountId"),
+            "BROWSER_VAULT");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_DestinationGoldAccountId"),
+            "BROWSER_SECOND_VAULT");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_GoldAssetId"),
+            "BROWSER_GOLD");
+        await ClickGoldButtonAsync(page, "Bu kapsamdaki lotları getir");
+
+        var lot = page.Locator($"[data-gold-lot=\"{assetLotId:D}\"]");
+        Assert.Equal(1, await lot.CountAsync());
+        await lot.Locator("input[name$='.GrossWeight']")
+            .FillAsync(grossWeight);
+        await lot.Locator("input[name$='.PieceCount']")
+            .FillAsync(pieceCount);
+        await page.Locator("#Input_ExecutionDate").FillAsync(executionDate);
+        await page.Locator("#Input_ExternalReference")
+            .FillAsync("BROWSER-GOLD-TRANSFER");
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser exact custody transfer.");
+        await ClickGoldButtonAsync(page, "Etkiyi gözden geçir");
+        await page.Locator("#gold-transfer-review-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        Assert.Equal(
+            1,
+            await page.Locator("#gold-transfer-review-heading").CountAsync());
+        var reviewText = await page.Locator("main").InnerTextAsync();
+        Assert.Contains(assetLotId.ToString("D"), reviewText);
+        Assert.Contains("Browser Test Vault", reviewText);
+        Assert.Contains("Browser Test Second Vault", reviewText);
+        Assert.Contains("Değişmez", reviewText);
+
+        await ClickGoldButtonAsync(page, "Saklama transferini kaydet");
+        await page.Locator("#gold-receipt-heading, .validation-summary")
+            .First
+            .WaitForAsync();
+        Assert.Equal(1, await page.Locator("#gold-receipt-heading").CountAsync());
+        var receiptText = await page.Locator("main").InnerTextAsync();
+        Assert.Contains("+10 gram — artış", receiptText);
+        Assert.Contains("-10 gram — azalış", receiptText);
+        return new Uri(page.Url).AbsolutePath;
+    }
+
+    private static async Task FillPhysicalGoldTradeScopeAsync(IPage page)
+    {
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_PortfolioId"),
+            "Browser Test Portfolio");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_GoldAccountId"),
+            "BROWSER_VAULT");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_CashAccountId"),
+            "ANA_HESAP");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_GoldAssetId"),
+            "BROWSER_GOLD");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_CashAssetId"),
+            "TRY_NAKIT");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_CounterpartyInstitutionId"),
+            "BROWSER_JEWELER");
+    }
+
+    private static async Task OpenGoldAdvancedAsync(IPage page)
+    {
+        var details = page.Locator("details.panel");
+        if (await details.GetAttributeAsync("open") is null)
+        {
+            await details.Locator("summary").ClickAsync();
+        }
+    }
+
+    private static Task ClickGoldButtonAsync(IPage page, string name)
+        => page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = name,
+                    Exact = true
+                })
+            .ClickAsync();
+
+    private static async Task AssertPhysicalGoldReadbackAsync(
+        Uri baseAddress,
+        GoldBrowserReceipt bracelet,
+        GoldBrowserReceipt group,
+        string originalSaleReceipt,
+        string transferReceipt,
+        string correctedSaleReceipt)
+    {
+        using var client = new HttpClient { BaseAddress = baseAddress };
+        var households = await client.GetFromJsonAsync<
+            NavigationPageResponse<HouseholdNavigationResponse>>(
+            "/api/households?pageSize=100");
+        var household = Assert.Single(households!.Items);
+        var custody = await client.GetFromJsonAsync<
+            PhysicalGoldCustodyInventoryResponse>(
+            $"/api/households/{household.HouseholdId:D}/physical-gold/custody");
+        Assert.NotNull(custody);
+
+        var braceletPosition = Assert.Single(
+            custody.Items,
+            x => x.AssetLotId == bracelet.AssetLotId);
+        Assert.Equal("Browser Test Second Vault", braceletPosition.AccountName);
+        Assert.Equal(10_00000000L, braceletPosition.GrossWeightRawE8);
+        Assert.Equal(1, braceletPosition.PieceCount);
+        Assert.Equal(9.16m, braceletPosition.FineWeightGrams);
+
+        var groupPosition = Assert.Single(
+            custody.Items,
+            x => x.AssetLotId == group.AssetLotId);
+        Assert.Contains("Vault", groupPosition.AccountName, StringComparison.Ordinal);
+        Assert.Equal(14_00000000L, groupPosition.GrossWeightRawE8);
+        Assert.Equal(1, groupPosition.PieceCount);
+        Assert.Equal(10.5m, groupPosition.FineWeightGrams);
+
+        var braceletPurchase = await GetGoldVerificationAsync(
+            client,
+            household.HouseholdId,
+            bracelet.ReceiptPath);
+        var groupPurchase = await GetGoldVerificationAsync(
+            client,
+            household.HouseholdId,
+            group.ReceiptPath);
+        var originalSale = await GetGoldVerificationAsync(
+            client,
+            household.HouseholdId,
+            originalSaleReceipt);
+        var transfer = await GetGoldVerificationAsync(
+            client,
+            household.HouseholdId,
+            transferReceipt);
+        var correctedSale = await GetGoldVerificationAsync(
+            client,
+            household.HouseholdId,
+            correctedSaleReceipt);
+
+        Assert.Equal(-101_000, braceletPurchase.Economics.NetCashEffectMinorUnits);
+        Assert.Equal(101_000, braceletPurchase.Economics.AcquisitionLotCostMinorUnits);
+        Assert.Equal(-240_000, groupPurchase.Economics.NetCashEffectMinorUnits);
+        Assert.Equal(120_000, originalSale.Economics.NetCashEffectMinorUnits);
+        Assert.NotNull(originalSale.ReversedByTransactionId);
+        Assert.False(originalSale.RealizedCost!.SourceSaleIsEffective);
+        Assert.Equal(0, transfer.Economics.NetCashEffectMinorUnits);
+        Assert.Equal(2, transfer.Allocations.Count);
+        Assert.Equal(
+            0,
+            transfer.Allocations.Sum(x => x.GrossWeightDeltaRawE8));
+        Assert.Equal(0, transfer.Allocations.Sum(x => x.PieceDelta));
+        Assert.Equal(90_000, correctedSale.Economics.NetCashEffectMinorUnits);
+        Assert.Equal(72_000, Assert.Single(correctedSale.RealizedCost!.KnownAmounts).MinorUnits);
+        Assert.True(correctedSale.RealizedCost.SourceSaleIsEffective);
+    }
+
+    private static async Task<PhysicalGoldActivityVerificationResponse>
+        GetGoldVerificationAsync(
+            HttpClient client,
+            Guid householdId,
+            string receiptPath)
+    {
+        var transactionId = Guid.Parse(
+            receiptPath.Split('/', StringSplitOptions.RemoveEmptyEntries)[^2]);
+        var response = await client.GetFromJsonAsync<
+            PhysicalGoldActivityVerificationResponse>(
+            $"/api/households/{householdId:D}/ledger/physical-gold-activities/{transactionId:D}/verification");
+        return Assert.IsType<PhysicalGoldActivityVerificationResponse>(response);
+    }
+
+    private sealed record GoldBrowserReceipt(
+        string ReceiptPath,
+        Guid AssetLotId);
+
+    /// <summary>
     /// Corrects a posted fund sale from its receipt, without JavaScript.
     /// </summary>
     /// <remarks>
@@ -1420,5 +2004,6 @@ public sealed class CriticalJourneysTests
         bool ExerciseOpeningCutover,
         int ViewportWidth,
         int ViewportHeight,
-        bool ExerciseFundLifecycle = false);
+        bool ExerciseFundLifecycle = false,
+        bool ExercisePhysicalGoldLifecycle = false);
 }

@@ -51,6 +51,45 @@ namespace WealthLedger.Domain.Lots
         public bool IsClosed
             => CurrentQuantity.RawE8 == 0;
 
+        /// <summary>
+        /// The current global number of pieces in a physical-gold lot.
+        /// </summary>
+        /// <remarks>
+        /// This is derived from immutable signed allocation details. The
+        /// original <see cref="PhysicalGoldLotDetail.PieceCount"/> remains
+        /// acquisition evidence and is never mutated.
+        /// </remarks>
+        public int CurrentPieceCount
+        {
+            get
+            {
+                if (PhysicalGoldDetail is null)
+                {
+                    throw new InvalidOperationException(
+                        "Only a physical-gold lot has a current piece count.");
+                }
+
+                var total = 0;
+
+                foreach (var allocation in _allocations)
+                {
+                    var detail = allocation.PhysicalGoldDetail
+                        ?? throw new InvalidOperationException(
+                            "Every physical-gold allocation must contain piece movement.");
+
+                    total = checked(total + detail.PieceDelta);
+                }
+
+                if (total < 0)
+                {
+                    throw new InvalidOperationException(
+                        "Physical-gold lot piece count cannot be negative.");
+                }
+
+                return total;
+            }
+        }
+
         private AssetLot(
             Guid id,
             Guid assetId,
@@ -181,7 +220,8 @@ namespace WealthLedger.Domain.Lots
                     Id,
                     openingEntry.Id,
                     QuantityDelta.FromRaw(
-                        openingQuantity.RawE8)));
+                        openingQuantity.RawE8),
+                    physicalGoldDetail?.PieceCount));
         }
 
         public static AssetLot Create(
@@ -208,6 +248,40 @@ namespace WealthLedger.Domain.Lots
         public LotEntryAllocation Allocate(
             TransactionEntry entry,
             QuantityDelta quantityDelta)
+        {
+            if (PhysicalGoldDetail is not null)
+            {
+                throw new DomainRuleViolationException(
+                    "A physical-gold allocation requires an exact piece movement.");
+            }
+
+            return AllocateCore(
+                entry,
+                quantityDelta,
+                physicalGoldPieceDelta: null);
+        }
+
+        public LotEntryAllocation Allocate(
+            TransactionEntry entry,
+            QuantityDelta quantityDelta,
+            int physicalGoldPieceDelta)
+        {
+            if (PhysicalGoldDetail is null)
+            {
+                throw new DomainRuleViolationException(
+                    "Piece movement can be attached only to a physical-gold allocation.");
+            }
+
+            return AllocateCore(
+                entry,
+                quantityDelta,
+                physicalGoldPieceDelta);
+        }
+
+        private LotEntryAllocation AllocateCore(
+            TransactionEntry entry,
+            QuantityDelta quantityDelta,
+            int? physicalGoldPieceDelta)
         {
             ArgumentNullException.ThrowIfNull(entry);
 
@@ -248,12 +322,36 @@ namespace WealthLedger.Domain.Lots
                     "Lot allocation would make the lot quantity negative.");
             }
 
+            PhysicalGoldLotAllocationDetail? pieceDetail = null;
+
+            if (physicalGoldPieceDelta is int pieceDelta)
+            {
+                pieceDetail =
+                    new PhysicalGoldLotAllocationDetail(
+                        Guid.NewGuid(),
+                        quantityDelta,
+                        pieceDelta);
+
+                var resultingPieces = checked(
+                    CurrentPieceCount + pieceDetail.PieceDelta);
+
+                if (resultingPieces < 0)
+                {
+                    throw new DomainRuleViolationException(
+                        "Physical-gold allocation would make the lot piece count negative.");
+                }
+            }
+
+            var allocationId = pieceDetail?.LotEntryAllocationId
+                ?? Guid.NewGuid();
+
             var allocation =
                 new LotEntryAllocation(
-                    Guid.NewGuid(),
+                    allocationId,
                     Id,
                     entry.Id,
-                    quantityDelta);
+                    quantityDelta,
+                    physicalGoldPieceDelta);
 
             _allocations.Add(allocation);
 
@@ -356,7 +454,8 @@ namespace WealthLedger.Domain.Lots
                         snapshot.Id,
                         lot.Id,
                         snapshot.TransactionEntryId,
-                        snapshot.QuantityDelta));
+                        snapshot.QuantityDelta,
+                        snapshot.PhysicalGoldPieceDelta));
             }
 
             var openingAllocation =
@@ -371,8 +470,36 @@ namespace WealthLedger.Domain.Lots
                     "A reconstituted asset lot must contain its positive opening allocation.");
             }
 
+            if (physicalGoldDetail is not null)
+            {
+                if (lot._allocations.Any(
+                        x => x.PhysicalGoldDetail is null))
+                {
+                    throw new DomainRuleViolationException(
+                        "Every physical-gold allocation must contain piece movement.");
+                }
+
+                if (openingAllocation.PhysicalGoldDetail!.PieceDelta
+                    != physicalGoldDetail.PieceCount)
+                {
+                    throw new DomainRuleViolationException(
+                        "The opening physical-gold piece movement must equal the original piece count.");
+                }
+            }
+            else if (lot._allocations.Any(
+                         x => x.PhysicalGoldDetail is not null))
+            {
+                throw new DomainRuleViolationException(
+                    "Only physical-gold allocations may contain piece movement.");
+            }
+
             // Forces checked summation and negative-balance validation.
             _ = lot.CurrentQuantity;
+
+            if (physicalGoldDetail is not null)
+            {
+                _ = lot.CurrentPieceCount;
+            }
 
             return lot;
         }

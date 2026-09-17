@@ -31,5 +31,6 @@
         Guid AssetLotId,
         Guid OriginalTransactionEntryId,
         int EntrySequence,
-        long QuantityDeltaRawE8);
+        long QuantityDeltaRawE8,
+        int? PhysicalGoldPieceDelta);
 }

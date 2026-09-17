@@ -1750,4 +1750,229 @@
   <data name="FundReverse_UnsupportedShape" xml:space="preserve"><value>Bu işlemin kayıtlı yapısı ters kayıt için desteklenmiyor.</value></data>
   <data name="FundReverse_Validation_ReasonRequired" xml:space="preserve"><value>Düzeltme nedeni zorunludur.</value></data>
   <data name="FundReverse_Validation_ReasonInvalid" xml:space="preserve"><value>Neden en fazla 2000 karakter olmalı ve kontrol karakteri içermemelidir.</value></data>
+  <data name="Gold_Eyebrow" xml:space="preserve"><value>Fiziki altın defteri</value></data>
+  <data name="GoldPurchase_Title" xml:space="preserve"><value>Fiziki altın alımı kaydet</value></data>
+  <data name="GoldPurchase_Introduction" xml:space="preserve"><value>Nakit karşılığı tamamlanmış bir fiziki altın alımını, ürün ve saklama kanıtlarıyla kaydedin.</value></data>
+  <data name="GoldPurchase_ReviewExplanation" xml:space="preserve"><value>Brüt ağırlık ve ayar kaynak bilgidir; saf altın ağırlığı bunlardan türetilmiştir. Kaydetme bir edinim lotu oluşturur.</value></data>
+  <data name="GoldPurchase_PostAction" xml:space="preserve"><value>Altın alımını kaydet</value></data>
+  <data name="GoldSale_Title" xml:space="preserve"><value>Fiziki altın satışı kaydet</value></data>
+  <data name="GoldSale_Introduction" xml:space="preserve"><value>Satılan ağırlığı ve tam parça sayısını, kullanacağınız saklama lotlarında açıkça belirtin.</value></data>
+  <data name="GoldSale_ReviewExplanation" xml:space="preserve"><value>Yalnızca aşağıda seçtiğiniz lotlar kullanılacak. Kaydetme öncesinde ağırlık ve parça mevcudu yeniden denetlenir.</value></data>
+  <data name="GoldSale_PostAction" xml:space="preserve"><value>Altın satışını kaydet</value></data>
+  <data name="GoldTransfer_Title" xml:space="preserve"><value>Fiziki altın saklama transferi kaydet</value></data>
+  <data name="GoldTransfer_Introduction" xml:space="preserve"><value>Seçilen altın lotlarını yeni bir edinim yaratmadan iki saklama kapsamı arasında taşıyın.</value></data>
+  <data name="GoldTransfer_ReviewExplanation" xml:space="preserve"><value>Kaynak ve hedef hareketleri eşit ve zıttır. Edinim soyu, maliyet ve ayar değişmeden korunur.</value></data>
+  <data name="GoldTransfer_PostAction" xml:space="preserve"><value>Saklama transferini kaydet</value></data>
+  <data name="Gold_Legend_Identify" xml:space="preserve"><value>Kapsamı belirleyin</value></data>
+  <data name="Gold_Legend_SourceFacts" xml:space="preserve"><value>Kaynak bilgileri girin</value></data>
+  <data name="Gold_Legend_PriceDates" xml:space="preserve"><value>Fiyat ve ek tarihler</value></data>
+  <data name="Gold_Legend_Costs" xml:space="preserve"><value>Masraf ve vergiler</value></data>
+  <data name="Gold_Legend_ItemEvidence" xml:space="preserve"><value>Ürün ve parça kanıtı</value></data>
+  <data name="Gold_Legend_Provenance" xml:space="preserve"><value>Kaynak ve açıklama</value></data>
+  <data name="Gold_PortfolioLabel" xml:space="preserve"><value>Portföy</value></data>
+  <data name="Gold_SourcePortfolioLabel" xml:space="preserve"><value>Kaynak portföy</value></data>
+  <data name="Gold_DestinationPortfolioLabel" xml:space="preserve"><value>Hedef portföy</value></data>
+  <data name="Gold_CashPortfolioLabel" xml:space="preserve"><value>Masraf portföyü</value></data>
+  <data name="Gold_GoldAccountLabel" xml:space="preserve"><value>Fiziki saklama hesabı</value></data>
+  <data name="Gold_SourceAccountLabel" xml:space="preserve"><value>Kaynak saklama hesabı</value></data>
+  <data name="Gold_DestinationAccountLabel" xml:space="preserve"><value>Hedef saklama hesabı</value></data>
+  <data name="Gold_CashAccountLabel" xml:space="preserve"><value>Nakit hesabı</value></data>
+  <data name="Gold_AssetLabel" xml:space="preserve"><value>Fiziki altın ürünü</value></data>
+  <data name="Gold_CashAssetLabel" xml:space="preserve"><value>Nakit varlığı</value></data>
+  <data name="Gold_CounterpartyLabel" xml:space="preserve"><value>Satıcı veya alıcı kurum</value></data>
+  <data name="Gold_CounterpartyUnknown" xml:space="preserve"><value>Bilinmiyor / kaydedilmedi</value></data>
+  <data name="Gold_CounterpartyHelp" xml:space="preserve"><value>Karşı taraf isteğe bağlıdır ve saklama hesabından ayrıdır.</value></data>
+  <data name="Gold_ChoosePlaceholder" xml:space="preserve"><value>Seçin</value></data>
+  <data name="Gold_MissingReferenceHelp" xml:space="preserve"><value>Gerekli hesap, ürün veya kurum listede yoksa önce ayrı olarak oluşturun.</value></data>
+  <data name="Gold_CreateReferenceAction" xml:space="preserve"><value>Referans oluşturma ekranını aç</value></data>
+  <data name="Gold_LoadLotsAction" xml:space="preserve"><value>Bu kapsamdaki lotları getir</value></data>
+  <data name="Gold_GrossWeightLabel" xml:space="preserve"><value>Brüt ağırlık</value></data>
+  <data name="Gold_GrossWeightHelp" xml:space="preserve"><value>Gram cinsinden, en fazla sekiz ondalık basamakla girin.</value></data>
+  <data name="Gold_FinenessLabel" xml:space="preserve"><value>Ayar / saflık</value></data>
+  <data name="Gold_FinenessHelp" xml:space="preserve"><value>Etiketteki ayarı seçin; kesin değer farklıysa özel seçeneği kullanın.</value></data>
+  <data name="Gold_Fineness_24K" xml:space="preserve"><value>24 ayar — 999,9 ‰ (999900 ppm)</value></data>
+  <data name="Gold_Fineness_22K" xml:space="preserve"><value>22 ayar — 916 ‰ (916000 ppm)</value></data>
+  <data name="Gold_Fineness_18K" xml:space="preserve"><value>18 ayar — 750 ‰ (750000 ppm)</value></data>
+  <data name="Gold_Fineness_14K" xml:space="preserve"><value>14 ayar — 585 ‰ (585000 ppm)</value></data>
+  <data name="Gold_Fineness_8K" xml:space="preserve"><value>8 ayar — 333 ‰ (333000 ppm)</value></data>
+  <data name="Gold_Fineness_Custom" xml:space="preserve"><value>Kesin özel değer</value></data>
+  <data name="Gold_CustomFinenessLabel" xml:space="preserve"><value>Özel saflık (binde)</value></data>
+  <data name="Gold_CustomFinenessHelp" xml:space="preserve"><value>Yalnızca özel seçeneğinde 0,001 ile 1000 arasında, en fazla üç ondalıkla girin.</value></data>
+  <data name="Gold_PieceCountLabel" xml:space="preserve"><value>Parça sayısı</value></data>
+  <data name="Gold_PieceCountHelp" xml:space="preserve"><value>Aynı nitelikteki tam parça adedi; ağırlıktan türetilmez.</value></data>
+  <data name="Gold_ExecutionDateLabel" xml:space="preserve"><value>İşlem tarihi</value></data>
+  <data name="Gold_ConsiderationLabel" xml:space="preserve"><value>Ödenen nakit</value></data>
+  <data name="Gold_ProceedsLabel" xml:space="preserve"><value>Alınan nakit</value></data>
+  <data name="Gold_ConsiderationHelp" xml:space="preserve"><value>Belgedeki gerçek toplamı, para biriminin kesin basamaklarıyla girin.</value></data>
+  <data name="Gold_AdvancedTitle" xml:space="preserve"><value>Fiyat, masraf ve kanıt ayrıntıları</value></data>
+  <data name="Gold_UnitPriceLabel" xml:space="preserve"><value>Brüt gram başına gerçekleşen fiyat</value></data>
+  <data name="Gold_UnitPriceHelp" xml:space="preserve"><value>Belgede açıkça varsa girin; toplam tutardan geriye doğru üretmeyin.</value></data>
+  <data name="Gold_OrderDateLabel" xml:space="preserve"><value>Talimat tarihi</value></data>
+  <data name="Gold_SettlementDateLabel" xml:space="preserve"><value>Takas tarihi</value></data>
+  <data name="Gold_CostsHelp" xml:space="preserve"><value>Her masrafın türünü, nakit davranışını ve belge tutarını ayrı girin.</value></data>
+  <data name="Gold_CostRowTitle" xml:space="preserve"><value>Masraf</value></data>
+  <data name="Gold_CostTypeLabel" xml:space="preserve"><value>Masraf türü</value></data>
+  <data name="Gold_CostTreatmentLabel" xml:space="preserve"><value>İşlemdeki davranışı</value></data>
+  <data name="Gold_CostAmountLabel" xml:space="preserve"><value>Tutar</value></data>
+  <data name="Gold_CostNoteLabel" xml:space="preserve"><value>Masraf açıklaması</value></data>
+  <data name="Gold_CostNone" xml:space="preserve"><value>Masraf yok</value></data>
+  <data name="Gold_AddCostAction" xml:space="preserve"><value>Bir masraf daha ekle</value></data>
+  <data name="Gold_CostType_MakingCharge" xml:space="preserve"><value>İşçilik</value></data>
+  <data name="Gold_CostType_Commission" xml:space="preserve"><value>Komisyon</value></data>
+  <data name="Gold_CostType_OtherTax" xml:space="preserve"><value>Diğer vergi</value></data>
+  <data name="Gold_CostType_Insurance" xml:space="preserve"><value>Sigorta</value></data>
+  <data name="Gold_CostType_Other" xml:space="preserve"><value>Diğer</value></data>
+  <data name="Gold_Treatment_Additional" xml:space="preserve"><value>Ek nakit çıkışı</value></data>
+  <data name="Gold_Treatment_Withheld" xml:space="preserve"><value>Satış gelirinden kesildi</value></data>
+  <data name="Gold_Treatment_Included" xml:space="preserve"><value>Toplam bedele dahil</value></data>
+  <data name="Gold_Treatment_Informational" xml:space="preserve"><value>Yalnızca bilgi</value></data>
+  <data name="Gold_TransferCashScopeTitle" xml:space="preserve"><value>Transfer masrafının nakit kapsamı</value></data>
+  <data name="Gold_TransferCashScopeHelp" xml:space="preserve"><value>Yalnızca ek nakit çıkışı olan transfer masrafında üç alanı da seçin.</value></data>
+  <data name="Gold_HallmarkLabel" xml:space="preserve"><value>Damga / ayar işareti</value></data>
+  <data name="Gold_CertificateLabel" xml:space="preserve"><value>Sertifika referansı</value></data>
+  <data name="Gold_LotNoteLabel" xml:space="preserve"><value>Homojen ürün grubu notu</value></data>
+  <data name="Gold_ExternalReferenceLabel" xml:space="preserve"><value>Belge veya işlem referansı</value></data>
+  <data name="Gold_NoteLabel" xml:space="preserve"><value>Açıklama</value></data>
+  <data name="Gold_NoteHelp" xml:space="preserve"><value>Kaynağı ve olağandışı fiyat ya da nakit farkını anlaşılır biçimde açıklayın.</value></data>
+  <data name="Gold_SelectedLotsTitle" xml:space="preserve"><value>Taşınacak tam lot parçaları</value></data>
+  <data name="Gold_SelectedLotsHelp" xml:space="preserve"><value>Kullanacağınız her lotta brüt gramı ve tam parça sayısını ayrı girin. Boş satırlar seçilmez.</value></data>
+  <data name="Gold_NoLots" xml:space="preserve"><value>Seçilen saklama kapsamında kullanılabilir fiziki altın lotu yok.</value></data>
+  <data name="Gold_LotTitle" xml:space="preserve"><value>Saklama lotu</value></data>
+  <data name="Gold_LotId" xml:space="preserve"><value>Lot kimliği</value></data>
+  <data name="Gold_AvailableGross" xml:space="preserve"><value>Mevcut brüt ağırlık</value></data>
+  <data name="Gold_AvailablePieces" xml:space="preserve"><value>Mevcut parça</value></data>
+  <data name="Gold_MovedGrossLabel" xml:space="preserve"><value>Taşınan brüt ağırlık</value></data>
+  <data name="Gold_MovedPiecesLabel" xml:space="preserve"><value>Taşınan parça</value></data>
+  <data name="Gold_LotChanged" xml:space="preserve"><value>Bu lot artık seçilen kapsamın güncel listesinde değil.</value></data>
+  <data name="Gold_ReviewStatus" xml:space="preserve"><value>Kaydetmeye hazır inceleme</value></data>
+  <data name="Gold_ReviewTitle" xml:space="preserve"><value>Kesin etkiyi gözden geçirin</value></data>
+  <data name="Gold_ReviewAction" xml:space="preserve"><value>Etkiyi gözden geçir</value></data>
+  <data name="Gold_EditAction" xml:space="preserve"><value>Bilgileri yeniden düzenle</value></data>
+  <data name="Gold_FineGramUnit" xml:space="preserve"><value>gram saf altın</value></data>
+  <data name="Gold_FineWeightLabel" xml:space="preserve"><value>Türetilen saf altın ağırlığı</value></data>
+  <data name="Gold_AdditionalOutflowLabel" xml:space="preserve"><value>Ek nakit çıkışı</value></data>
+  <data name="Gold_NetCashEffectLabel" xml:space="preserve"><value>Net nakit etkisi</value></data>
+  <data name="Gold_AcquisitionCostLabel" xml:space="preserve"><value>Edinim lotu maliyeti</value></data>
+  <data name="Gold_PriceComparisonTitle" xml:space="preserve"><value>Fiyat ve belge tutarı karşılaştırması</value></data>
+  <data name="Gold_PriceImpliedLabel" xml:space="preserve"><value>Fiyatın ima ettiği brüt tutar</value></data>
+  <data name="Gold_DiscrepancyLabel" xml:space="preserve"><value>Açıklanacak fark</value></data>
+  <data name="Gold_CostsTitle" xml:space="preserve"><value>Kaydedilen masraflar</value></data>
+  <data name="Gold_WarningsTitle" xml:space="preserve"><value>Gözden geçirme uyarıları</value></data>
+  <data name="Gold_SelectedPlanTitle" xml:space="preserve"><value>Seçilen kesin lot planı</value></data>
+  <data name="Gold_RemainingGrossLabel" xml:space="preserve"><value>Kaynakta kalan</value></data>
+  <data name="Gold_PiecesMovementLabel" xml:space="preserve"><value>Parça hareketi</value></data>
+  <data name="Gold_CostKnowledgeLabel" xml:space="preserve"><value>Maliyet bilgisi</value></data>
+  <data name="Gold_RealizedCostTitle" xml:space="preserve"><value>Türetilen gerçekleşen maliyet</value></data>
+  <data name="Gold_CompletenessLabel" xml:space="preserve"><value>Bilgi bütünlüğü</value></data>
+  <data name="Gold_KnownGrossLabel" xml:space="preserve"><value>Maliyeti bilinen brüt ağırlık</value></data>
+  <data name="Gold_UnknownGrossLabel" xml:space="preserve"><value>Maliyeti bilinmeyen brüt ağırlık</value></data>
+  <data name="Gold_MethodLabel" xml:space="preserve"><value>Hesaplama yöntemi</value></data>
+  <data name="Gold_UnknownCostExplanation" xml:space="preserve"><value>Maliyet bilinmiyor; sıfır kabul edilmedi.</value></data>
+  <data name="Gold_PartialCostExplanation" xml:space="preserve"><value>Gösterilen tutar yalnızca maliyeti bilinen ağırlığı kapsar.</value></data>
+  <data name="Gold_SourceScopeLabel" xml:space="preserve"><value>Kaynak saklama kapsamı</value></data>
+  <data name="Gold_DestinationScopeLabel" xml:space="preserve"><value>Hedef saklama kapsamı</value></data>
+  <data name="Gold_HouseholdTotalLabel" xml:space="preserve"><value>Hane toplamı</value></data>
+  <data name="Gold_Unchanged" xml:space="preserve"><value>Değişmez</value></data>
+  <data name="Gold_SourceEffectLabel" xml:space="preserve"><value>Kaynak etkisi</value></data>
+  <data name="Gold_DestinationEffectLabel" xml:space="preserve"><value>Hedef etkisi</value></data>
+  <data name="Gold_OriginalPiecesLabel" xml:space="preserve"><value>Edinimdeki özgün parça sayısı</value></data>
+  <data name="Gold_StaleTitle" xml:space="preserve"><value>Saklama planı değişti</value></data>
+  <data name="Gold_StaleExplanation" xml:space="preserve"><value>Gözden geçirmeden sonra ağırlık veya parça mevcudu değişti; hiçbir kayıt oluşturulmadı. Güncel planı yeniden inceleyin.</value></data>
+  <data name="Gold_LoadErrorTitle" xml:space="preserve"><value>Fiziki altın bilgileri yüklenemedi</value></data>
+  <data name="Gold_LoadErrorExplanation" xml:space="preserve"><value>Bu sayfa şu anda güvenli biçimde hazırlanamadı. Defter ve başlangıç durumunu denetleyip yeniden deneyin.</value></data>
+  <data name="Gold_ChoicesTruncatedTitle" xml:space="preserve"><value>Seçim listesi sınırlandı</value></data>
+  <data name="Gold_ChoicesTruncatedExplanation" xml:space="preserve"><value>Uyumlu kayıtların tümü bu sayfaya sığmadı. Doğru kaydı göremiyorsanız ana veriyi sadeleştirin.</value></data>
+  <data name="Gold_Validation_ChoiceUnavailable" xml:space="preserve"><value>Uyumlu ve etkin bir seçim yapın.</value></data>
+  <data name="Gold_Validation_Quantity" xml:space="preserve"><value>Sekiz ondalık basamağı aşmayan pozitif bir gram değeri girin.</value></data>
+  <data name="Gold_Validation_Pieces" xml:space="preserve"><value>Pozitif bir tam parça sayısı girin.</value></data>
+  <data name="Gold_Validation_Fineness" xml:space="preserve"><value>Geçerli bir ayar seçin veya en fazla üç ondalıklı binde değeri girin.</value></data>
+  <data name="Gold_Validation_Price" xml:space="preserve"><value>Geçerli pozitif bir brüt gram fiyatı girin veya alanı boş bırakın.</value></data>
+  <data name="Gold_Validation_Amount" xml:space="preserve"><value>Para biriminin basamaklarına uyan pozitif bir tutar girin.</value></data>
+  <data name="Gold_Validation_CostType" xml:space="preserve"><value>Desteklenen bir masraf türü seçin.</value></data>
+  <data name="Gold_Validation_CostTreatment" xml:space="preserve"><value>Bu işlem için desteklenen bir masraf davranışı seçin.</value></data>
+  <data name="Gold_Validation_Date" xml:space="preserve"><value>Geçerli bir tarih girin.</value></data>
+  <data name="Gold_Validation_SelectLot" xml:space="preserve"><value>En az bir lotta brüt ağırlık ve tam parça sayısı girin.</value></data>
+  <data name="Gold_Validation_LotUnavailable" xml:space="preserve"><value>Bu lot seçilen saklama kapsamında kullanılamıyor.</value></data>
+  <data name="Gold_Error_ProvenanceRequired" xml:space="preserve"><value>Belge referansı veya açıklama girin.</value></data>
+  <data name="Gold_Error_UnexplainedDiscrepancy" xml:space="preserve"><value>Fiyat ile belge tutarı arasındaki önemli farkı açıklayın.</value></data>
+  <data name="Gold_Error_NegativeExpectedProceeds" xml:space="preserve"><value>Masraflar beklenen satış gelirini geçemez.</value></data>
+  <data name="Gold_Error_NegativeCashNoteRequired" xml:space="preserve"><value>Nakit açığının kaynağını açıklamaya yazın.</value></data>
+  <data name="Gold_Error_InsufficientGross" xml:space="preserve"><value>Seçilen saklama kapsamında yeterli brüt ağırlık kalmadı.</value></data>
+  <data name="Gold_Error_InsufficientPieces" xml:space="preserve"><value>Seçilen saklama kapsamında yeterli tam parça kalmadı.</value></data>
+  <data name="Gold_Error_StalePlan" xml:space="preserve"><value>Gözden geçirilen lot planı artık güncel değil.</value></data>
+  <data name="Gold_Error_Cost" xml:space="preserve"><value>Masraf satırlarını, türlerini ve nakit davranışlarını denetleyin.</value></data>
+  <data name="Gold_Error_CurrencyMismatch" xml:space="preserve"><value>Altın, nakit, fiyat ve masraflar aynı para birimini kullanmalıdır.</value></data>
+  <data name="Gold_Error_Date" xml:space="preserve"><value>Tarihleri ve hesap açılış tarihlerini denetleyin.</value></data>
+  <data name="Gold_Error_ReferenceNotFound" xml:space="preserve"><value>İstenen fiziki altın kaydı veya referans bulunamadı.</value></data>
+  <data name="Gold_Error_Reference" xml:space="preserve"><value>Seçilen hesap, varlık, portföy veya kurum bu işlemle uyumlu değil.</value></data>
+  <data name="Gold_Error_SelectedLot" xml:space="preserve"><value>Seçilen lotları, brüt ağırlıkları ve parça sayılarını denetleyin.</value></data>
+  <data name="Gold_Error_Persistence" xml:space="preserve"><value>Kayıt güvenli biçimde tamamlanamadı; hiçbir kısmi işlem oluşturulmadı.</value></data>
+  <data name="Gold_Error_IdempotencyConflict" xml:space="preserve"><value>Aynı kayıt anahtarı farklı bilgilerle daha önce kullanılmış.</value></data>
+  <data name="Gold_Error_InvalidInput" xml:space="preserve"><value>Girilen bilgiler desteklenen kesin biçime uymuyor.</value></data>
+  <data name="Gold_Warning_PHYSICAL_GOLD_EXPLAINED_DISCREPANCY" xml:space="preserve"><value>Fiyat ile toplam arasındaki önemli fark açıklamayla birlikte saklanacak.</value></data>
+  <data name="Gold_Warning_PHYSICAL_GOLD_ROUNDING_CONSISTENT" xml:space="preserve"><value>Fiyat ile toplam arasındaki fark para birimi yuvarlamasıyla uyumlu.</value></data>
+  <data name="Gold_Warning_PHYSICAL_GOLD_EXECUTED_PRICE_UNAVAILABLE" xml:space="preserve"><value>Gerçekleşen birim fiyat kaydedilmedi; toplam bedel kaynak bilgisi olarak korunur.</value></data>
+  <data name="Gold_Warning_PHYSICAL_GOLD_NEGATIVE_PROJECTED_CASH" xml:space="preserve"><value>Bu işlem seçilen nakit kapsamında eksi bakiye oluşturabilir.</value></data>
+  <data name="Gold_Warning_PHYSICAL_GOLD_INCOMPLETE_REALIZED_COST" xml:space="preserve"><value>Gerçekleşen maliyetin bir bölümü veya tamamı bilinmiyor.</value></data>
+  <data name="GoldReceipt_Title" xml:space="preserve"><value>Fiziki altın işlem kaydı</value></data>
+  <data name="GoldReceipt_Introduction" xml:space="preserve"><value>Bu görünüm yalnızca kalıcı defter kayıtlarından yeniden oluşturulur; yenilemek yeni işlem yaratmaz.</value></data>
+  <data name="GoldReceipt_InvalidTitle" xml:space="preserve"><value>İşlem kimliği geçersiz</value></data>
+  <data name="GoldReceipt_InvalidExplanation" xml:space="preserve"><value>Geçerli bir fiziki altın işlem bağlantısı kullanın.</value></data>
+  <data name="GoldReceipt_NotFoundTitle" xml:space="preserve"><value>Fiziki altın işlemi bulunamadı</value></data>
+  <data name="GoldReceipt_NotFoundExplanation" xml:space="preserve"><value>Bu haneye ait desteklenen bir fiziki altın alımı, satışı veya transferi yok.</value></data>
+  <data name="GoldReceipt_PostedStatus" xml:space="preserve"><value>Kalıcı olarak kaydedildi</value></data>
+  <data name="GoldReceipt_PersistedExplanation" xml:space="preserve"><value>Aşağıdaki kaynak bilgiler, lot hareketleri ve saklama sonucu veritabanından okunmuştur.</value></data>
+  <data name="GoldReceipt_TransactionId" xml:space="preserve"><value>İşlem kimliği</value></data>
+  <data name="GoldReceipt_PostedAt" xml:space="preserve"><value>Kayıt zamanı</value></data>
+  <data name="GoldReceipt_CreatedLot" xml:space="preserve"><value>Oluşturulan edinim lotu</value></data>
+  <data name="GoldReceipt_ReversalId" xml:space="preserve"><value>Ters kayıt kimliği</value></data>
+  <data name="GoldReceipt_MovementsTitle" xml:space="preserve"><value>Kesin lot ve parça hareketleri</value></data>
+  <data name="GoldReceipt_MovementsExplanation" xml:space="preserve"><value>Brüt ağırlık ile parça sayısı birbirinden bağımsız, işaretli kanıtlardır.</value></data>
+  <data name="GoldReceipt_Scope" xml:space="preserve"><value>Portföy / hesap kapsamı</value></data>
+  <data name="GoldReceipt_GrossDelta" xml:space="preserve"><value>Brüt ağırlık hareketi</value></data>
+  <data name="GoldReceipt_PieceDelta" xml:space="preserve"><value>Parça hareketi</value></data>
+  <data name="GoldReceipt_EvidenceTitle" xml:space="preserve"><value>Edinim ve ürün kanıtı</value></data>
+  <data name="GoldReceipt_RealizedExplanation" xml:space="preserve"><value>Gerçekleşen maliyet, seçilen lotların brüt ağırlık geçmişinden türetilir ve deftere ayrı bir tutar olarak yazılmaz.</value></data>
+  <data name="GoldReceipt_RealizedEffective" xml:space="preserve"><value>Kaynak satışın durumu</value></data>
+  <data name="GoldReceipt_Effective" xml:space="preserve"><value>Etkin</value></data>
+  <data name="GoldReceipt_NotEffective" xml:space="preserve"><value>Ters kayıt nedeniyle etkin değil</value></data>
+  <data name="GoldReceipt_CurrentCustodyTitle" xml:space="preserve"><value>Bu lotların güncel saklama dağılımı</value></data>
+  <data name="GoldReceipt_NoCurrentCustody" xml:space="preserve"><value>Bu lotlarda güncel pozitif saklama bakiyesi kalmadı.</value></data>
+  <data name="GoldReceipt_NextTitle" xml:space="preserve"><value>Doğrulama ve düzeltme</value></data>
+  <data name="GoldReceipt_OpenTransaction" xml:space="preserve"><value>Tam genel işlem açıklamasını aç</value></data>
+  <data name="GoldReceipt_AlreadyReversed" xml:space="preserve"><value>Bu işlem ayrı bir ters kayıtla düzeltilmiş.</value></data>
+  <data name="GoldReceipt_ReverseAction" xml:space="preserve"><value>Ters kayıt uygunluğunu incele</value></data>
+  <data name="GoldReceipt_StartCorrection" xml:space="preserve"><value>Ayrı bir düzeltilmiş işlem başlat</value></data>
+  <data name="GoldReceipt_CorrectionHelp" xml:space="preserve"><value>Geçmiş kayıt değişmez. Düzeltme önce ayrı bir ters kayıt, ardından yeni ve ayrıca gözden geçirilen normal işlemdir.</value></data>
+  <data name="GoldReverse_Title" xml:space="preserve"><value>Fiziki altın işlemini ters kayıtla düzelt</value></data>
+  <data name="GoldReverse_Introduction" xml:space="preserve"><value>Uygun işlemde nakit, brüt ağırlık, tam parça ve saklama hareketleri ayrı bir kayıtla tam tersine çevrilir.</value></data>
+  <data name="GoldReverse_OriginalTitle" xml:space="preserve"><value>Özgün kalıcı işlem</value></data>
+  <data name="GoldReverse_EffectsTitle" xml:space="preserve"><value>Ters kaydın kesin etkileri</value></data>
+  <data name="GoldReverse_Sequence" xml:space="preserve"><value>Sıra</value></data>
+  <data name="GoldReverse_Role" xml:space="preserve"><value>Satır türü</value></data>
+  <data name="GoldReverse_QuantityEffect" xml:space="preserve"><value>Miktar etkisi</value></data>
+  <data name="GoldReverse_LotEffectsTitle" xml:space="preserve"><value>Lot ve parça etkileri</value></data>
+  <data name="GoldReverse_ReasonLegend" xml:space="preserve"><value>Düzeltme nedeni</value></data>
+  <data name="GoldReverse_ReasonLabel" xml:space="preserve"><value>Neden</value></data>
+  <data name="GoldReverse_ReasonHelp" xml:space="preserve"><value>Neden kalıcı olarak ters kayıtta saklanır.</value></data>
+  <data name="GoldReverse_PostAction" xml:space="preserve"><value>Kalıcı ters kaydı oluştur</value></data>
+  <data name="GoldReverse_NextTitle" xml:space="preserve"><value>Sonraki adımlar</value></data>
+  <data name="GoldReverse_BackToReceipt" xml:space="preserve"><value>Fiziki altın işlem kaydına dön</value></data>
+  <data name="GoldReverse_StartReplacement" xml:space="preserve"><value>Ayrı düzeltilmiş işlemi başlat</value></data>
+  <data name="GoldReverse_ReplacementHelp" xml:space="preserve"><value>Düzeltilmiş işlem yeni bir inceleme ve yeni bir kayıt anahtarı kullanır; özgün işlem değiştirilmez.</value></data>
+  <data name="GoldReverse_Eligible" xml:space="preserve"><value>Uygun — bütün miktar ve parça hareketleri tam tersine çevrilecek.</value></data>
+  <data name="GoldReverse_AlreadyReversed" xml:space="preserve"><value>Bu işlem zaten ters kayıtla düzeltilmiş.</value></data>
+  <data name="GoldReverse_BlockedByDependencies" xml:space="preserve"><value>Sonraki bir hareket bu lotları kullanıyor. Önce bağımlı işlemi düzeltin.</value></data>
+  <data name="GoldReverse_TargetIsReversal" xml:space="preserve"><value>Bu işlem zaten bir ters kayıt; yeniden ters çevrilemez.</value></data>
+  <data name="GoldReverse_NotPosted" xml:space="preserve"><value>Yalnızca kalıcı olarak kaydedilmiş işlemler ters çevrilebilir.</value></data>
+  <data name="GoldReverse_UnsupportedShape" xml:space="preserve"><value>Kayıtlı işlem yapısı güvenli ters kayıt için desteklenmiyor.</value></data>
+  <data name="GoldReverse_Validation_ReasonRequired" xml:space="preserve"><value>Düzeltme nedeni zorunludur.</value></data>
+  <data name="GoldReverse_Validation_ReasonInvalid" xml:space="preserve"><value>Neden en fazla 2000 karakter olmalı ve kontrol karakteri içermemelidir.</value></data>
+  <data name="RecordHub_GoldPurchaseExplanation" xml:space="preserve"><value>Nakit alımı, kesin brüt ağırlık, ayar, parça ve ürün kanıtıyla kaydedin.</value></data>
+  <data name="RecordHub_GoldPurchaseAction" xml:space="preserve"><value>Fiziki altın alımı kaydet</value></data>
+  <data name="RecordHub_GoldSaleExplanation" xml:space="preserve"><value>Satılan saklama lotlarını, ağırlığı ve tam parçaları açıkça seçin.</value></data>
+  <data name="RecordHub_GoldSaleAction" xml:space="preserve"><value>Fiziki altın satışı kaydet</value></data>
+  <data name="RecordHub_GoldTransferExplanation" xml:space="preserve"><value>Edinim soyunu değiştirmeden seçilen altını iki saklama kapsamı arasında taşıyın.</value></data>
+  <data name="RecordHub_GoldTransferAction" xml:space="preserve"><value>Saklama transferi kaydet</value></data>
+  <data name="GoldReceipt_TechnicalIds" xml:space="preserve"><value>Teknik kapsam kimlikleri</value></data>
 </root>

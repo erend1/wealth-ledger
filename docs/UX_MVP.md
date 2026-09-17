@@ -2,7 +2,7 @@
 
 Status: Proposed product interaction model
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-16
 
 ## Scope and constraint
 
@@ -67,23 +67,26 @@ cash-flow treatment, and source data.
 
 ### Record
 
-M007 implements Record's dedicated **Opening balance** choice at
-`/record/opening-balance`. It is not a generic transaction editor. The following
-other task choices remain later workflows:
+Through M009, Record provides dedicated workflows rather than a generic
+transaction editor:
 
 - Contribution
-- Withdrawal
 - Fund purchase
 - Fund sale
 - Physical-gold purchase
 - Physical-gold sale
-- Transfer
-- Adjustment
-- Reverse or correct an existing transaction
+- Physical-gold custody transfer
+- Opening balance
 
-Each implemented choice opens a dedicated workflow rather than a generic
-transaction table editor. An opening receipt exposes the bounded reversal path
-for that opening and a link to start another single-asset opening.
+The following choices remain later workflows:
+
+- Withdrawal
+- generic transfer for other asset families
+- Adjustment
+
+Each implemented receipt exposes only its bounded reversal/correction path and
+links to a separately reviewed replacement where allowed. No page edits a
+posted transaction.
 
 ### Assets
 
@@ -292,7 +295,7 @@ milestone.
 
 ## Physical-gold purchase form
 
-Routine fields:
+M009 implements `/record/physical-gold-purchase`. Routine fields are:
 
 - gold asset or product;
 - physical-vault account;
@@ -301,7 +304,7 @@ Routine fields:
 - fineness;
 - piece count;
 - total cash paid;
-- seller or institution.
+- optional seller Institution, shown separately from custody.
 
 Advanced fields:
 
@@ -313,7 +316,30 @@ Advanced fields:
 - note and evidence reference.
 
 Fine weight is derived and displayed. It is not entered as a second
-authoritative quantity.
+authoritative quantity. Review shows exact gross raw-E8 presentation, immutable
+fineness, derived fine weight, original pieces, cash consideration, every cost
+treatment, Known acquisition cost, and any preserved price discrepancy. One
+post creates one homogeneous acquisition lot.
+
+## Physical-gold sale and transfer forms
+
+`/record/physical-gold-sale` requires the operator to select the acquisition
+lot or lots actually disposed from one custody scope and to enter exact moved
+gross weight and whole pieces for each. Review shows those selections,
+completeness-aware ADR-009 realized cost by currency, and a versioned plan
+fingerprint. It never substitutes Fund FIFO, infers a per-piece weight, or
+shows gain/loss.
+
+`/record/physical-gold-transfer` selects distinct source and destination
+PhysicalVault scopes and exact movements against the same acquisition lots.
+Review shows equal-and-opposite gross and piece effects, unchanged household
+totals and lineage, and any separately treated transfer cost. The transfer
+creates no acquisition lot or consideration.
+
+Both posts revalidate the reviewed source-custody plan inside the write
+transaction. A changed plan returns a sanitized conflict and writes nothing.
+Equivalent retry returns the original persisted receipt; a reused key with
+different facts is rejected.
 
 ## Transaction detail and correction
 
@@ -358,18 +384,19 @@ result must be retrieved by its retry identity.
   summaries, visible keyboard focus, logical navigation, and text-based status.
 - Layouts reflow at narrow and desktop widths and at a 200%-equivalent effective
   viewport. CSS respects reduced-motion and forced-color preferences.
-- Critical first-run, Ledger navigation, and M007 review/post/receipt/reversal
-  paths pass in real Chromium with JavaScript disabled and with keyboard-only
-  operation. They include linked financial validation, double-submit/retry,
-  restart readback, narrow and 200%-equivalent reflow, reduced motion, and
-  forced colors. These focused checks do not claim general WCAG conformance or
-  replace assistive-technology review.
+- Critical first-run, Ledger navigation, opening, Fund, and physical-gold
+  review/post/receipt/reversal paths pass in real Chromium with JavaScript
+  disabled and with keyboard-only operation. They include linked financial
+  validation, double-submit/retry, restart readback, narrow and
+  200%-equivalent reflow, reduced motion, and forced colors. These focused
+  checks do not claim general WCAG conformance or replace assistive-technology
+  review.
 - Confirmation text and errors use plain, sanitized language.
 - Screenshots and diagnostic exports default to hiding household names,
   references, notes, and exact values unless explicitly included.
 - The UI must not expose connection strings, raw SQL, stack traces, or internal
   row representations during routine use.
-- M006/M007 add no screenshot or diagnostic-export feature. Tests and any
+- M006-M009 add no screenshot or diagnostic-export feature. Tests and any
   manually captured artifacts use synthetic isolated data only.
 
 ## MVP UX acceptance
@@ -387,9 +414,15 @@ reverse and replace an incorrect opening without editing history. That outcome
 is implemented and covered by real-browser and retained synthetic recovery
 journeys.
 
-The broader MVP interaction model is not yet complete. Ordinary contribution,
-purchase, sale, transfer, searchable inventory/reconciliation, valuation, and
-planning entry from the UI remain in later accepted milestones.
+The M008/M009 subset is verified when that Ready user can record a contribution,
+review and post Fund or physical-gold purchases and sales, transfer selected
+gold custody, inspect persisted receipts, and correct supported activity through
+reversal plus a separate reviewed replacement. That outcome is implemented and
+covered by real-browser and disposable recovery journeys.
+
+The first M002-M009 entry slice is complete. Searchable inventory and
+reconciliation, evidence objects, valuation, market observations, and planning
+remain in later milestones.
 
 ## Implemented recording workflows (M008)
 
@@ -429,3 +462,34 @@ Posted and writes a separate reversal; a corrected trade is then a new,
 separately reviewed submission with its own command identity. A purchase whose
 units have since been sold explains the dependency and offers no reversal form
 at all.
+
+## Implemented physical-gold workflows (M009)
+
+The Record hub adds these Ready-only routes:
+
+```text
+/record/physical-gold-purchase
+/record/physical-gold-sale
+/record/physical-gold-transfer
+/record/physical-gold/{transactionId}/receipt
+/record/physical-gold/{transactionId}/reverse
+```
+
+Purchase, sale, and transfer use server-rendered Turkish-first forms and call
+Application directly from their Razor PageModels. They require antiforgery,
+work without JavaScript, use Post/Redirect/Get, and reconstruct receipts from
+persisted verification rather than browser state. The common receipt route
+fails closed for Fund or unsupported transaction families.
+
+Purchase records exact gross weight, fineness, derived fine weight, original
+pieces, optional seller and identifiers, cash, costs, and one Known-cost lot.
+Sale displays only explicitly selected source-custody lots, exact negative
+gross/piece effects, proceeds, and completeness-aware realized cost. Transfer
+displays the same acquisition lots leaving one scope and entering another with
+equal-and-opposite gross and piece facts.
+
+Correction starts from the persisted receipt. Reversal mirrors entries,
+allocations, and piece movements exactly and never copies original cost or
+counterparty rows. After reversal, the UI offers a new normal workflow for a
+separately reviewed corrected replacement; it does not claim a mutable or
+durable replacement link.
