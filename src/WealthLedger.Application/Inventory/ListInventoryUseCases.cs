@@ -50,8 +50,7 @@ public sealed class ListPositionInventoryUseCase
             cancellationToken);
         var items = new List<PositionInventoryItem>();
 
-        foreach (var group in facts
-                     .OrderBy(FactOrderKey)
+        foreach (var group in OrderPositionFacts(facts)
                      .GroupBy(
                          fact => new
                          {
@@ -60,9 +59,7 @@ public sealed class ListPositionInventoryUseCase
                              fact.Scope.AssetId
                          }))
         {
-            var ordered = group
-                .OrderBy(FactOrderKey)
-                .ToArray();
+            var ordered = OrderPositionFacts(group).ToArray();
             var scope = ordered[0].Scope;
             long quantityRawE8 = 0;
 
@@ -150,15 +147,14 @@ public sealed class ListPositionInventoryUseCase
             facts.Select(fact => fact.EntryId).ToArray(),
             facts.Select(fact => fact.TransactionId).Distinct().ToArray());
 
-    private static object FactOrderKey(InventoryEntryFact fact)
-        => new
-        {
-            fact.ExecutionDate,
-            fact.TransactionCreatedAtUtc,
-            fact.TransactionId,
-            fact.EntrySequence,
-            fact.EntryId
-        };
+    private static IOrderedEnumerable<InventoryEntryFact> OrderPositionFacts(
+        IEnumerable<InventoryEntryFact> facts)
+        => facts
+            .OrderBy(fact => fact.ExecutionDate)
+            .ThenBy(fact => fact.TransactionCreatedAtUtc)
+            .ThenBy(fact => fact.TransactionId)
+            .ThenBy(fact => fact.EntrySequence)
+            .ThenBy(fact => fact.EntryId);
 
     internal static void ValidateScopeIdentities(
         Guid householdId,
@@ -234,9 +230,7 @@ public sealed class ListLotInventoryUseCase
             .GroupBy(allocation => allocation.AssetLotId)
             .ToDictionary(
                 group => group.Key,
-                group => group
-                    .OrderBy(AllocationOrderKey)
-                    .ToArray());
+                group => OrderLotAllocations(group).ToArray());
         var items = new List<LotInventoryItem>();
 
         foreach (var lot in facts.Lots
@@ -355,7 +349,7 @@ public sealed class ListLotInventoryUseCase
                          allocation.Scope.AccountId
                      }))
         {
-            var ordered = group.OrderBy(AllocationOrderKey).ToArray();
+            var ordered = OrderLotAllocations(group).ToArray();
             var scope = ordered[0].Scope;
             long quantityRawE8 = 0;
             int? pieceCount = lot.AssetType == AssetType.PhysicalGold ? 0 : null;
@@ -390,7 +384,7 @@ public sealed class ListLotInventoryUseCase
                     "Derived lot custody cannot be negative.");
             }
 
-            if (quantityRawE8 == 0 && pieceCount is null or 0)
+            if (quantityRawE8 == 0 && (pieceCount is null or 0))
             {
                 continue;
             }
@@ -545,14 +539,12 @@ public sealed class ListLotInventoryUseCase
             * (finenessPpm / 1_000_000m));
     }
 
-    private static object AllocationOrderKey(
-        InventoryLotAllocationFact allocation)
-        => new
-        {
-            allocation.ExecutionDate,
-            allocation.TransactionCreatedAtUtc,
-            allocation.TransactionId,
-            allocation.EntrySequence,
-            allocation.AllocationId
-        };
+    private static IOrderedEnumerable<InventoryLotAllocationFact>
+        OrderLotAllocations(IEnumerable<InventoryLotAllocationFact> allocations)
+        => allocations
+            .OrderBy(allocation => allocation.ExecutionDate)
+            .ThenBy(allocation => allocation.TransactionCreatedAtUtc)
+            .ThenBy(allocation => allocation.TransactionId)
+            .ThenBy(allocation => allocation.EntrySequence)
+            .ThenBy(allocation => allocation.AllocationId);
 }
