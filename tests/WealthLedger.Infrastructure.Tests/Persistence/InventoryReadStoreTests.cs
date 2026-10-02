@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.Inventory;
-using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
@@ -17,19 +17,15 @@ public sealed class InventoryReadStoreTests
         Guid.Parse("73000000-0000-0000-0000-000000000001");
     private static readonly Guid FundOpeningEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000001");
-    private static readonly Guid FundSaleTransactionId =
+    private static readonly Guid FundAdjustmentTransactionId =
         Guid.Parse("73000000-0000-0000-0000-000000000002");
-    private static readonly Guid FundSaleEntryId =
+    private static readonly Guid FundAdjustmentEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000002");
-    private static readonly Guid FundReversalTransactionId =
-        Guid.Parse("73000000-0000-0000-0000-000000000003");
-    private static readonly Guid FundReversalEntryId =
-        Guid.Parse("73100000-0000-0000-0000-000000000003");
-    private static readonly Guid FundTransferTransactionId =
+    private static readonly Guid FundMovementTransactionId =
         Guid.Parse("73000000-0000-0000-0000-000000000004");
-    private static readonly Guid FundTransferSourceEntryId =
+    private static readonly Guid FundMovementSourceEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000004");
-    private static readonly Guid FundTransferDestinationEntryId =
+    private static readonly Guid FundMovementDestinationEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000005");
     private static readonly Guid GoldLotId =
         Guid.Parse("83000000-0000-0000-0000-000000000002");
@@ -37,16 +33,24 @@ public sealed class InventoryReadStoreTests
         Guid.Parse("73000000-0000-0000-0000-000000000010");
     private static readonly Guid GoldOpeningEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000010");
-    private static readonly Guid GoldSaleTransactionId =
+    private static readonly Guid GoldAdjustmentTransactionId =
         Guid.Parse("73000000-0000-0000-0000-000000000011");
-    private static readonly Guid GoldSaleEntryId =
+    private static readonly Guid GoldAdjustmentEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000011");
-    private static readonly Guid GoldTransferTransactionId =
+    private static readonly Guid GoldMovementTransactionId =
         Guid.Parse("73000000-0000-0000-0000-000000000012");
-    private static readonly Guid GoldTransferSourceEntryId =
+    private static readonly Guid GoldMovementSourceEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000012");
-    private static readonly Guid GoldTransferDestinationEntryId =
+    private static readonly Guid GoldMovementDestinationEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000013");
+    private static readonly Guid GoldSourceVaultId =
+        Guid.Parse("50000000-0000-0000-0000-000000000091");
+    private static readonly Guid GoldDestinationVaultId =
+        Guid.Parse("50000000-0000-0000-0000-000000000092");
+    private static readonly Guid DraftTransactionId =
+        Guid.Parse("73000000-0000-0000-0000-000000000099");
+    private static readonly Guid DraftEntryId =
+        Guid.Parse("73100000-0000-0000-0000-000000000099");
 
     [Fact]
     public async Task PositionInventory_CurrentAndAsOfUseOnlyEffectivePostedEntries()
@@ -57,7 +61,7 @@ public sealed class InventoryReadStoreTests
         var useCase = new ListPositionInventoryUseCase(
             new EfCoreInventoryReadStore(context));
 
-        var beforeTransfer = await useCase.ExecuteAsync(
+        var beforeMovement = await useCase.ExecuteAsync(
             new ListPositionInventoryQuery(
                 CoreLedgerTestData.HouseholdId,
                 AssetId: CoreLedgerTestData.FundAssetId,
@@ -69,10 +73,10 @@ public sealed class InventoryReadStoreTests
                 AssetId: CoreLedgerTestData.FundAssetId,
                 IncludeZero: true));
 
-        Assert.Single(beforeTransfer.Items);
+        Assert.Single(beforeMovement.Items);
         Assert.Equal(
             10 * 100_000_000L,
-            beforeTransfer.Items.Single().QuantityRawE8);
+            beforeMovement.Items.Single().QuantityRawE8);
         Assert.Equal(2, current.Items.Count);
         Assert.Equal(
             6 * 100_000_000L,
@@ -90,16 +94,16 @@ public sealed class InventoryReadStoreTests
     }
 
     [Fact]
-    public async Task LotInventory_DerivesFundLineageCustodyAndReversalAsOf()
+    public async Task LotInventory_DerivesFundLineageCustodyAndEffectiveReversal()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();
-        await SeedInventoryHistoryAsync(database);
+        var seed = await SeedInventoryHistoryAsync(database);
 
         await using (var context = database.CreateContext())
         {
             var useCase = new ListLotInventoryUseCase(
                 new EfCoreInventoryReadStore(context));
-            var afterSaleBeforeReversal = await useCase.ExecuteAsync(
+            var effectiveAsOfAdjustmentDate = await useCase.ExecuteAsync(
                 new ListLotInventoryQuery(
                     CoreLedgerTestData.HouseholdId,
                     AssetId: CoreLedgerTestData.FundAssetId,
@@ -109,8 +113,14 @@ public sealed class InventoryReadStoreTests
                     CoreLedgerTestData.HouseholdId,
                     AssetId: CoreLedgerTestData.FundAssetId));
 
-            var historical = Assert.Single(afterSaleBeforeReversal.Items);
-            Assert.Equal(7 * 100_000_000L, historical.GlobalQuantityRawE8);
+            // Reversal keeps the original financial date. Therefore a current
+            // as-of reconstruction for 2026-09-01 includes both the original
+            // adjustment and its later-posted reversal.
+            Assert.Equal(
+                10 * 100_000_000L,
+                Assert.Single(effectiveAsOfAdjustmentDate.Items)
+                    .GlobalQuantityRawE8);
+
             var lot = Assert.Single(current.Items);
             Assert.Equal(FundLotId, lot.AssetLotId);
             Assert.Equal(FundOpeningTransactionId, lot.CreatingTransactionId);
@@ -122,8 +132,9 @@ public sealed class InventoryReadStoreTests
             Assert.Equal(2, lot.Custody.Count);
             Assert.Contains(
                 lot.Allocations,
-                allocation => allocation.TransactionId
-                              == FundReversalTransactionId
+                allocation => allocation.TransactionId == seed.ReversalTransactionId
+                              && allocation.TransactionType
+                              == TransactionType.Reversal
                               && allocation.QuantityDeltaRawE8
                               == 3 * 100_000_000L);
         }
@@ -139,8 +150,10 @@ public sealed class InventoryReadStoreTests
 
         Assert.Equal(
             4 * 100_000_000L,
-            Assert.Single(Assert.Single(restartedInventory.Items).Custody,
-                item => item.AccountId == CoreLedgerTestData.DestinationAccountId)
+            Assert.Single(
+                    Assert.Single(restartedInventory.Items).Custody,
+                    item => item.AccountId
+                            == CoreLedgerTestData.DestinationAccountId)
                 .QuantityRawE8);
     }
 
@@ -169,13 +182,11 @@ public sealed class InventoryReadStoreTests
         Assert.Equal(2, lot.Custody.Count);
         Assert.Equal(
             2,
-            lot.Custody.Single(
-                item => item.AccountId == CoreLedgerTestData.AccountId)
+            lot.Custody.Single(item => item.AccountId == GoldSourceVaultId)
                 .PieceCount);
         Assert.Equal(
             1,
-            lot.Custody.Single(
-                item => item.AccountId == CoreLedgerTestData.DestinationAccountId)
+            lot.Custody.Single(item => item.AccountId == GoldDestinationVaultId)
                 .PieceCount);
     }
 
@@ -208,21 +219,80 @@ public sealed class InventoryReadStoreTests
                     IncludeZero: true)));
     }
 
-    private static readonly Guid DraftTransactionId =
-        Guid.Parse("73000000-0000-0000-0000-000000000099");
-    private static readonly Guid DraftEntryId =
-        Guid.Parse("73100000-0000-0000-0000-000000000099");
-
-    private static async Task SeedInventoryHistoryAsync(SqliteTestDatabase database)
+    private static async Task<SeedResult> SeedInventoryHistoryAsync(
+        SqliteTestDatabase database)
     {
         await using var context = database.CreateContext();
         await CoreLedgerTestData.SeedMasterDataAsync(context);
+        context.Accounts.AddRange(
+            new AccountRow
+            {
+                Id = GoldSourceVaultId,
+                HouseholdId = CoreLedgerTestData.HouseholdId,
+                InstitutionId = null,
+                Code = "GOLD_SOURCE",
+                Name = "Gold Source Vault",
+                Type = AccountType.PhysicalVault,
+                IsActive = true,
+                OpenedOn = new DateOnly(2026, 1, 1)
+            },
+            new AccountRow
+            {
+                Id = GoldDestinationVaultId,
+                HouseholdId = CoreLedgerTestData.HouseholdId,
+                InstitutionId = null,
+                Code = "GOLD_DESTINATION",
+                Name = "Gold Destination Vault",
+                Type = AccountType.PhysicalVault,
+                IsActive = true,
+                OpenedOn = new DateOnly(2026, 1, 1)
+            });
+        await context.SaveChangesAsync();
 
-        var fundOpening = CoreLedgerTestData.CreateDraftTransaction(
-            FundOpeningTransactionId,
-            TransactionType.OpeningBalance,
-            executionDate: new DateOnly(2026, 8, 31));
-        context.LedgerTransactions.Add(fundOpening);
+        await SeedFundOpeningAsync(context);
+        await SeedFundAdjustmentAsync(context);
+
+        var reversalStore = new EfCoreLedgerReversalStore(context);
+        var reversal = await new ReversePostedTransactionUseCase(
+                reversalStore,
+                new FixedTimeProvider(
+                    new DateTimeOffset(2026, 9, 2, 10, 0, 0, TimeSpan.Zero)))
+            .ExecuteAsync(
+                "inventory-fund-adjustment-reversal",
+                new ReversePostedTransactionCommand(
+                    FundAdjustmentTransactionId,
+                    "Synthetic inventory reversal."));
+        Assert.NotNull(reversal);
+
+        await SeedFundMovementAsync(context);
+
+        context.LedgerTransactions.Add(
+            CoreLedgerTestData.CreateDraftTransaction(
+                DraftTransactionId,
+                TransactionType.Adjustment,
+                executionDate: new DateOnly(2026, 9, 4)));
+        context.TransactionEntries.Add(
+            CoreLedgerTestData.CreateEntry(
+                DraftEntryId,
+                DraftTransactionId,
+                0,
+                CoreLedgerTestData.FundAssetId,
+                99 * 100_000_000L,
+                EntryRole.Adjustment));
+        await context.SaveChangesAsync();
+
+        await SeedGoldAsync(context);
+
+        return new SeedResult(reversal!.ReversalTransactionId);
+    }
+
+    private static async Task SeedFundOpeningAsync(WealthLedgerDbContext context)
+    {
+        context.LedgerTransactions.Add(
+            CoreLedgerTestData.CreateDraftTransaction(
+                FundOpeningTransactionId,
+                TransactionType.OpeningBalance,
+                executionDate: new DateOnly(2026, 8, 31)));
         context.TransactionEntries.Add(
             CoreLedgerTestData.CreateEntry(
                 FundOpeningEntryId,
@@ -257,91 +327,70 @@ public sealed class InventoryReadStoreTests
             context,
             FundOpeningTransactionId,
             new DateTime(2026, 8, 31, 9, 0, 0, DateTimeKind.Utc));
+    }
 
+    private static async Task SeedFundAdjustmentAsync(
+        WealthLedgerDbContext context)
+    {
         context.LedgerTransactions.Add(
             CoreLedgerTestData.CreateDraftTransaction(
-                FundSaleTransactionId,
-                TransactionType.Sell,
+                FundAdjustmentTransactionId,
+                TransactionType.Adjustment,
                 executionDate: new DateOnly(2026, 9, 1)));
         context.TransactionEntries.Add(
             CoreLedgerTestData.CreateEntry(
-                FundSaleEntryId,
-                FundSaleTransactionId,
+                FundAdjustmentEntryId,
+                FundAdjustmentTransactionId,
                 0,
                 CoreLedgerTestData.FundAssetId,
                 -3 * 100_000_000L,
-                EntryRole.Principal));
+                EntryRole.Adjustment));
         context.LotEntryAllocations.Add(
             new LotEntryAllocationRow
             {
                 Id = Guid.Parse("84000000-0000-0000-0000-000000000002"),
                 AssetLotId = FundLotId,
-                TransactionEntryId = FundSaleEntryId,
+                TransactionEntryId = FundAdjustmentEntryId,
                 QuantityDeltaE8 = -3 * 100_000_000L,
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(1)
             });
         await context.SaveChangesAsync();
         await CoreLedgerTestData.PostAsync(
             context,
-            FundSaleTransactionId,
+            FundAdjustmentTransactionId,
             new DateTime(2026, 9, 1, 10, 0, 0, DateTimeKind.Utc));
+    }
 
+    private static async Task SeedFundMovementAsync(
+        WealthLedgerDbContext context)
+    {
         context.LedgerTransactions.Add(
             CoreLedgerTestData.CreateDraftTransaction(
-                FundReversalTransactionId,
-                TransactionType.Reversal,
-                executionDate: new DateOnly(2026, 9, 2),
-                reversalOfTransactionId: FundSaleTransactionId));
-        context.TransactionEntries.Add(
-            CoreLedgerTestData.CreateEntry(
-                FundReversalEntryId,
-                FundReversalTransactionId,
-                0,
-                CoreLedgerTestData.FundAssetId,
-                3 * 100_000_000L,
-                EntryRole.Principal));
-        context.LotEntryAllocations.Add(
-            new LotEntryAllocationRow
-            {
-                Id = Guid.Parse("84000000-0000-0000-0000-000000000003"),
-                AssetLotId = FundLotId,
-                TransactionEntryId = FundReversalEntryId,
-                QuantityDeltaE8 = 3 * 100_000_000L,
-                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(2)
-            });
-        await context.SaveChangesAsync();
-        await CoreLedgerTestData.PostAsync(
-            context,
-            FundReversalTransactionId,
-            new DateTime(2026, 9, 2, 10, 0, 0, DateTimeKind.Utc));
-
-        context.LedgerTransactions.Add(
-            CoreLedgerTestData.CreateDraftTransaction(
-                FundTransferTransactionId,
-                TransactionType.Transfer,
+                FundMovementTransactionId,
+                TransactionType.Adjustment,
                 executionDate: new DateOnly(2026, 9, 3)));
         context.TransactionEntries.AddRange(
             CoreLedgerTestData.CreateEntry(
-                FundTransferSourceEntryId,
-                FundTransferTransactionId,
+                FundMovementSourceEntryId,
+                FundMovementTransactionId,
                 0,
                 CoreLedgerTestData.FundAssetId,
                 -4 * 100_000_000L,
-                EntryRole.Transfer),
+                EntryRole.Adjustment),
             CoreLedgerTestData.CreateEntry(
-                FundTransferDestinationEntryId,
-                FundTransferTransactionId,
+                FundMovementDestinationEntryId,
+                FundMovementTransactionId,
                 1,
                 CoreLedgerTestData.FundAssetId,
                 4 * 100_000_000L,
-                EntryRole.Transfer,
+                EntryRole.Adjustment,
                 accountId: CoreLedgerTestData.DestinationAccountId));
         context.LotEntryAllocations.AddRange(
             new LotEntryAllocationRow
             {
                 Id = Guid.Parse("84000000-0000-0000-0000-000000000004"),
                 AssetLotId = FundLotId,
-                TransactionEntryId = FundTransferSourceEntryId,
+                TransactionEntryId = FundMovementSourceEntryId,
                 QuantityDeltaE8 = -4 * 100_000_000L,
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(3)
             },
@@ -349,32 +398,15 @@ public sealed class InventoryReadStoreTests
             {
                 Id = Guid.Parse("84000000-0000-0000-0000-000000000005"),
                 AssetLotId = FundLotId,
-                TransactionEntryId = FundTransferDestinationEntryId,
+                TransactionEntryId = FundMovementDestinationEntryId,
                 QuantityDeltaE8 = 4 * 100_000_000L,
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(3)
             });
         await context.SaveChangesAsync();
         await CoreLedgerTestData.PostAsync(
             context,
-            FundTransferTransactionId,
+            FundMovementTransactionId,
             new DateTime(2026, 9, 3, 10, 0, 0, DateTimeKind.Utc));
-
-        context.LedgerTransactions.Add(
-            CoreLedgerTestData.CreateDraftTransaction(
-                DraftTransactionId,
-                TransactionType.Adjustment,
-                executionDate: new DateOnly(2026, 9, 4)));
-        context.TransactionEntries.Add(
-            CoreLedgerTestData.CreateEntry(
-                DraftEntryId,
-                DraftTransactionId,
-                0,
-                CoreLedgerTestData.FundAssetId,
-                99 * 100_000_000L,
-                EntryRole.Adjustment));
-        await context.SaveChangesAsync();
-
-        await SeedGoldAsync(context);
     }
 
     private static async Task SeedGoldAsync(WealthLedgerDbContext context)
@@ -391,7 +423,8 @@ public sealed class InventoryReadStoreTests
                 0,
                 CoreLedgerTestData.GoldAssetId,
                 20 * 100_000_000L,
-                EntryRole.Principal));
+                EntryRole.Principal,
+                accountId: GoldSourceVaultId));
         context.AssetLots.Add(
             new AssetLotRow
             {
@@ -439,97 +472,113 @@ public sealed class InventoryReadStoreTests
 
         context.LedgerTransactions.Add(
             CoreLedgerTestData.CreateDraftTransaction(
-                GoldSaleTransactionId,
-                TransactionType.Sell,
+                GoldAdjustmentTransactionId,
+                TransactionType.Adjustment,
                 executionDate: new DateOnly(2026, 9, 1)));
         context.TransactionEntries.Add(
             CoreLedgerTestData.CreateEntry(
-                GoldSaleEntryId,
-                GoldSaleTransactionId,
+                GoldAdjustmentEntryId,
+                GoldAdjustmentTransactionId,
                 0,
                 CoreLedgerTestData.GoldAssetId,
                 -5 * 100_000_000L,
-                EntryRole.Principal));
-        var saleAllocationId =
+                EntryRole.Adjustment,
+                accountId: GoldSourceVaultId));
+        var adjustmentAllocationId =
             Guid.Parse("84000000-0000-0000-0000-000000000011");
         context.LotEntryAllocations.Add(
             new LotEntryAllocationRow
             {
-                Id = saleAllocationId,
+                Id = adjustmentAllocationId,
                 AssetLotId = GoldLotId,
-                TransactionEntryId = GoldSaleEntryId,
+                TransactionEntryId = GoldAdjustmentEntryId,
                 QuantityDeltaE8 = -5 * 100_000_000L,
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(11)
             });
         context.PhysicalGoldLotAllocationDetails.Add(
             new PhysicalGoldLotAllocationDetailRow
             {
-                LotEntryAllocationId = saleAllocationId,
+                LotEntryAllocationId = adjustmentAllocationId,
                 PieceDelta = -1
             });
         await context.SaveChangesAsync();
         await CoreLedgerTestData.PostAsync(
             context,
-            GoldSaleTransactionId,
+            GoldAdjustmentTransactionId,
             new DateTime(2026, 9, 1, 12, 0, 0, DateTimeKind.Utc));
 
         context.LedgerTransactions.Add(
             CoreLedgerTestData.CreateDraftTransaction(
-                GoldTransferTransactionId,
-                TransactionType.Transfer,
+                GoldMovementTransactionId,
+                TransactionType.Adjustment,
                 executionDate: new DateOnly(2026, 9, 2)));
         context.TransactionEntries.AddRange(
             CoreLedgerTestData.CreateEntry(
-                GoldTransferSourceEntryId,
-                GoldTransferTransactionId,
+                GoldMovementSourceEntryId,
+                GoldMovementTransactionId,
                 0,
                 CoreLedgerTestData.GoldAssetId,
                 -5 * 100_000_000L,
-                EntryRole.Transfer),
+                EntryRole.Adjustment,
+                accountId: GoldSourceVaultId),
             CoreLedgerTestData.CreateEntry(
-                GoldTransferDestinationEntryId,
-                GoldTransferTransactionId,
+                GoldMovementDestinationEntryId,
+                GoldMovementTransactionId,
                 1,
                 CoreLedgerTestData.GoldAssetId,
                 5 * 100_000_000L,
-                EntryRole.Transfer,
-                accountId: CoreLedgerTestData.DestinationAccountId));
-        var transferSourceAllocationId =
+                EntryRole.Adjustment,
+                accountId: GoldDestinationVaultId));
+        var movementSourceAllocationId =
             Guid.Parse("84000000-0000-0000-0000-000000000012");
-        var transferDestinationAllocationId =
+        var movementDestinationAllocationId =
             Guid.Parse("84000000-0000-0000-0000-000000000013");
         context.LotEntryAllocations.AddRange(
             new LotEntryAllocationRow
             {
-                Id = transferSourceAllocationId,
+                Id = movementSourceAllocationId,
                 AssetLotId = GoldLotId,
-                TransactionEntryId = GoldTransferSourceEntryId,
+                TransactionEntryId = GoldMovementSourceEntryId,
                 QuantityDeltaE8 = -5 * 100_000_000L,
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(12)
             },
             new LotEntryAllocationRow
             {
-                Id = transferDestinationAllocationId,
+                Id = movementDestinationAllocationId,
                 AssetLotId = GoldLotId,
-                TransactionEntryId = GoldTransferDestinationEntryId,
+                TransactionEntryId = GoldMovementDestinationEntryId,
                 QuantityDeltaE8 = 5 * 100_000_000L,
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(12)
             });
         context.PhysicalGoldLotAllocationDetails.AddRange(
             new PhysicalGoldLotAllocationDetailRow
             {
-                LotEntryAllocationId = transferSourceAllocationId,
+                LotEntryAllocationId = movementSourceAllocationId,
                 PieceDelta = -1
             },
             new PhysicalGoldLotAllocationDetailRow
             {
-                LotEntryAllocationId = transferDestinationAllocationId,
+                LotEntryAllocationId = movementDestinationAllocationId,
                 PieceDelta = 1
             });
         await context.SaveChangesAsync();
         await CoreLedgerTestData.PostAsync(
             context,
-            GoldTransferTransactionId,
+            GoldMovementTransactionId,
             new DateTime(2026, 9, 2, 13, 0, 0, DateTimeKind.Utc));
+    }
+
+    private sealed record SeedResult(Guid ReversalTransactionId);
+
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        private readonly DateTimeOffset _utcNow;
+
+        internal FixedTimeProvider(DateTimeOffset utcNow)
+        {
+            _utcNow = utcNow;
+        }
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
     }
 }
