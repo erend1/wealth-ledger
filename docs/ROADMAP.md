@@ -2,7 +2,7 @@
 
 Status: Canonical delivery intent
 
-Last reviewed: 2026-09-16
+Last reviewed: 2026-10-02
 
 ## How to read this roadmap
 
@@ -48,7 +48,7 @@ Statuses used here:
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
 | M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
 | M009 | Verified | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; migration 008, 930-test suite, browser, and recovery evidence verified 2026-09-16 |
-| M010 | Planned | Transaction search, position inventory, reconciliation, and evidence capture | Core entry workflows |
+| M010 | Accepted | [Searchable inventory, evidence, and reconciliation](milestones/M010_searchable_inventory_evidence_reconciliation.md) with broad ledger search, derived current/as-of positions and lot custody, retained evidence, and deterministic dated reconciliation | All twenty-two decisions accepted 2026-10-02; implementation authorized but not yet verified |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
 | M012 | Planned | Goal, reserve, allocation policy, deterministic performance, and monthly review | Reliable ledger and valuation data |
 | M013 | Planned | Decision journal and governed read models for agent-assisted analysis | Stable deterministic analytical contracts |
@@ -124,7 +124,17 @@ without amendment and was verified on 2026-09-16. ADR-010 records
 allocation-level physical-gold piece movement and extends ADR-009 cumulative
 realized-cost apportionment to physical gold. Migration 008, the 930-test
 suite, three real-Chromium journeys, and the disposable recovery drill prove
-the complete lifecycle. M010 is the next Planned candidate and has not started.
+the complete lifecycle.
+
+[`M010_searchable_inventory_evidence_reconciliation.md`](milestones/M010_searchable_inventory_evidence_reconciliation.md)
+was accepted on 2026-10-02 after the human owners approved all twenty-two
+Recommended decisions without amendment. The accepted contract keeps inventory
+fully derived from Posted ledger/allocation history, adds filter-bound broad
+search and current/as-of queries, retains optional bounded immutable evidence
+attachments inside SQLite, and defines deterministic reconciliation with
+explicit tolerance, staleness, correction links, and documented exceptions.
+M010 is authorized for implementation but is not Verified; M009 remains the
+current verified checkpoint.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -165,13 +175,13 @@ of the following are verified:
   extend the same privacy checks across their APIs, forms, receipts, conflicts,
   browser journeys, and recovery diagnostics;
 - the user can reconcile an imported or entered position with independent
-  evidence — **not yet satisfied**; it needs the M010 search, inventory, and
-  reconciliation work.
+  evidence — **not yet satisfied**; M010 is now Accepted but must be implemented
+  and verified before this gate closes.
 
 One bullet therefore remains open. The M002-M009 entry lifecycle is verified,
-but reliance on real household data still needs M010 independent evidence and
-reconciliation, so WealthLedger should not yet be the sole record of real
-assets.
+but reliance on real household data still needs verified M010 independent
+evidence and reconciliation, so WealthLedger should not yet be the sole record
+of real assets.
 
 This gate does not block development with synthetic test data.
 
@@ -210,6 +220,7 @@ milestone becomes Accepted:
 | Opening reference scope, semantic duplicate/history rules, lot/cost/gold/date semantics, verification, contracts, and correction | M007 | Resolved by all fifteen accepted M007 decisions on 2026-09-10; no new ADR was required |
 | Completed Fund-trade scope, cash/cost equations, price reconciliation, custody-aware FIFO, stale-plan protection, compatibility, and correction UI | M008 | Resolved by all eighteen accepted M008 decisions on 2026-09-12, including the amended price formula, post-time cash check, and provenance precedence |
 | Physical-gold gross/piece movement, selected physical lots, custody transfer, making-charge treatment, realized cost, correction, and asset-family guard isolation | M009 | Resolved by all twenty accepted M009 decisions and ADR-010 on 2026-09-14; predecessor gate closed by M008 verification on 2026-09-15 |
+| Search filter/cursor semantics, derived current/as-of inventory, evidence attachment retention, reconciliation tolerance/staleness/resolution, privacy, and recovery boundary | M010 | Resolved by all twenty-two accepted M010 decisions on 2026-10-02; no new ADR required at acceptance |
 | Remote or home-server access, authentication, authorization, and transport security | after M006 | New milestone and ADR; ADR-008 keeps normal operation loopback-only |
 | Market/reference data schema and provider contracts | M011 | ADR when a provider-independent boundary is accepted |
 | Partial lot-cost apportionment, Unknown completeness, currency grouping, and correction behavior | M008/M009/M012 | Resolved by ADR-009, accepted 2026-09-12; ADR-010 extends the accepted cumulative method to physical gold, while broader analytics remain deferred to M012 |
