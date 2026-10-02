@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.LedgerSearch;
 using WealthLedger.Domain.Ledger;
+using WealthLedger.Domain.Portfolios;
 
 namespace WealthLedger.Infrastructure.Persistence;
 
@@ -94,13 +95,13 @@ public sealed class EfCoreLedgerSearchReadStore : ILedgerSearchReadStore
         if (filters.ExecutedFrom is DateOnly executedFrom)
         {
             transactions = transactions.Where(
-                transaction => transaction.ExecutionDate >= executedFrom);
+                transaction => transaction.ExecutionDate!.Value >= executedFrom);
         }
 
         if (filters.ExecutedTo is DateOnly executedTo)
         {
             transactions = transactions.Where(
-                transaction => transaction.ExecutionDate <= executedTo);
+                transaction => transaction.ExecutionDate!.Value <= executedTo);
         }
 
         if (filters.Types.Count > 0)
@@ -194,11 +195,11 @@ public sealed class EfCoreLedgerSearchReadStore : ILedgerSearchReadStore
             var afterPostedAtUtc = after.PostedAtUtc.UtcDateTime;
             transactions = transactions.Where(
                 transaction =>
-                    transaction.ExecutionDate < after.ExecutionDate
-                    || (transaction.ExecutionDate == after.ExecutionDate
-                        && transaction.PostedAtUtc < afterPostedAtUtc)
-                    || (transaction.ExecutionDate == after.ExecutionDate
-                        && transaction.PostedAtUtc == afterPostedAtUtc
+                    transaction.ExecutionDate!.Value < after.ExecutionDate
+                    || (transaction.ExecutionDate.Value == after.ExecutionDate
+                        && transaction.PostedAtUtc!.Value < afterPostedAtUtc)
+                    || (transaction.ExecutionDate.Value == after.ExecutionDate
+                        && transaction.PostedAtUtc!.Value == afterPostedAtUtc
                         && transaction.Id.CompareTo(after.TransactionId) < 0));
         }
 
@@ -293,8 +294,8 @@ public sealed class EfCoreLedgerSearchReadStore : ILedgerSearchReadStore
                         ? null
                         : institution.Name,
                     InstitutionType = institution == null
-                        ? null
-                        : (Domain.Portfolios.InstitutionType?)institution.Type,
+                        ? (InstitutionType?)null
+                        : institution.Type,
                     InstitutionIsActive = institution == null
                         ? (bool?)null
                         : institution.IsActive,
