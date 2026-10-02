@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.FundTrades;
+using WealthLedger.Application.Inventory;
 using WealthLedger.Application.LedgerSearch;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
@@ -78,7 +79,7 @@ public static class DependencyInjection
         services.AddSingleton<ILocalRestoreStager>(
             serviceProvider => new SqliteLocalRestoreStager(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
-                serviceProvider.GetRequiredService<SqliteRestoreService>()));
+                serviceProvider.GetRequiredService<SqliteBackupService>()));
         services.AddSingleton<ILocalDatabaseReplacementSessionFactory>(
             serviceProvider =>
                 new SqliteLocalDatabaseReplacementSessionFactory(
@@ -144,6 +145,7 @@ public static class DependencyInjection
         services.AddScoped<
             ILedgerSearchReadStore,
             EfCoreLedgerSearchReadStore>();
+        services.AddScoped<IInventoryReadStore, EfCoreInventoryReadStore>();
 
         services.AddScoped<EfCoreOpeningBalanceReferenceStore>();
         services.AddScoped<IOpeningBalanceReferenceReadStore>(
