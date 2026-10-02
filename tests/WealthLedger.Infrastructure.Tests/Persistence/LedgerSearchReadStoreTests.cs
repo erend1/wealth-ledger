@@ -176,7 +176,7 @@ public sealed class LedgerSearchReadStoreTests
     }
 
     [Fact]
-    public async Task Search_RepresentativePlanUsesExistingHouseholdStatusIndex()
+    public async Task Search_RepresentativePlanUsesExistingHouseholdStatusDateIndex()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();
         await SeedAsync(database);
@@ -188,7 +188,7 @@ public sealed class LedgerSearchReadStoreTests
             SELECT Id
             FROM LedgerTransaction
             WHERE HouseholdId = $household
-              AND Status = 'POSTED'
+              AND StatusCode = 'POSTED'
               AND ExecutionDate IS NOT NULL
               AND PostedAtUtc IS NOT NULL
             ORDER BY ExecutionDate DESC, PostedAtUtc DESC, Id DESC
@@ -208,7 +208,7 @@ public sealed class LedgerSearchReadStoreTests
         Assert.Contains(
             details,
             detail => detail.Contains(
-                "IX_LedgerTransaction_Household_Status_Posted_Id",
+                "IX_LedgerTransaction_Household_Status_Date",
                 StringComparison.Ordinal));
     }
 
