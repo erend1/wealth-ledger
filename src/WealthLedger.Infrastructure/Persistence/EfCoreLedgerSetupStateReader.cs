@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Setup;
@@ -56,6 +56,7 @@ namespace WealthLedger.Infrastructure.Persistence
                 var households =
                     await _dbContext.Households
                         .AsNoTracking()
+                        .OrderBy(x => x.Id)
                         .Select(x => new
                         {
                             x.Id,
