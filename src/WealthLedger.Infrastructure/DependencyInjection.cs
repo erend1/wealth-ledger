@@ -79,7 +79,7 @@ public static class DependencyInjection
         services.AddSingleton<ILocalRestoreStager>(
             serviceProvider => new SqliteLocalRestoreStager(
                 serviceProvider.GetRequiredService<LocalDataPathResolver>(),
-                serviceProvider.GetRequiredService<LocalBackupPackageReader>()));
+                serviceProvider.GetRequiredService<SqliteRestoreService>()));
         services.AddSingleton<ILocalDatabaseReplacementSessionFactory>(
             serviceProvider =>
                 new SqliteLocalDatabaseReplacementSessionFactory(
