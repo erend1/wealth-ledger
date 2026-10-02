@@ -1,14 +1,31 @@
 # M010: Searchable Inventory, Evidence, and Reconciliation
 
-Status: Proposed
+Status: Accepted
 
 Owner: Human and agent
 
-Last reviewed: 2026-10-01
+Last reviewed: 2026-10-02
 
-Planning note: this document is a review contract only. M010 implementation is
-not authorized until the human owners accept the decisions below or explicitly
-amend them.
+Accepted: 2026-10-02
+
+## Acceptance record and implementation gate
+
+The human owners reviewed draft PR #18 and on 2026-10-02 approved all twenty-two
+Recommended decisions without amendment. This acceptance authorizes the bounded
+M010 implementation described below. It does not mark any M010 behavior as
+Verified; M009 remains the current verified checkpoint until implementation,
+migrations, tests, browser evidence, recovery evidence, and canonical docs all
+agree.
+
+Decision 11's recommended retained-attachment option is accepted: metadata-only
+evidence remains valid, while an optional bounded source attachment may be
+stored immutably inside SQLite with SHA-256 integrity metadata. The metadata-
+only alternative that would defer retained bytes is therefore not selected.
+
+No new ADR is required merely for acceptance because the retained bytes remain
+inside the existing SQLite/M004 backup boundary. If implementation reveals a
+new cross-cutting storage, security, or ownership rule, that change requires an
+explicit milestone amendment and ADR before it is adopted.
 
 ## Objective
 
@@ -160,8 +177,9 @@ The run remains audit history and must be rerun rather than silently rewritten.
 
 ## Decisions and decision gates
 
-Every item below is a recommendation for human review. None is accepted merely
-because it appears in this Proposed document.
+Every decision below was accepted as Recommended by the human owners on
+2026-10-02. A later material change requires an explicit milestone amendment
+and, where cross-cutting, a new or superseding ADR.
 
 ### Decision 1: deliver four coherent capabilities in one milestone
 
@@ -466,7 +484,7 @@ metadata and digest only when the caller specifically reads evidence metadata;
 they never embed source bytes by default.
 
 Automated tests use synthetic evidence only. Browser screenshots/traces remain
-o-default artifacts and must never capture real evidence.
+no-default artifacts and must never capture real evidence.
 
 ### Decision 18: no valuation or market-reference semantics leak into M010
 
@@ -830,7 +848,7 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 Build the BrowserTests project and install the repository-pinned Chromium before
 browser verification exactly as documented in `README.md`.
 
-When the GitHub Actions verification workflow is merged, its pull-request result
+The GitHub Actions verification workflow is merged and its pull-request result
 is additional reproducible evidence; it does not replace the milestone-specific
 migration and disposable recovery checks.
 
