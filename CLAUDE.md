@@ -74,10 +74,9 @@ cannot find Git Bash, set `CLAUDE_CODE_GIT_BASH_PATH`.
   becomes a separate issue and PR.
 - Merge policy: squash-merge only, with the PR title as the commit subject on
   `main`.
-  - Target repository settings, for the owner to set: squash title = PR title,
-    squash message = blank, merge commits and rebase merges off.
-  - Until they are set, use "Squash and merge" by hand. Set the subject to the
-    PR title and clear the body before confirming.
+  - The repository settings enforce this: squash is the only merge method, the
+    squash title is the PR title, the squash message is blank, and merged
+    branches are deleted.
   - A child issue's PR title is its milestone's conventional "Suggested commit
     boundaries" subject, for example
     `feat(evidence): persist evidence and transaction links`.

@@ -181,8 +181,8 @@ still to go):
 
 1. **Title:** the milestone's "Suggested commit boundaries" subject for this
    issue, for example `feat(evidence): persist evidence and transaction links`.
-   Once the repository squashes with the PR title, this title becomes the commit
-   on `main`. Until then, the owner sets it by hand at merge.
+   The repository squash-merges with the PR title, so this title becomes the
+   commit on `main`.
 2. **Body:**
    - `Closes #N` and `Parent: #<parent>`. Use a closing keyword (close, fix,
      resolve and their forms) only in that line; refer to other issues as
