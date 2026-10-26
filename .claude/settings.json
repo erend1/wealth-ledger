@@ -154,9 +154,14 @@
       "Edit(/docs/milestones/M007_*.md)",
       "Edit(/docs/milestones/M008_*.md)",
       "Edit(/docs/milestones/M009_*.md)",
+      "Edit(/docs/milestones/M010_*.md)",
       "Edit(/docs/decisions/ADR-*.md)",
+      "Edit(/docs/ROADMAP.md)",
+      "Edit(/CHANGELOG.md)",
       "Edit(/.claude/settings.json)",
       "Edit(/.claude/hooks/**)",
+      "Edit(/.claude/skills/**)",
+      "Edit(/.claude/agents/**)",
       "Edit(/.claude/launch.json)"
     ],
     "deny": [

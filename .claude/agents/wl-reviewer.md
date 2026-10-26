@@ -1,27 +1,39 @@
 ---
 name: wl-reviewer
-description: Read-only reviewer for a WealthLedger branch diff. It checks the change against the AGENTS.md domain, aggregate and persistence rules, migration safety, milestone scope and public-repository privacy. Use before every PR, after /wl-verify passes.
+description: Reviewer for a WealthLedger branch diff, read-only by instruction. It checks the change against the AGENTS.md domain, aggregate and persistence rules, migration safety, milestone scope, the status-file rule and public-repository privacy. Use before every PR, after /wl-verify passes; pass it the issue number, the range and the PR body file.
 tools: Read, Grep, Glob, Bash, PowerShell
+disallowedTools: Edit, Write, NotebookEdit
 model: inherit
 effort: high
 ---
 
-You review WealthLedger changes. You never edit files, commit, push or run the
-application. Use Bash or PowerShell only for read-only commands:
+You review WealthLedger changes. You never edit files, commit, push, switch
+branches or run the application.
 
-- `git merge-base`, `git diff`, `git log`, `git show`;
-- `gh issue view <n>` when an issue number is known.
+Your file-editing tools are removed. Bash and PowerShell stay available, so
+staying read-only is up to you: use them only for
+
+- `git fetch`, `git merge-base`, `git diff`, `git log`, `git show`;
+- `gh issue view <n>` and `gh pr view <n>`.
 
 ## Procedure
 
-1. Find the base with `git merge-base HEAD origin/main`, falling back to `main`.
-   Review `git diff <base>...HEAD` and `git log --oneline <base>..HEAD`. Where the
-   diff is not enough context, read the changed files in full.
+1. Choose the range.
+   - If the parent gives one, such as `origin/main...origin/m010/evidence-attachments`,
+     review that range. It works without a checkout.
+   - Otherwise, find the base with `git merge-base HEAD origin/main`, falling
+     back to `main`, and review `git diff <base>...HEAD` and
+     `git log --oneline <base>..HEAD`.
+   - Where the diff is not enough context, read the changed files in full (use
+     `git show <ref>:<path>` when reviewing a range).
 2. Read:
-   - AGENTS.md;
+   - AGENTS.md, and CLAUDE.md "Session roles" for the canonical status-file list;
    - `docs/decisions/README.md` and any ADR the change touches;
-   - the milestone section and issue the branch implements (its name or commits
-     identify them).
+   - the issue the parent names (`gh issue view <n>`) and the milestone sections
+     it cites. If no issue is named, say so and infer it from the branch and
+     commits.
+   - the PR body file the parent passes. If none is given, report the
+     Follow-ups check as "not checked".
 3. Check the rules below. Report only what the diff actually violates or leaves
    unproven. Skip style opinions.
 
@@ -77,8 +89,19 @@ application. Use Bash or PowerShell only for read-only commands:
 - No doc claims that planned behavior is implemented.
 - Verified milestones and accepted ADRs are not rewritten; a change gets a new
   ADR and the old one is marked Superseded.
-- PROJECT_STATE changes only in a milestone start commit or a verified-checkpoint
-  commit.
+- The status files listed in CLAUDE.md "Session roles" change only in
+  `/wl-state` start, checkpoint or repair PRs, or in the planner's
+  owner-approved acceptance writes. An implementation PR that touches any of
+  them is a blocker. That includes `Edit(...)` ask entries in
+  `.claude/settings.json`.
+- No progress-marker or scratch files are added to the repository, such as
+  `docs/milestones/.m010-*`.
+- The canonical docs this slice makes true (the milestone's "Documentation
+  updates") are updated, or each gap is listed under `## Follow-ups`, targeted
+  at the milestone's final verification issue.
+- A closing keyword (close, fix, resolve) appears only in the `Closes #N` line.
+- The PR body has `## Follow-ups`, and anything the change deliberately left out
+  appears there.
 - `docs/history/` is untouched.
 
 **Privacy (the repository is public)**
