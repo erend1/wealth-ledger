@@ -48,7 +48,7 @@ Statuses used here:
 | M007 | Verified | [Controlled opening-balance cutover](milestones/M007_opening_balance_cutover.md) for cash, foreign currency, funds, equities, and physical-gold lots | Fifteen decisions accepted 2026-09-10; implementation, 676-test suite, browser, backup, and restore evidence verified 2026-09-11 |
 | M008 | Verified | [Complete investment-fund lifecycle](milestones/M008_complete_investment_fund_lifecycle.md), including the recurring contribution UI, exact purchase costs, sale, scope-aware FIFO allocation, and completeness-aware realized cost | Eighteen decisions and ADR-009 accepted 2026-09-12 with four amendments; verified 2026-09-15 |
 | M009 | Verified | [Complete physical-gold lifecycle](milestones/M009_complete_physical_gold_lifecycle.md), including exact gross weight, fineness, pieces, making-charge treatment, selected-lot sale, custody transfer, and correction | All twenty decisions and ADR-010 accepted 2026-09-14; migration 008, 930-test suite, browser, and recovery evidence verified 2026-09-16 |
-| M010 | Accepted | [Searchable inventory, evidence, and reconciliation](milestones/M010_searchable_inventory_evidence_reconciliation.md) with broad ledger search, derived current/as-of positions and lot custody, retained evidence, and deterministic dated reconciliation | All twenty-two decisions accepted 2026-10-02; implementation authorized but not yet verified |
+| M010 | In Progress | [Searchable inventory, evidence, and reconciliation](milestones/M010_searchable_inventory_evidence_reconciliation.md) with broad ledger search, derived current/as-of positions and lot custody, retained evidence, and deterministic dated reconciliation | All twenty-two decisions accepted 2026-10-02; implementation started from verified M009 on 2026-10-02 (#20 merged via PR #27); not yet verified |
 | M011 | Planned | Market/reference observations, dated valuation, freshness, and source provenance | Accepted schema/provider boundary ADR if cross-cutting |
 | M012 | Planned | Goal, reserve, allocation policy, deterministic performance, and monthly review | Reliable ledger and valuation data |
 | M013 | Planned | Decision journal and governed read models for agent-assisted analysis | Stable deterministic analytical contracts |
@@ -133,8 +133,8 @@ fully derived from Posted ledger/allocation history, adds filter-bound broad
 search and current/as-of queries, retains optional bounded immutable evidence
 attachments inside SQLite, and defines deterministic reconciliation with
 explicit tolerance, staleness, correction links, and documented exceptions.
-M010 is authorized for implementation but is not Verified; M009 remains the
-current verified checkpoint.
+M010 became the sole In Progress milestone on 2026-10-02, when #20 merged via
+PR #27; it is not Verified, and M009 remains the current verified checkpoint.
 
 No later roadmap item should be implemented merely because it appears in this
 file.
@@ -175,8 +175,8 @@ of the following are verified:
   extend the same privacy checks across their APIs, forms, receipts, conflicts,
   browser journeys, and recovery diagnostics;
 - the user can reconcile an imported or entered position with independent
-  evidence — **not yet satisfied**; M010 is now Accepted but must be implemented
-  and verified before this gate closes.
+  evidence — **not yet satisfied**; M010 is In Progress and must be verified
+  before this gate closes.
 
 One bullet therefore remains open. The M002-M009 entry lifecycle is verified,
 but reliance on real household data still needs verified M010 independent

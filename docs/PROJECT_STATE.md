@@ -105,8 +105,15 @@ Recommended decisions without amendment. ADR-010 records signed allocation-
 level piece movement and the physical-gold extension of ADR-009 cumulative
 realized-cost apportionment. M009 was verified on 2026-09-16 after its Domain,
 Application, real-SQLite, API, Razor UI, real-browser, privacy, migration,
-concurrency, backup, restore, and fresh-process readback evidence passed. M010
-is the next Planned candidate and has not started.
+concurrency, backup, restore, and fresh-process readback evidence passed. M009
+remains Verified while M010 is implemented.
+
+[`M010: Searchable Inventory, Evidence, and Reconciliation`](milestones/M010_searchable_inventory_evidence_reconciliation.md)
+was accepted on 2026-10-02 after the human owners approved all twenty-two
+Recommended decisions without amendment. M010 became the sole In Progress
+milestone on 2026-10-02, when #20 merged via PR #27; parent issue #19 tracks
+the open children #21-#26. This starting checkpoint adds no M010 Verified
+behavior; implementation evidence will be recorded only after it is proved.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
@@ -840,9 +847,9 @@ migration 008 asset-family dispatch and guards, API and Razor boundaries, three
 real-browser journeys, and disposable backup/restore verification recorded
 above.
 
-M010 is the next Planned candidate. It has not started and no milestone is In
-Progress. Its bounded contract must be accepted before transaction search,
-position/lot inventory, reconciliation, or evidence objects are implemented.
+M010 is the sole In Progress delivery milestone under parent issue #19. Its
+accepted contract bounds transaction search, position/lot inventory, evidence,
+and reconciliation; no later milestone has started.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
