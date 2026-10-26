@@ -1,0 +1,4 @@
+# Gitignored local files that Claude Code copies into the worktrees it creates.
+# Both carry private paths and must never be committed.
+.claude/settings.local.json
+.claude/hooks/protected-paths.local.txt
