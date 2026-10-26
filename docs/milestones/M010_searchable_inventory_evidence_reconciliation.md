@@ -1,12 +1,14 @@
 # M010: Searchable Inventory, Evidence, and Reconciliation
 
-Status: Accepted
+Status: In Progress
 
 Owner: Human and agent
 
-Last reviewed: 2026-10-02
+Last reviewed: 2026-10-26
 
 Accepted: 2026-10-02
+
+Implementation started: 2026-10-02
 
 ## Acceptance record and implementation gate
 
@@ -26,6 +28,11 @@ No new ADR is required merely for acceptance because the retained bytes remain
 inside the existing SQLite/M004 backup boundary. If implementation reveals a
 new cross-cutting storage, security, or ownership rule, that change requires an
 explicit milestone amendment and ADR before it is adopted.
+
+Implementation is tracked by parent issue #19 and child issues #20-#26. It
+began on 2026-10-02, when #20 merged via PR #27; this In Progress status was
+recorded on 2026-10-26. #21-#26 remain open. The start adds no M010 Verified
+behavior; implementation evidence is recorded only after it is proved.
 
 ## Objective
 
