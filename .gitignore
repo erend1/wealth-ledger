@@ -93,3 +93,9 @@ docs/tests/
 ## Generated agent context (never authoritative project state)
 .agent/
 /docs/history
+
+## Claude Code local state (personal settings, private paths, session worktrees)
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/hooks/*.local.txt
+.claude/worktrees/
