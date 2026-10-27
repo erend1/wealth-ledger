@@ -526,6 +526,15 @@ Do not persist these as mutable truth:
 
 Views or rebuildable projections may use similar names only when their non-authoritative nature is unmistakable and rebuilding from source facts is tested.
 
+M010 position and lot inventory is a query, not stored state. At read time it
+sums effective Posted `TransactionEntry` deltas, signed `LotEntryAllocation`
+quantities and `PhysicalGoldLotAllocationDetail` piece movement, optionally
+bounded by `ExecutionDate <= asOf`. Fine weight is derived from gross quantity
+and the lot's immutable fineness. Inventory adds no table, column, index or
+migration. Real-SQLite query-plan tests show that its position, lot and
+allocation queries use only existing indexes, rooted on
+`IX_LedgerTransaction_Household_Status_Date`.
+
 ## Deferred database regions
 
 Not part of 001_CoreLedger:
