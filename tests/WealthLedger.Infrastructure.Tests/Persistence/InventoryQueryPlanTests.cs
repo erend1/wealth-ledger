@@ -52,58 +52,86 @@ public sealed class InventoryQueryPlanTests
                         ]));
         }
 
+        // EF emits different SQL for null and non-null parameters, so each
+        // representative shape is explained on its own.
+        (Guid? AccountId, Guid? AssetId, DateOnly? AsOf)[] shapes =
+        [
+            (null, null, new DateOnly(2026, 9, 30)),
+            (null, null, null),
+            (
+                CoreLedgerTestData.AccountId,
+                CoreLedgerTestData.FundAssetId,
+                new DateOnly(2026, 9, 30))
+        ];
+
+        foreach (var (accountId, assetId, asOf) in shapes)
+        {
+            var commands = await CaptureInventoryCommandsAsync(
+                database,
+                accountId,
+                assetId,
+                asOf);
+
+            // Position entries, lot roots, then lot allocations.
+            Assert.Equal(3, commands.Count);
+
+            foreach (var captured in commands)
+            {
+                var details = await ExplainAsync(database, captured);
+                _output.WriteLine(string.Join(Environment.NewLine, details));
+
+                // M010 adds no inventory index: every table access must be a
+                // search on an existing index, never a scan or an automatic
+                // (temporary) index.
+                Assert.DoesNotContain(
+                    details,
+                    detail => detail.StartsWith("SCAN ", StringComparison.Ordinal));
+                Assert.DoesNotContain(
+                    details,
+                    detail => detail.Contains(
+                        "AUTOMATIC",
+                        StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (accountId is null)
+            {
+                Assert.Contains(
+                    await ExplainAsync(database, commands[0]),
+                    detail => detail.Contains(
+                        "IX_LedgerTransaction_Household_Status_Date",
+                        StringComparison.Ordinal));
+            }
+        }
+    }
+
+    private static async Task<IReadOnlyList<CapturedCommand>>
+        CaptureInventoryCommandsAsync(
+            SqliteTestDatabase database,
+            Guid? accountId,
+            Guid? assetId,
+            DateOnly? asOf)
+    {
         var interceptor = new ReaderCommandInterceptor();
         var options = new DbContextOptionsBuilder<WealthLedgerDbContext>()
             .UseSqlite(database.ConnectionString)
             .AddInterceptors(interceptor)
             .Options;
 
-        await using (var context = new WealthLedgerDbContext(options))
-        {
-            var store = new EfCoreInventoryReadStore(context);
-            _ = await store.ListPositionEntryFactsAsync(
-                CoreLedgerTestData.HouseholdId,
-                null,
-                null,
-                null,
-                null,
-                new DateOnly(2026, 9, 30));
-            _ = await store.ListLotFactsAsync(
-                CoreLedgerTestData.HouseholdId,
-                null,
-                new DateOnly(2026, 9, 30));
-        }
+        await using var context = new WealthLedgerDbContext(options);
+        var store = new EfCoreInventoryReadStore(context);
+        _ = await store.ListPositionEntryFactsAsync(
+            CoreLedgerTestData.HouseholdId,
+            null,
+            accountId,
+            null,
+            assetId,
+            asOf);
+        _ = await store.ListLotFactsAsync(
+            CoreLedgerTestData.HouseholdId,
+            assetId,
+            asOf);
 
-        // Position entries, lot roots, then lot allocations.
-        Assert.Equal(3, interceptor.Commands.Count);
-        var plans = new List<IReadOnlyList<string>>();
-
-        foreach (var captured in interceptor.Commands)
-        {
-            var details = await ExplainAsync(database, captured);
-            _output.WriteLine(string.Join(Environment.NewLine, details));
-            plans.Add(details);
-
-            // M010 adds no inventory index: every table access must already
-            // be an indexed search.
-            Assert.DoesNotContain(
-                details,
-                detail => detail.StartsWith("SCAN ", StringComparison.Ordinal)
-                          && !detail.StartsWith(
-                              "SCAN json_each",
-                              StringComparison.Ordinal));
-        }
-
-        Assert.Contains(
-            plans[0],
-            detail => detail.Contains(
-                "IX_LedgerTransaction_Household_Status_Date",
-                StringComparison.Ordinal));
-        Assert.Contains(
-            plans[1],
-            detail => detail.Contains(
-                "IX_LedgerTransaction_Household_Status_Date",
-                StringComparison.Ordinal));
+        return interceptor.Commands;
     }
 
     private static async Task<IReadOnlyList<string>> ExplainAsync(
