@@ -1,8 +1,10 @@
+using System.Globalization;
 using WealthLedger.Application.Inventory;
 using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.ValueObjects;
 
 namespace WealthLedger.Application.Tests.Inventory;
 
@@ -181,9 +183,308 @@ public sealed class InventoryUseCaseTests
             item.PhysicalGold);
         Assert.Equal(1, physical.GlobalPieceCount);
         Assert.Equal(13.74m, physical.GlobalFineWeightGrams);
+        // Same value and decimal scale as the M009 Domain derivation.
+        var m009FineWeight = new PhysicalGoldLotDetail(new Fineness(916_000), 2)
+            .CalculateFineWeightGrams(Quantity.FromRaw(15 * 100_000_000L));
+        Assert.Equal(
+            m009FineWeight.ToString(CultureInfo.InvariantCulture),
+            physical.GlobalFineWeightGrams.ToString(CultureInfo.InvariantCulture));
         var custody = Assert.Single(item.Custody);
         Assert.Equal(1, custody.PieceCount);
         Assert.Equal(13.74m, custody.FineWeightGrams);
+    }
+
+    [Fact]
+    public async Task LotInventory_CheckedAggregationRejectsOverflow()
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var lotId = Guid.Parse("80000000-0000-0000-0000-000000000003");
+        var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000020");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1))],
+                [
+                    Allocation(
+                        scope,
+                        lotId,
+                        openingEntryId,
+                        20,
+                        new DateOnly(2026, 1, 1),
+                        long.MaxValue,
+                        null),
+                    Allocation(
+                        scope,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000021"),
+                        21,
+                        new DateOnly(2026, 1, 2),
+                        1,
+                        null)
+                ])
+        };
+
+        await Assert.ThrowsAsync<OverflowException>(
+            () => new ListLotInventoryUseCase(store)
+                .ExecuteAsync(new ListLotInventoryQuery(HouseholdId)));
+    }
+
+    [Fact]
+    public async Task LotInventory_AsOfExcludesLotAcquiredLater()
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var lotId = Guid.Parse("80000000-0000-0000-0000-000000000004");
+        var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000030");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [FundLot(lotId, openingEntryId, new DateOnly(2026, 3, 1))],
+                [
+                    Allocation(
+                        scope,
+                        lotId,
+                        openingEntryId,
+                        30,
+                        new DateOnly(2026, 3, 1),
+                        100,
+                        null)
+                ])
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var beforeAcquisition = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AsOf: new DateOnly(2026, 2, 28),
+                IncludeExhausted: true));
+        var onAcquisition = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AsOf: new DateOnly(2026, 3, 1)));
+
+        Assert.Empty(beforeAcquisition.Items);
+        Assert.Equal(
+            100,
+            Assert.Single(onAcquisition.Items).GlobalQuantityRawE8);
+    }
+
+    [Fact]
+    public async Task LotInventory_CustodyFiltersFollowDerivedHoldings()
+    {
+        var secondAccountId = Guid.Parse("50000000-0000-0000-0000-000000000002");
+        var secondInstitutionId = Guid.Parse("30000000-0000-0000-0000-000000000002");
+        var source = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var destination = source with
+        {
+            AccountId = secondAccountId,
+            AccountCode = "SECOND",
+            AccountName = "Second Account",
+            InstitutionId = secondInstitutionId,
+            InstitutionCode = "BANK",
+            InstitutionName = "Bank",
+            InstitutionType = InstitutionType.Bank
+        };
+        var lotId = Guid.Parse("80000000-0000-0000-0000-000000000005");
+        var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000040");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1))],
+                [
+                    Allocation(
+                        source,
+                        lotId,
+                        openingEntryId,
+                        40,
+                        new DateOnly(2026, 1, 1),
+                        100,
+                        null),
+                    Allocation(
+                        source,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000041"),
+                        41,
+                        new DateOnly(2026, 2, 1),
+                        -100,
+                        null),
+                    Allocation(
+                        destination,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000042"),
+                        42,
+                        new DateOnly(2026, 2, 1),
+                        100,
+                        null)
+                ])
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var all = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId));
+        var sourceHeld = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, AccountId: AccountId));
+        var sourceHistory = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AccountId: AccountId,
+                IncludeExhausted: true));
+        var destinationHeld = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AccountId: secondAccountId));
+        var sourceInstitution = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                InstitutionId: InstitutionId));
+        var destinationInstitution = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                InstitutionId: secondInstitutionId));
+
+        var lot = Assert.Single(all.Items);
+        Assert.Equal(100, lot.GlobalQuantityRawE8);
+        var custody = Assert.Single(lot.Custody);
+        Assert.Equal(secondAccountId, custody.AccountId);
+        Assert.Equal(secondInstitutionId, custody.InstitutionId);
+        Assert.Equal(100, custody.QuantityRawE8);
+        Assert.Empty(sourceHeld.Items);
+        Assert.Equal(3, Assert.Single(sourceHistory.Items).Allocations.Count);
+        Assert.Single(destinationHeld.Items);
+        Assert.Empty(sourceInstitution.Items);
+        Assert.Single(destinationInstitution.Items);
+    }
+
+    [Fact]
+    public async Task LotInventory_FailsClosedOnInconsistentLineageOrCustody()
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var otherAccount = scope with
+        {
+            AccountId = Guid.Parse("50000000-0000-0000-0000-000000000002"),
+            AccountCode = "SECOND"
+        };
+        var lotId = Guid.Parse("80000000-0000-0000-0000-000000000006");
+        var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000050");
+        var lot = FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1));
+        var opening = Allocation(
+            scope,
+            lotId,
+            openingEntryId,
+            50,
+            new DateOnly(2026, 1, 1),
+            100,
+            null);
+
+        var missingOpening = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [lot],
+                [
+                    Allocation(
+                        scope,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000051"),
+                        51,
+                        new DateOnly(2026, 1, 1),
+                        100,
+                        null)
+                ])
+        };
+        var negativeCustody = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [lot],
+                [
+                    opening,
+                    Allocation(
+                        otherAccount,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000052"),
+                        52,
+                        new DateOnly(2026, 2, 1),
+                        -40,
+                        null)
+                ])
+        };
+        var pieceMovementOnFund = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [lot],
+                [opening with { PieceDelta = 1 }])
+        };
+
+        foreach (var store in new[]
+                 {
+                     missingOpening,
+                     negativeCustody,
+                     pieceMovementOnFund
+                 })
+        {
+            await Assert.ThrowsAsync<InventoryPersistenceException>(
+                () => new ListLotInventoryUseCase(store)
+                    .ExecuteAsync(new ListLotInventoryQuery(HouseholdId)));
+        }
+    }
+
+    [Fact]
+    public async Task LotInventory_PreservesKnownAndUnknownCostShapes()
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var knownLotId = Guid.Parse("80000000-0000-0000-0000-000000000007");
+        var knownEntryId = Guid.Parse("81000000-0000-0000-0000-000000000060");
+        var unknownLotId = Guid.Parse("80000000-0000-0000-0000-000000000008");
+        var unknownEntryId = Guid.Parse("81000000-0000-0000-0000-000000000061");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [
+                    FundLot(
+                        knownLotId,
+                        knownEntryId,
+                        new DateOnly(2026, 1, 1),
+                        CostBasisStatus.Known,
+                        12_345,
+                        "TRY"),
+                    FundLot(
+                        unknownLotId,
+                        unknownEntryId,
+                        new DateOnly(2026, 1, 2))
+                ],
+                [
+                    Allocation(
+                        scope,
+                        knownLotId,
+                        knownEntryId,
+                        60,
+                        new DateOnly(2026, 1, 1),
+                        100,
+                        null),
+                    Allocation(
+                        scope,
+                        unknownLotId,
+                        unknownEntryId,
+                        61,
+                        new DateOnly(2026, 1, 2),
+                        200,
+                        null)
+                ])
+        };
+
+        var result = await new ListLotInventoryUseCase(store)
+            .ExecuteAsync(new ListLotInventoryQuery(HouseholdId));
+
+        var known = Assert.Single(
+            result.Items,
+            item => item.AssetLotId == knownLotId);
+        Assert.Equal(CostBasisStatus.Known, known.CostStatus);
+        Assert.Equal(12_345, known.CostMinorUnits);
+        Assert.Equal("TRY", known.CostCurrencyCode);
+        var unknown = Assert.Single(
+            result.Items,
+            item => item.AssetLotId == unknownLotId);
+        Assert.Equal(CostBasisStatus.Unknown, unknown.CostStatus);
+        Assert.Null(unknown.CostMinorUnits);
+        Assert.Null(unknown.CostCurrencyCode);
     }
 
     [Fact]
@@ -282,6 +583,43 @@ public sealed class InventoryUseCaseTests
             "TRY",
             LotTrackingMode.Required,
             true);
+
+    private static InventoryLotDescriptor FundLot(
+        Guid lotId,
+        Guid openingEntryId,
+        DateOnly acquiredOn,
+        CostBasisStatus costStatus = CostBasisStatus.Unknown,
+        long? costMinorUnits = null,
+        string? costCurrencyCode = null)
+        => new(
+            lotId,
+            Guid.Parse("70000000-0000-0000-0000-000000000020"),
+            openingEntryId,
+            AssetId,
+            "FUND_A",
+            "Fund A",
+            AssetType.Fund,
+            AssetUnit.FundUnit,
+            "TRY",
+            LotTrackingMode.Required,
+            true,
+            acquiredOn,
+            costStatus,
+            costMinorUnits,
+            costCurrencyCode,
+            new DateTimeOffset(
+                acquiredOn.Year,
+                acquiredOn.Month,
+                acquiredOn.Day,
+                8,
+                0,
+                0,
+                TimeSpan.Zero),
+            null,
+            null,
+            null,
+            null,
+            null);
 
     private static InventoryEntryFact Entry(
         InventoryScopeContext scope,
