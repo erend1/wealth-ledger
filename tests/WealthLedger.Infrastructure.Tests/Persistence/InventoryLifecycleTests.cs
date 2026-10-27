@@ -30,6 +30,16 @@ public sealed class InventoryLifecycleTests
         Guid.Parse("60000000-0000-0000-0000-0000000000a1");
     private static readonly Guid UsdAssetId =
         Guid.Parse("60000000-0000-0000-0000-0000000000a2");
+    private static readonly Guid SidePortfolioId =
+        Guid.Parse("40000000-0000-0000-0000-0000000000b1");
+    private static readonly Guid SideAccountId =
+        Guid.Parse("50000000-0000-0000-0000-0000000000b1");
+    private static readonly Guid SideInstitutionId =
+        Guid.Parse("30000000-0000-0000-0000-0000000000b1");
+    private static readonly Guid OtherHouseholdAccountId =
+        Guid.Parse("50000000-0000-0000-0000-0000000000c1");
+    private static readonly Guid UnknownId =
+        Guid.Parse("99999999-0000-0000-0000-0000000000ff");
     private static readonly DateTimeOffset Now =
         new(2026, 9, 30, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateOnly OpeningDate = new(2026, 9, 1);
@@ -163,6 +173,14 @@ public sealed class InventoryLifecycleTests
             new ListLotInventoryQuery(
                 CoreLedgerTestData.HouseholdId,
                 AsOf: FundPurchaseDate.AddDays(-1)));
+        var onFundSaleDate = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                AsOf: FundSaleDate));
+        var onGoldPurchaseDate = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                AsOf: GoldPurchaseDate));
         var institutionScoped = await useCase.ExecuteAsync(
             new ListLotInventoryQuery(
                 CoreLedgerTestData.HouseholdId,
@@ -269,6 +287,16 @@ public sealed class InventoryLifecycleTests
             10 * Unit,
             Single(afterOpening, history.FundOpeningLotId).GlobalQuantityRawE8);
 
+        // The as-of bound is inclusive: an allocation dated on the as-of day,
+        // including a lot's opening, belongs to that day's inventory.
+        Assert.Equal(
+            15 * Unit,
+            Single(onFundSaleDate, history.FundPurchaseLotId).GlobalQuantityRawE8);
+        Assert.Equal(
+            20 * Unit,
+            Single(onGoldPurchaseDate, history.GoldPurchaseLotId)
+                .GlobalQuantityRawE8);
+
         Assert.Equal(
             new[] { history.EquityLotId, history.FundPurchaseLotId }.Order().ToArray(),
             institutionScoped.Items.Select(item => item.AssetLotId).Order().ToArray());
@@ -303,6 +331,454 @@ public sealed class InventoryLifecycleTests
                     CultureInfo.InvariantCulture));
         }
     }
+
+    [Fact]
+    public async Task LotInventory_GoldPiecesLeftAtZeroGramsStayHeldAsInM009()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedMasterDataAsync(database);
+        var lotId = await RecordGoldPurchaseAsync(
+            database,
+            "zero-gram-gold-purchase",
+            SourceVaultId,
+            20m,
+            2,
+            20_000,
+            new DateOnly(2026, 9, 1));
+
+        // M009 bounds gross weight and pieces separately, so it accepts a
+        // sale of all the weight with only one of the two pieces.
+        await RecordGoldSaleAsync(
+            database,
+            "zero-gram-gold-sale",
+            SourceVaultId,
+            lotId,
+            20m,
+            1,
+            20_000,
+            new DateOnly(2026, 9, 5));
+
+        await using var context = database.CreateContext();
+        var inventory = await new ListLotInventoryUseCase(
+                new EfCoreInventoryReadStore(context))
+            .ExecuteAsync(
+                new ListLotInventoryQuery(CoreLedgerTestData.HouseholdId));
+        var m009Custody = await new GetPhysicalGoldCustodyInventoryUseCase(
+                new EfCorePhysicalGoldVerificationReadStore(context))
+            .ExecuteAsync(CoreLedgerTestData.HouseholdId);
+
+        var lot = Assert.Single(inventory.Items);
+        Assert.Equal(0, lot.GlobalQuantityRawE8);
+        Assert.Equal(1, lot.PhysicalGold!.GlobalPieceCount);
+        var custody = Assert.Single(lot.Custody);
+        var expected = Assert.Single(m009Custody.Items);
+        Assert.Equal(expected.AccountId, custody.AccountId);
+        Assert.Equal(expected.GrossWeightRawE8, custody.QuantityRawE8);
+        Assert.Equal(expected.PieceCount, custody.PieceCount);
+        Assert.Equal(1, custody.PieceCount);
+    }
+
+    [Fact]
+    public async Task Inventory_BackdatedGoldSaleBeforeTransfer_ReportsSignedAsOfCustody()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedMasterDataAsync(database);
+        var lotId = await RecordGoldPurchaseAsync(
+            database,
+            "backdated-gold-purchase",
+            SourceVaultId,
+            20m,
+            2,
+            20_000,
+            new DateOnly(2026, 9, 1));
+        await RecordGoldTransferAsync(
+            database,
+            "backdated-gold-transfer",
+            SourceVaultId,
+            DestinationVaultId,
+            lotId,
+            20m,
+            2,
+            new DateOnly(2026, 9, 10));
+
+        // M009 checks the sale against current custody in vault B only, so
+        // it accepts a date before the transfer that filled vault B.
+        await RecordGoldSaleAsync(
+            database,
+            "backdated-gold-sale",
+            DestinationVaultId,
+            lotId,
+            10m,
+            1,
+            10_000,
+            new DateOnly(2026, 9, 5));
+
+        await using var context = database.CreateContext();
+        var store = new EfCoreInventoryReadStore(context);
+        var asOf = new DateOnly(2026, 9, 7);
+        var slice = await new ListLotInventoryUseCase(store).ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                AsOf: asOf));
+        var positions = await new ListPositionInventoryUseCase(store)
+            .ExecuteAsync(
+                new ListPositionInventoryQuery(
+                    CoreLedgerTestData.HouseholdId,
+                    AssetId: CoreLedgerTestData.GoldAssetId,
+                    AsOf: asOf));
+        var current = await new ListLotInventoryUseCase(store).ExecuteAsync(
+            new ListLotInventoryQuery(CoreLedgerTestData.HouseholdId));
+
+        var lot = Assert.Single(slice.Items);
+        Assert.Equal(10 * Unit, lot.GlobalQuantityRawE8);
+        Assert.Equal(1, lot.PhysicalGold!.GlobalPieceCount);
+        var overdrawn = Assert.Single(
+            lot.Custody,
+            item => item.AccountId == DestinationVaultId);
+        Assert.Equal(-10 * Unit, overdrawn.QuantityRawE8);
+        Assert.Equal(-1, overdrawn.PieceCount);
+        Assert.Equal(2, positions.Items.Count);
+
+        foreach (var custody in lot.Custody)
+        {
+            Assert.Equal(
+                QuantityOf(
+                    positions,
+                    (custody.AccountId, CoreLedgerTestData.GoldAssetId)),
+                custody.QuantityRawE8);
+        }
+
+        var held = Assert.Single(Assert.Single(current.Items).Custody);
+        Assert.Equal(DestinationVaultId, held.AccountId);
+        Assert.Equal(10 * Unit, held.QuantityRawE8);
+        Assert.Equal(1, held.PieceCount);
+    }
+
+    [Fact]
+    public async Task Inventory_BackdatedFundSaleOfLaterLot_KeepsLotsEqualToPosition()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedMasterDataAsync(database);
+        var openingLotId = Assert.Single(
+            (await RecordOpeningAsync(
+                database,
+                "backdated-fund-opening",
+                Opening(
+                    CoreLedgerTestData.AccountId,
+                    CoreLedgerTestData.FundAssetId,
+                    10m,
+                    [
+                        new OpeningBalanceLotCommand(
+                            Quantity.FromDecimal(10m),
+                            new DateOnly(2026, 8, 15),
+                            CostBasis.Known(
+                                Money.FromMinorUnits(10_000, CurrencyCode.TRY)))
+                    ]))).AssetLotIds);
+        var (_, laterLotId) = await RecordFundPurchaseAsync(
+            database,
+            "backdated-fund-purchase",
+            20m,
+            15m,
+            30_000,
+            new DateOnly(2026, 9, 5));
+
+        // M008 plans the sale over current custody, so a sale dated before
+        // the purchase still consumes the purchased lot.
+        var (_, plannedLotIds) = await RecordFundSaleAsync(
+            database,
+            "backdated-fund-sale",
+            15m,
+            10m,
+            15_000,
+            new DateOnly(2026, 9, 3));
+        Assert.Equal([openingLotId, laterLotId], plannedLotIds);
+
+        await using var context = database.CreateContext();
+        var store = new EfCoreInventoryReadStore(context);
+        var asOf = new DateOnly(2026, 9, 4);
+        var lots = await new ListLotInventoryUseCase(store).ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                AssetId: CoreLedgerTestData.FundAssetId,
+                AsOf: asOf,
+                IncludeExhausted: true));
+        var position = await new ListPositionInventoryUseCase(store)
+            .ExecuteAsync(
+                new ListPositionInventoryQuery(
+                    CoreLedgerTestData.HouseholdId,
+                    AssetId: CoreLedgerTestData.FundAssetId,
+                    AsOf: asOf));
+
+        Assert.Equal(-5 * Unit, QuantityOf(position, FundScope));
+        Assert.Equal(
+            QuantityOf(position, FundScope),
+            lots.Items.Sum(item => item.GlobalQuantityRawE8));
+        Assert.Equal(0, Single(lots, openingLotId).GlobalQuantityRawE8);
+        var later = Single(lots, laterLotId);
+        Assert.Equal(20 * Unit, later.OriginalQuantityRawE8);
+        Assert.Equal(-5 * Unit, later.GlobalQuantityRawE8);
+    }
+
+    [Fact]
+    public async Task Inventory_FiltersSelectExactScopesAndRejectUnknownScopes()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        var history = await SeedLifecycleAsync(database);
+        var sideFundLotId = await SeedSideScopeAsync(database);
+        var otherHouseholdLotId = await SeedOtherHouseholdAsync(database);
+
+        await using var context = database.CreateContext();
+        var store = new EfCoreInventoryReadStore(context);
+        var positions = new ListPositionInventoryUseCase(store);
+        var lots = new ListLotInventoryUseCase(store);
+        var sidePortfolio = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                PortfolioId: SidePortfolioId));
+        var primaryAccount = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                AccountId: CoreLedgerTestData.AccountId));
+        var crossedScope = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                PortfolioId: CoreLedgerTestData.PortfolioId,
+                AccountId: SideAccountId));
+        var sideInstitution = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                InstitutionId: SideInstitutionId));
+        var primaryInstitution = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                InstitutionId: CoreLedgerTestData.InstitutionId));
+        var exactEmpty = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                CoreLedgerTestData.PortfolioId,
+                CoreLedgerTestData.DestinationAccountId,
+                AssetId: EquityAssetId,
+                IncludeZero: true));
+
+        Assert.Equal(
+            new[] { CoreLedgerTestData.CashAssetId, CoreLedgerTestData.FundAssetId }
+                .Order()
+                .ToArray(),
+            sidePortfolio.Items.Select(item => item.AssetId).Order().ToArray());
+        Assert.All(
+            sidePortfolio.Items,
+            item => Assert.Equal(SideAccountId, item.AccountId));
+        Assert.Equal(
+            new[] { CoreLedgerTestData.FundAssetId, EquityAssetId, UsdAssetId }
+                .Order()
+                .ToArray(),
+            primaryAccount.Items.Select(item => item.AssetId).Order().ToArray());
+        Assert.All(
+            primaryAccount.Items,
+            item => Assert.Equal(CoreLedgerTestData.PortfolioId, item.PortfolioId));
+        Assert.Empty(crossedScope.Items);
+        Assert.Equal(
+            sidePortfolio.Items.Select(item => (item.AccountId, item.AssetId)),
+            sideInstitution.Items.Select(item => (item.AccountId, item.AssetId)));
+        Assert.Equal(4, primaryInstitution.Items.Count);
+        Assert.DoesNotContain(
+            primaryInstitution.Items,
+            item => item.PortfolioId == SidePortfolioId);
+
+        var sideCash = Assert.Single(
+            sidePortfolio.Items,
+            item => item.AssetId == CoreLedgerTestData.CashAssetId);
+        Assert.Equal(50 * Unit, sideCash.QuantityRawE8);
+        Assert.Equal(SideScopeView, ScopeView.Of(sideCash));
+        Assert.Equal(
+            new AssetView(
+                CoreLedgerTestData.CashAssetId,
+                "TRY_CASH",
+                "Test Cash Asset",
+                AssetType.Cash,
+                AssetUnit.CurrencyUnit,
+                "TRY",
+                LotTrackingMode.None,
+                true),
+            AssetView.Of(sideCash));
+
+        var empty = Assert.Single(exactEmpty.Items);
+        Assert.Equal(0, empty.QuantityRawE8);
+        Assert.Equal(0, empty.SourceEntryCount);
+        Assert.Equal(
+            new ScopeView(
+                CoreLedgerTestData.PortfolioId,
+                "CORE",
+                "Core Portfolio",
+                PortfolioStatus.Active,
+                CoreLedgerTestData.DestinationAccountId,
+                "SECONDARY",
+                "Secondary Account",
+                AccountType.Investment,
+                true,
+                CoreLedgerTestData.InstitutionId,
+                "TEST_INSTITUTION",
+                "Test Institution",
+                InstitutionType.Broker,
+                true),
+            ScopeView.Of(empty));
+        Assert.Equal(
+            new AssetView(
+                EquityAssetId,
+                "EQUITY_INVENTORY",
+                "Synthetic Inventory Equity",
+                AssetType.Equity,
+                AssetUnit.Share,
+                "TRY",
+                LotTrackingMode.Required,
+                true),
+            AssetView.Of(empty));
+
+        var sideLots = await lots.ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                PortfolioId: SidePortfolioId));
+        var primaryLots = await lots.ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                PortfolioId: CoreLedgerTestData.PortfolioId));
+        var sideLot = Assert.Single(sideLots.Items);
+        Assert.Equal(sideFundLotId, sideLot.AssetLotId);
+        Assert.Equal(SideScopeView, ScopeView.Of(Assert.Single(sideLot.Custody)));
+        Assert.Equal(
+            new[]
+            {
+                history.EquityLotId,
+                history.FundPurchaseLotId,
+                history.GoldOpeningLotId,
+                history.GoldPurchaseLotId
+            }.Order().ToArray(),
+            primaryLots.Items.Select(item => item.AssetLotId).Order().ToArray());
+
+        // Another household's Posted history never leaks into this one.
+        var householdPositions = await positions.ExecuteAsync(
+            new ListPositionInventoryQuery(CoreLedgerTestData.HouseholdId));
+        var householdLots = await lots.ExecuteAsync(
+            new ListLotInventoryQuery(
+                CoreLedgerTestData.HouseholdId,
+                IncludeExhausted: true));
+        var otherHouseholdLots = await lots.ExecuteAsync(
+            new ListLotInventoryQuery(CoreLedgerTestData.OtherHouseholdId));
+        Assert.DoesNotContain(
+            householdPositions.Items,
+            item => item.PortfolioId == CoreLedgerTestData.OtherPortfolioId);
+        Assert.Equal(15 * Unit, QuantityOf(householdPositions, FundScope));
+        Assert.DoesNotContain(
+            householdLots.Items,
+            lot => lot.AssetLotId == otherHouseholdLotId);
+        Assert.Equal(
+            otherHouseholdLotId,
+            Assert.Single(otherHouseholdLots.Items).AssetLotId);
+
+        // Unknown, cross-household and mismatched scopes never read as empty.
+        (Guid? Portfolio, Guid? Account, Guid? Institution, Guid? Asset)[] unknownScopes =
+        [
+            (UnknownId, null, null, null),
+            (CoreLedgerTestData.OtherPortfolioId, null, null, null),
+            (null, UnknownId, null, null),
+            (null, CoreLedgerTestData.OtherAccountId, null, null),
+            (null, CoreLedgerTestData.AccountId, SideInstitutionId, null),
+            (null, null, UnknownId, null),
+            (null, null, null, UnknownId)
+        ];
+
+        foreach (var (portfolio, account, institution, asset) in unknownScopes)
+        {
+            await Assert.ThrowsAsync<InventoryScopeNotFoundException>(
+                () => positions.ExecuteAsync(
+                    new ListPositionInventoryQuery(
+                        CoreLedgerTestData.HouseholdId,
+                        portfolio,
+                        account,
+                        institution,
+                        asset)));
+            await Assert.ThrowsAsync<InventoryScopeNotFoundException>(
+                () => lots.ExecuteAsync(
+                    new ListLotInventoryQuery(
+                        CoreLedgerTestData.HouseholdId,
+                        portfolio,
+                        account,
+                        institution,
+                        asset)));
+        }
+    }
+
+    [Fact]
+    public async Task LotInventory_SplitOpeningKeepsEachLotsOriginalQuantity()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await SeedMasterDataAsync(database);
+
+        // M007 may split one opening entry into lots with different cost.
+        var opening = await RecordOpeningAsync(
+            database,
+            "split-fund-opening",
+            Opening(
+                CoreLedgerTestData.AccountId,
+                CoreLedgerTestData.FundAssetId,
+                10m,
+                [
+                    new OpeningBalanceLotCommand(
+                        Quantity.FromDecimal(6m),
+                        new DateOnly(2026, 8, 10),
+                        CostBasis.Known(
+                            Money.FromMinorUnits(6_000, CurrencyCode.TRY))),
+                    new OpeningBalanceLotCommand(
+                        Quantity.FromDecimal(4m),
+                        AcquiredOn: null,
+                        CostBasis.Unknown())
+                ]));
+
+        await using var context = database.CreateContext();
+        var inventory = await new ListLotInventoryUseCase(
+                new EfCoreInventoryReadStore(context))
+            .ExecuteAsync(
+                new ListLotInventoryQuery(CoreLedgerTestData.HouseholdId));
+
+        Assert.Equal(
+            opening.AssetLotIds.Order().ToArray(),
+            inventory.Items.Select(lot => lot.AssetLotId).Order().ToArray());
+        Assert.Single(
+            inventory.Items.Select(lot => lot.OpeningTransactionEntryId).Distinct());
+        Assert.All(
+            inventory.Items,
+            lot => Assert.Equal(opening.TransactionId, lot.CreatingTransactionId));
+        Assert.All(
+            inventory.Items,
+            lot => Assert.Equal(lot.OriginalQuantityRawE8, lot.GlobalQuantityRawE8));
+        var known = Assert.Single(
+            inventory.Items,
+            lot => lot.CostStatus == CostBasisStatus.Known);
+        Assert.Equal(6 * Unit, known.OriginalQuantityRawE8);
+        Assert.Equal(6_000, known.CostMinorUnits);
+        var unknown = Assert.Single(
+            inventory.Items,
+            lot => lot.CostStatus == CostBasisStatus.Unknown);
+        Assert.Equal(4 * Unit, unknown.OriginalQuantityRawE8);
+        Assert.Null(unknown.CostMinorUnits);
+    }
+
+    private static ScopeView SideScopeView
+        => new(
+            SidePortfolioId,
+            "SIDE",
+            "Synthetic Side Portfolio",
+            PortfolioStatus.Active,
+            SideAccountId,
+            "SIDE_ACCOUNT",
+            "Synthetic Side Account",
+            AccountType.Investment,
+            true,
+            SideInstitutionId,
+            "SIDE_BANK",
+            "Synthetic Side Bank",
+            InstitutionType.Bank,
+            true);
 
     private static (Guid AccountId, Guid AssetId) CashScope
         => (CoreLedgerTestData.DestinationAccountId, CoreLedgerTestData.CashAssetId);
@@ -343,261 +819,110 @@ public sealed class InventoryLifecycleTests
         SqliteTestDatabase database)
     {
         await SeedMasterDataAsync(database);
-
-        Guid fundOpeningTransactionId;
-        Guid fundOpeningLotId;
-        Guid equityLotId;
-        Guid goldOpeningLotId;
-
-        await using (var context = database.CreateContext())
-        {
-            var opening = OpeningRecorder(context);
-            await opening.ExecuteAsync(
-                "inventory-cash-opening",
-                Opening(
-                    CoreLedgerTestData.DestinationAccountId,
-                    CoreLedgerTestData.CashAssetId,
-                    1_000m,
-                    []));
-            await opening.ExecuteAsync(
-                "inventory-usd-opening",
-                Opening(CoreLedgerTestData.AccountId, UsdAssetId, 250m, []));
-            var fundOpening = await opening.ExecuteAsync(
-                "inventory-fund-opening",
+        await RecordOpeningAsync(
+            database,
+            "inventory-cash-opening",
+            Opening(
+                CoreLedgerTestData.DestinationAccountId,
+                CoreLedgerTestData.CashAssetId,
+                1_000m,
+                []));
+        await RecordOpeningAsync(
+            database,
+            "inventory-usd-opening",
+            Opening(CoreLedgerTestData.AccountId, UsdAssetId, 250m, []));
+        var fundOpening = await RecordOpeningAsync(
+            database,
+            "inventory-fund-opening",
+            Opening(
+                CoreLedgerTestData.AccountId,
+                CoreLedgerTestData.FundAssetId,
+                10m,
+                [
+                    new OpeningBalanceLotCommand(
+                        Quantity.FromDecimal(10m),
+                        new DateOnly(2026, 8, 15),
+                        CostBasis.Known(
+                            Money.FromMinorUnits(10_000, CurrencyCode.TRY)))
+                ]));
+        var fundOpeningLotId = Assert.Single(fundOpening.AssetLotIds);
+        var equityLotId = Assert.Single(
+            (await RecordOpeningAsync(
+                database,
+                "inventory-equity-opening",
                 Opening(
                     CoreLedgerTestData.AccountId,
-                    CoreLedgerTestData.FundAssetId,
+                    EquityAssetId,
+                    5m,
+                    [
+                        new OpeningBalanceLotCommand(
+                            Quantity.FromDecimal(5m),
+                            AcquiredOn: null,
+                            CostBasis.Unknown())
+                    ]))).AssetLotIds);
+        var goldOpeningLotId = Assert.Single(
+            (await RecordOpeningAsync(
+                database,
+                "inventory-gold-opening",
+                Opening(
+                    SourceVaultId,
+                    CoreLedgerTestData.GoldAssetId,
                     10m,
                     [
                         new OpeningBalanceLotCommand(
                             Quantity.FromDecimal(10m),
-                            new DateOnly(2026, 8, 15),
-                            CostBasis.Known(
-                                Money.FromMinorUnits(10_000, CurrencyCode.TRY)))
-                    ]));
-            fundOpeningTransactionId = fundOpening.TransactionId;
-            fundOpeningLotId = Assert.Single(fundOpening.AssetLotIds);
-            equityLotId = Assert.Single(
-                (await opening.ExecuteAsync(
-                    "inventory-equity-opening",
-                    Opening(
-                        CoreLedgerTestData.AccountId,
-                        EquityAssetId,
-                        5m,
-                        [
-                            new OpeningBalanceLotCommand(
-                                Quantity.FromDecimal(5m),
-                                AcquiredOn: null,
-                                CostBasis.Unknown())
-                        ]))).AssetLotIds);
-            goldOpeningLotId = Assert.Single(
-                (await opening.ExecuteAsync(
-                    "inventory-gold-opening",
-                    Opening(
-                        SourceVaultId,
-                        CoreLedgerTestData.GoldAssetId,
-                        10m,
-                        [
-                            new OpeningBalanceLotCommand(
-                                Quantity.FromDecimal(10m),
-                                AcquiredOn: null,
-                                CostBasis.Unknown(),
-                                new PhysicalGoldLotDetail(
-                                    new Fineness(916_000),
-                                    pieceCount: 1))
-                        ]))).AssetLotIds);
-        }
+                            AcquiredOn: null,
+                            CostBasis.Unknown(),
+                            new PhysicalGoldLotDetail(
+                                new Fineness(916_000),
+                                pieceCount: 1))
+                    ]))).AssetLotIds);
 
-        Guid fundPurchaseTransactionId;
-        Guid fundPurchaseLotId;
+        var (fundPurchaseTransactionId, fundPurchaseLotId) =
+            await RecordFundPurchaseAsync(
+                database,
+                "inventory-fund-purchase",
+                20m,
+                15m,
+                30_000,
+                FundPurchaseDate);
+        var (fundSaleTransactionId, plannedLotIds) = await RecordFundSaleAsync(
+            database,
+            "inventory-fund-sale",
+            15m,
+            10m,
+            15_000,
+            FundSaleDate);
 
-        await using (var context = database.CreateContext())
-        {
-            var posting = new EfCoreLedgerPostingStore(context);
-            var purchase = await new RecordFundPurchaseUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    posting,
-                    posting,
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(
-                    "inventory-fund-purchase",
-                    new RecordFundPurchaseCommand(
-                        CoreLedgerTestData.HouseholdId,
-                        CoreLedgerTestData.PortfolioId,
-                        CoreLedgerTestData.AccountId,
-                        CoreLedgerTestData.FundAssetId,
-                        CoreLedgerTestData.CashAssetId,
-                        Quantity.FromDecimal(20m),
-                        UnitPrice.FromDecimal(15m, CurrencyCode.TRY),
-                        Money.FromMinorUnits(30_000, CurrencyCode.TRY),
-                        FundPurchaseDate,
-                        ExternalReference: "SYNTHETIC-INVENTORY-FUND-BUY",
-                        Note: "Synthetic inventory fund purchase.",
-                        CashAccountId: CoreLedgerTestData.DestinationAccountId));
-            fundPurchaseTransactionId = purchase.TransactionId;
-            fundPurchaseLotId = purchase.AssetLotId;
-        }
+        // FIFO consumes the whole opening lot before the purchase lot.
+        Assert.Equal([fundOpeningLotId, fundPurchaseLotId], plannedLotIds);
 
-        Guid fundSaleTransactionId;
-
-        await using (var context = database.CreateContext())
-        {
-            var posting = new EfCoreLedgerPostingStore(context);
-            var command = new FundSaleCommand(
-                CoreLedgerTestData.HouseholdId,
-                CoreLedgerTestData.PortfolioId,
-                CoreLedgerTestData.AccountId,
-                CoreLedgerTestData.DestinationAccountId,
-                CoreLedgerTestData.FundAssetId,
-                CoreLedgerTestData.CashAssetId,
-                Quantity.FromDecimal(15m),
-                UnitPrice.FromDecimal(10m, CurrencyCode.TRY),
-                Money.FromMinorUnits(15_000, CurrencyCode.TRY),
-                FundSaleDate,
-                ExternalReference: "SYNTHETIC-INVENTORY-FUND-SELL",
-                Note: "Synthetic inventory fund sale.");
-            var preview = await new PreviewFundSaleUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    new EfCoreFundLotCustodyReadStore(posting),
-                    new EfCoreFundRealizedCostReadStore(context),
-                    new LotAllocationService(),
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(command);
-
-            Assert.Equal(
-                [fundOpeningLotId, fundPurchaseLotId],
-                preview.Plan.Select(line => line.AssetLotId).ToArray());
-
-            fundSaleTransactionId = (await new RecordFundSaleUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    posting,
-                    posting,
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(
-                    "inventory-fund-sale",
-                    command with
-                    {
-                        ReviewedPlan = preview.Plan
-                            .Select(
-                                line => new ReviewedLotAllocation(
-                                    line.AssetLotId,
-                                    Quantity.FromRaw(
-                                        line.ConsumedQuantityRawE8)))
-                            .ToArray(),
-                        ReviewedPlanFingerprint = preview.PlanFingerprint
-                    })).TransactionId;
-        }
-
-        Guid goldPurchaseLotId;
-
-        await using (var context = database.CreateContext())
-        {
-            var posting = new EfCoreLedgerPostingStore(context);
-            goldPurchaseLotId = (await new RecordPhysicalGoldPurchaseUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    posting,
-                    posting,
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(
-                    "inventory-gold-purchase",
-                    new PhysicalGoldPurchaseCommand(
-                        CoreLedgerTestData.HouseholdId,
-                        CoreLedgerTestData.PortfolioId,
-                        SourceVaultId,
-                        CoreLedgerTestData.DestinationAccountId,
-                        CoreLedgerTestData.GoldAssetId,
-                        CoreLedgerTestData.CashAssetId,
-                        Quantity.FromDecimal(20m),
-                        new Fineness(916_000),
-                        2,
-                        Money.FromMinorUnits(20_000, CurrencyCode.TRY),
-                        GoldPurchaseDate,
-                        ExternalReference: "SYNTHETIC-INVENTORY-GOLD-BUY",
-                        Note: "Synthetic inventory gold purchase.")))
-                .AssetLotId;
-        }
-
-        Guid goldSaleTransactionId;
-
-        await using (var context = database.CreateContext())
-        {
-            var posting = new EfCoreLedgerPostingStore(context);
-            var command = new PhysicalGoldSaleCommand(
-                CoreLedgerTestData.HouseholdId,
-                CoreLedgerTestData.PortfolioId,
-                SourceVaultId,
-                CoreLedgerTestData.DestinationAccountId,
-                CoreLedgerTestData.GoldAssetId,
-                CoreLedgerTestData.CashAssetId,
-                Quantity.FromDecimal(8m),
-                1,
-                [
-                    new PhysicalGoldSelectedLot(
-                        goldPurchaseLotId,
-                        Quantity.FromDecimal(8m),
-                        1)
-                ],
-                Money.FromMinorUnits(10_000, CurrencyCode.TRY),
-                GoldSaleDate,
-                ExternalReference: "SYNTHETIC-INVENTORY-GOLD-SELL",
-                Note: "Synthetic inventory gold sale.");
-            var preview = await new PreviewPhysicalGoldSaleUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    new EfCorePhysicalGoldCustodyReadStore(posting),
-                    new EfCorePhysicalGoldRealizedCostReadStore(context),
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(command);
-            goldSaleTransactionId = (await new RecordPhysicalGoldSaleUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    posting,
-                    posting,
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(
-                    "inventory-gold-sale",
-                    command with
-                    {
-                        ReviewedPlanFingerprint = preview.PlanFingerprint
-                    })).TransactionId;
-        }
-
-        await using (var context = database.CreateContext())
-        {
-            var posting = new EfCoreLedgerPostingStore(context);
-            var command = new PhysicalGoldTransferCommand(
-                CoreLedgerTestData.HouseholdId,
-                CoreLedgerTestData.PortfolioId,
-                SourceVaultId,
-                CoreLedgerTestData.PortfolioId,
-                DestinationVaultId,
-                CoreLedgerTestData.GoldAssetId,
-                Quantity.FromDecimal(12m),
-                1,
-                [
-                    new PhysicalGoldSelectedLot(
-                        goldPurchaseLotId,
-                        Quantity.FromDecimal(12m),
-                        1)
-                ],
-                GoldTransferDate,
-                ExternalReference: "SYNTHETIC-INVENTORY-GOLD-MOVE",
-                Note: "Synthetic inventory custody transfer.");
-            var preview = await new PreviewPhysicalGoldTransferUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    new EfCorePhysicalGoldCustodyReadStore(posting),
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(command);
-            await new RecordPhysicalGoldTransferUseCase(
-                    new EfCoreOpeningBalanceReferenceStore(context),
-                    posting,
-                    posting,
-                    new FixedTimeProvider(Now))
-                .ExecuteAsync(
-                    "inventory-gold-transfer",
-                    command with
-                    {
-                        ReviewedPlanFingerprint = preview.PlanFingerprint
-                    });
-        }
+        var goldPurchaseLotId = await RecordGoldPurchaseAsync(
+            database,
+            "inventory-gold-purchase",
+            SourceVaultId,
+            20m,
+            2,
+            20_000,
+            GoldPurchaseDate);
+        var goldSaleTransactionId = await RecordGoldSaleAsync(
+            database,
+            "inventory-gold-sale",
+            SourceVaultId,
+            goldPurchaseLotId,
+            8m,
+            1,
+            10_000,
+            GoldSaleDate);
+        await RecordGoldTransferAsync(
+            database,
+            "inventory-gold-transfer",
+            SourceVaultId,
+            DestinationVaultId,
+            goldPurchaseLotId,
+            12m,
+            1,
+            GoldTransferDate);
 
         PositionInventory goldSaleDateBeforeReversal;
 
@@ -611,21 +936,13 @@ public sealed class InventoryLifecycleTests
                         AsOf: GoldSaleDate));
         }
 
-        await using (var context = database.CreateContext())
-        {
-            var reversal = await new ReversePostedTransactionUseCase(
-                    new EfCoreLedgerReversalStore(context),
-                    new FixedTimeProvider(Now.AddMinutes(1)))
-                .ExecuteAsync(
-                    "inventory-gold-sale-reversal",
-                    new ReversePostedTransactionCommand(
-                        goldSaleTransactionId,
-                        "Synthetic incorrect gold sale."));
-            Assert.NotNull(reversal);
-        }
+        await ReverseAsync(
+            database,
+            "inventory-gold-sale-reversal",
+            goldSaleTransactionId);
 
         return new LifecycleHistory(
-            fundOpeningTransactionId,
+            fundOpening.TransactionId,
             fundOpeningLotId,
             fundPurchaseTransactionId,
             fundPurchaseLotId,
@@ -636,14 +953,122 @@ public sealed class InventoryLifecycleTests
             goldSaleDateBeforeReversal);
     }
 
+    private static async Task<Guid> SeedSideScopeAsync(SqliteTestDatabase database)
+    {
+        await using (var context = database.CreateContext())
+        {
+            context.Institutions.Add(
+                new InstitutionRow
+                {
+                    Id = SideInstitutionId,
+                    Code = "SIDE_BANK",
+                    Name = "Synthetic Side Bank",
+                    Type = InstitutionType.Bank,
+                    IsActive = true
+                });
+            context.Portfolios.Add(
+                new PortfolioRow
+                {
+                    Id = SidePortfolioId,
+                    HouseholdId = CoreLedgerTestData.HouseholdId,
+                    Code = "SIDE",
+                    Name = "Synthetic Side Portfolio",
+                    Status = PortfolioStatus.Active,
+                    CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc
+                });
+            context.Accounts.Add(
+                new AccountRow
+                {
+                    Id = SideAccountId,
+                    HouseholdId = CoreLedgerTestData.HouseholdId,
+                    InstitutionId = SideInstitutionId,
+                    Code = "SIDE_ACCOUNT",
+                    Name = "Synthetic Side Account",
+                    Type = AccountType.Investment,
+                    IsActive = true,
+                    OpenedOn = new DateOnly(2026, 1, 1)
+                });
+            await context.SaveChangesAsync();
+        }
+
+        await RecordOpeningAsync(
+            database,
+            "inventory-side-cash-opening",
+            Opening(
+                SideAccountId,
+                CoreLedgerTestData.CashAssetId,
+                50m,
+                [],
+                SidePortfolioId));
+
+        return Assert.Single(
+            (await RecordOpeningAsync(
+                database,
+                "inventory-side-fund-opening",
+                Opening(
+                    SideAccountId,
+                    CoreLedgerTestData.FundAssetId,
+                    5m,
+                    [
+                        new OpeningBalanceLotCommand(
+                            Quantity.FromDecimal(5m),
+                            new DateOnly(2026, 8, 20),
+                            CostBasis.Known(
+                                Money.FromMinorUnits(5_000, CurrencyCode.TRY)))
+                    ],
+                    SidePortfolioId))).AssetLotIds);
+    }
+
+    private static async Task<Guid> SeedOtherHouseholdAsync(
+        SqliteTestDatabase database)
+    {
+        await using (var context = database.CreateContext())
+        {
+            context.Accounts.Add(
+                new AccountRow
+                {
+                    Id = OtherHouseholdAccountId,
+                    HouseholdId = CoreLedgerTestData.OtherHouseholdId,
+                    InstitutionId = CoreLedgerTestData.InstitutionId,
+                    Code = "OTHER_INVESTMENT",
+                    Name = "Synthetic Other Investment Account",
+                    Type = AccountType.Investment,
+                    IsActive = true,
+                    OpenedOn = new DateOnly(2026, 1, 1)
+                });
+            await context.SaveChangesAsync();
+        }
+
+        return Assert.Single(
+            (await RecordOpeningAsync(
+                database,
+                "inventory-other-household-opening",
+                new RecordOpeningBalanceCommand(
+                    CoreLedgerTestData.OtherHouseholdId,
+                    CoreLedgerTestData.OtherPortfolioId,
+                    OtherHouseholdAccountId,
+                    CoreLedgerTestData.FundAssetId,
+                    OpeningDate,
+                    Quantity.FromDecimal(7m),
+                    "SYNTHETIC-OTHER-HOUSEHOLD-OPENING",
+                    "Synthetic other-household opening source.",
+                    [
+                        new OpeningBalanceLotCommand(
+                            Quantity.FromDecimal(7m),
+                            AcquiredOn: null,
+                            CostBasis.Unknown())
+                    ]))).AssetLotIds);
+    }
+
     private static RecordOpeningBalanceCommand Opening(
         Guid accountId,
         Guid assetId,
         decimal quantity,
-        IReadOnlyList<OpeningBalanceLotCommand> lots)
+        IReadOnlyList<OpeningBalanceLotCommand> lots,
+        Guid? portfolioId = null)
         => new(
             CoreLedgerTestData.HouseholdId,
-            CoreLedgerTestData.PortfolioId,
+            portfolioId ?? CoreLedgerTestData.PortfolioId,
             accountId,
             assetId,
             OpeningDate,
@@ -660,6 +1085,257 @@ public sealed class InventoryLifecycleTests
             new EfCoreLedgerPostingStore(context),
             new EfCoreLedgerTransactionReadStore(context),
             new FixedTimeProvider(Now));
+
+    private static async Task<RecordOpeningBalanceResult> RecordOpeningAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        RecordOpeningBalanceCommand command)
+    {
+        await using var context = database.CreateContext();
+
+        return await OpeningRecorder(context).ExecuteAsync(
+            idempotencyKey,
+            command);
+    }
+
+    private static async Task<(Guid TransactionId, Guid LotId)> RecordFundPurchaseAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        decimal units,
+        decimal unitPrice,
+        long considerationMinor,
+        DateOnly executionDate)
+    {
+        await using var context = database.CreateContext();
+        var posting = new EfCoreLedgerPostingStore(context);
+        var purchase = await new RecordFundPurchaseUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                posting,
+                posting,
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(
+                idempotencyKey,
+                new RecordFundPurchaseCommand(
+                    CoreLedgerTestData.HouseholdId,
+                    CoreLedgerTestData.PortfolioId,
+                    CoreLedgerTestData.AccountId,
+                    CoreLedgerTestData.FundAssetId,
+                    CoreLedgerTestData.CashAssetId,
+                    Quantity.FromDecimal(units),
+                    UnitPrice.FromDecimal(unitPrice, CurrencyCode.TRY),
+                    Money.FromMinorUnits(considerationMinor, CurrencyCode.TRY),
+                    executionDate,
+                    ExternalReference: "SYNTHETIC-INVENTORY-FUND-BUY",
+                    Note: "Synthetic inventory fund purchase.",
+                    CashAccountId: CoreLedgerTestData.DestinationAccountId));
+
+        return (purchase.TransactionId, purchase.AssetLotId);
+    }
+
+    private static async Task<(Guid TransactionId, Guid[] PlannedLotIds)> RecordFundSaleAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        decimal units,
+        decimal unitPrice,
+        long considerationMinor,
+        DateOnly executionDate)
+    {
+        await using var context = database.CreateContext();
+        var posting = new EfCoreLedgerPostingStore(context);
+        var command = new FundSaleCommand(
+            CoreLedgerTestData.HouseholdId,
+            CoreLedgerTestData.PortfolioId,
+            CoreLedgerTestData.AccountId,
+            CoreLedgerTestData.DestinationAccountId,
+            CoreLedgerTestData.FundAssetId,
+            CoreLedgerTestData.CashAssetId,
+            Quantity.FromDecimal(units),
+            UnitPrice.FromDecimal(unitPrice, CurrencyCode.TRY),
+            Money.FromMinorUnits(considerationMinor, CurrencyCode.TRY),
+            executionDate,
+            ExternalReference: "SYNTHETIC-INVENTORY-FUND-SELL",
+            Note: "Synthetic inventory fund sale.");
+        var preview = await new PreviewFundSaleUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                new EfCoreFundLotCustodyReadStore(posting),
+                new EfCoreFundRealizedCostReadStore(context),
+                new LotAllocationService(),
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(command);
+        var sale = await new RecordFundSaleUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                posting,
+                posting,
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(
+                idempotencyKey,
+                command with
+                {
+                    ReviewedPlan = preview.Plan
+                        .Select(
+                            line => new ReviewedLotAllocation(
+                                line.AssetLotId,
+                                Quantity.FromRaw(line.ConsumedQuantityRawE8)))
+                        .ToArray(),
+                    ReviewedPlanFingerprint = preview.PlanFingerprint
+                });
+
+        return (
+            sale.TransactionId,
+            preview.Plan.Select(line => line.AssetLotId).ToArray());
+    }
+
+    private static async Task<Guid> RecordGoldPurchaseAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        Guid vaultId,
+        decimal grams,
+        int pieces,
+        long considerationMinor,
+        DateOnly executionDate)
+    {
+        await using var context = database.CreateContext();
+        var posting = new EfCoreLedgerPostingStore(context);
+
+        return (await new RecordPhysicalGoldPurchaseUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                posting,
+                posting,
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(
+                idempotencyKey,
+                new PhysicalGoldPurchaseCommand(
+                    CoreLedgerTestData.HouseholdId,
+                    CoreLedgerTestData.PortfolioId,
+                    vaultId,
+                    CoreLedgerTestData.DestinationAccountId,
+                    CoreLedgerTestData.GoldAssetId,
+                    CoreLedgerTestData.CashAssetId,
+                    Quantity.FromDecimal(grams),
+                    new Fineness(916_000),
+                    pieces,
+                    Money.FromMinorUnits(considerationMinor, CurrencyCode.TRY),
+                    executionDate,
+                    ExternalReference: "SYNTHETIC-INVENTORY-GOLD-BUY",
+                    Note: "Synthetic inventory gold purchase.")))
+            .AssetLotId;
+    }
+
+    private static async Task<Guid> RecordGoldSaleAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        Guid vaultId,
+        Guid lotId,
+        decimal grams,
+        int pieces,
+        long considerationMinor,
+        DateOnly executionDate)
+    {
+        await using var context = database.CreateContext();
+        var posting = new EfCoreLedgerPostingStore(context);
+        var command = new PhysicalGoldSaleCommand(
+            CoreLedgerTestData.HouseholdId,
+            CoreLedgerTestData.PortfolioId,
+            vaultId,
+            CoreLedgerTestData.DestinationAccountId,
+            CoreLedgerTestData.GoldAssetId,
+            CoreLedgerTestData.CashAssetId,
+            Quantity.FromDecimal(grams),
+            pieces,
+            [
+                new PhysicalGoldSelectedLot(
+                    lotId,
+                    Quantity.FromDecimal(grams),
+                    pieces)
+            ],
+            Money.FromMinorUnits(considerationMinor, CurrencyCode.TRY),
+            executionDate,
+            ExternalReference: "SYNTHETIC-INVENTORY-GOLD-SELL",
+            Note: "Synthetic inventory gold sale.");
+        var preview = await new PreviewPhysicalGoldSaleUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                new EfCorePhysicalGoldCustodyReadStore(posting),
+                new EfCorePhysicalGoldRealizedCostReadStore(context),
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(command);
+
+        return (await new RecordPhysicalGoldSaleUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                posting,
+                posting,
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(
+                idempotencyKey,
+                command with
+                {
+                    ReviewedPlanFingerprint = preview.PlanFingerprint
+                })).TransactionId;
+    }
+
+    private static async Task RecordGoldTransferAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        Guid sourceVaultId,
+        Guid destinationVaultId,
+        Guid lotId,
+        decimal grams,
+        int pieces,
+        DateOnly executionDate)
+    {
+        await using var context = database.CreateContext();
+        var posting = new EfCoreLedgerPostingStore(context);
+        var command = new PhysicalGoldTransferCommand(
+            CoreLedgerTestData.HouseholdId,
+            CoreLedgerTestData.PortfolioId,
+            sourceVaultId,
+            CoreLedgerTestData.PortfolioId,
+            destinationVaultId,
+            CoreLedgerTestData.GoldAssetId,
+            Quantity.FromDecimal(grams),
+            pieces,
+            [
+                new PhysicalGoldSelectedLot(
+                    lotId,
+                    Quantity.FromDecimal(grams),
+                    pieces)
+            ],
+            executionDate,
+            ExternalReference: "SYNTHETIC-INVENTORY-GOLD-MOVE",
+            Note: "Synthetic inventory custody transfer.");
+        var preview = await new PreviewPhysicalGoldTransferUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                new EfCorePhysicalGoldCustodyReadStore(posting),
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(command);
+        await new RecordPhysicalGoldTransferUseCase(
+                new EfCoreOpeningBalanceReferenceStore(context),
+                posting,
+                posting,
+                new FixedTimeProvider(Now))
+            .ExecuteAsync(
+                idempotencyKey,
+                command with
+                {
+                    ReviewedPlanFingerprint = preview.PlanFingerprint
+                });
+    }
+
+    private static async Task ReverseAsync(
+        SqliteTestDatabase database,
+        string idempotencyKey,
+        Guid transactionId)
+    {
+        await using var context = database.CreateContext();
+        var reversal = await new ReversePostedTransactionUseCase(
+                new EfCoreLedgerReversalStore(context),
+                new FixedTimeProvider(Now.AddMinutes(1)))
+            .ExecuteAsync(
+                idempotencyKey,
+                new ReversePostedTransactionCommand(
+                    transactionId,
+                    "Synthetic incorrect transaction."));
+        Assert.NotNull(reversal);
+    }
 
     private static async Task SeedMasterDataAsync(SqliteTestDatabase database)
     {
@@ -712,6 +1388,79 @@ public sealed class InventoryLifecycleTests
                 CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc
             });
         await context.SaveChangesAsync();
+    }
+
+    private sealed record ScopeView(
+        Guid PortfolioId,
+        string PortfolioCode,
+        string PortfolioName,
+        PortfolioStatus PortfolioStatus,
+        Guid AccountId,
+        string AccountCode,
+        string AccountName,
+        AccountType AccountType,
+        bool AccountIsActive,
+        Guid? InstitutionId,
+        string? InstitutionCode,
+        string? InstitutionName,
+        InstitutionType? InstitutionType,
+        bool? InstitutionIsActive)
+    {
+        internal static ScopeView Of(PositionInventoryItem item)
+            => new(
+                item.PortfolioId,
+                item.PortfolioCode,
+                item.PortfolioName,
+                item.PortfolioStatus,
+                item.AccountId,
+                item.AccountCode,
+                item.AccountName,
+                item.AccountType,
+                item.AccountIsActive,
+                item.InstitutionId,
+                item.InstitutionCode,
+                item.InstitutionName,
+                item.InstitutionType,
+                item.InstitutionIsActive);
+
+        internal static ScopeView Of(LotCustodyInventoryItem item)
+            => new(
+                item.PortfolioId,
+                item.PortfolioCode,
+                item.PortfolioName,
+                item.PortfolioStatus,
+                item.AccountId,
+                item.AccountCode,
+                item.AccountName,
+                item.AccountType,
+                item.AccountIsActive,
+                item.InstitutionId,
+                item.InstitutionCode,
+                item.InstitutionName,
+                item.InstitutionType,
+                item.InstitutionIsActive);
+    }
+
+    private sealed record AssetView(
+        Guid AssetId,
+        string AssetCode,
+        string AssetName,
+        AssetType AssetType,
+        AssetUnit AssetBaseUnit,
+        string? AssetBaseCurrencyCode,
+        LotTrackingMode AssetLotTrackingMode,
+        bool AssetIsActive)
+    {
+        internal static AssetView Of(PositionInventoryItem item)
+            => new(
+                item.AssetId,
+                item.AssetCode,
+                item.AssetName,
+                item.AssetType,
+                item.AssetBaseUnit,
+                item.AssetBaseCurrencyCode,
+                item.AssetLotTrackingMode,
+                item.AssetIsActive);
     }
 
     private sealed record LifecycleHistory(

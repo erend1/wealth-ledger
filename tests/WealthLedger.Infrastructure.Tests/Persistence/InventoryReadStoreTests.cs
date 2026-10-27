@@ -51,6 +51,12 @@ public sealed class InventoryReadStoreTests
         Guid.Parse("73000000-0000-0000-0000-000000000099");
     private static readonly Guid DraftEntryId =
         Guid.Parse("73100000-0000-0000-0000-000000000099");
+    private static readonly Guid DraftLotId =
+        Guid.Parse("83000000-0000-0000-0000-000000000099");
+    private static readonly Guid DraftSaleTransactionId =
+        Guid.Parse("73000000-0000-0000-0000-000000000098");
+    private static readonly Guid DraftSaleEntryId =
+        Guid.Parse("73100000-0000-0000-0000-000000000098");
 
     [Fact]
     public async Task PositionInventory_CurrentAndAsOfUseOnlyEffectivePostedEntries()
@@ -279,6 +285,52 @@ public sealed class InventoryReadStoreTests
                 CoreLedgerTestData.FundAssetId,
                 99 * 100_000_000L,
                 EntryRole.Adjustment));
+
+        // Never-posted history: a lot opened by a Draft, and a Draft
+        // disposal allocated against the Posted fund lot. Neither is effective.
+        context.AssetLots.Add(
+            new AssetLotRow
+            {
+                Id = DraftLotId,
+                AssetId = CoreLedgerTestData.FundAssetId,
+                OpeningTransactionEntryId = DraftEntryId,
+                AcquiredOn = new DateOnly(2026, 9, 4),
+                OriginalCostBasisMinor = null,
+                CostBasisCurrencyCode = null,
+                CostBasisStatus = CostBasisStatus.Unknown,
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(20)
+            });
+        context.LotEntryAllocations.Add(
+            new LotEntryAllocationRow
+            {
+                Id = Guid.Parse("84000000-0000-0000-0000-000000000099"),
+                AssetLotId = DraftLotId,
+                TransactionEntryId = DraftEntryId,
+                QuantityDeltaE8 = 99 * 100_000_000L,
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(20)
+            });
+        context.LedgerTransactions.Add(
+            CoreLedgerTestData.CreateDraftTransaction(
+                DraftSaleTransactionId,
+                TransactionType.Adjustment,
+                executionDate: new DateOnly(2026, 9, 4)));
+        context.TransactionEntries.Add(
+            CoreLedgerTestData.CreateEntry(
+                DraftSaleEntryId,
+                DraftSaleTransactionId,
+                0,
+                CoreLedgerTestData.FundAssetId,
+                -5 * 100_000_000L,
+                EntryRole.Adjustment));
+        context.LotEntryAllocations.Add(
+            new LotEntryAllocationRow
+            {
+                Id = Guid.Parse("84000000-0000-0000-0000-000000000098"),
+                AssetLotId = FundLotId,
+                TransactionEntryId = DraftSaleEntryId,
+                QuantityDeltaE8 = -5 * 100_000_000L,
+                CreatedAtUtc = CoreLedgerTestData.CreatedAtUtc.AddMinutes(21)
+            });
         await context.SaveChangesAsync();
 
         await SeedGoldAsync(context);
