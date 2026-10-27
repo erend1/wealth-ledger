@@ -171,7 +171,7 @@ public sealed record InventoryLotDescriptor(
     CostBasisStatus CostStatus,
     long? CostMinorUnits,
     string? CostCurrencyCode,
-    DateTimeOffset CreatedAtUtc,
+    long? OriginalQuantityRawE8,
     int? FinenessPpm,
     int? OriginalPieceCount,
     string? Hallmark,

@@ -1,5 +1,4 @@
 using WealthLedger.Domain.Assets;
-using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.ValueObjects;
 
 namespace WealthLedger.Application.Inventory;
@@ -19,26 +18,14 @@ public sealed class ListPositionInventoryUseCase
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        ValidateScopeIdentities(
+        await InventoryScopeValidation.EnsureScopeExistsAsync(
+            _readStore,
             query.HouseholdId,
             query.PortfolioId,
             query.AccountId,
             query.InstitutionId,
-            query.AssetId);
-
-        if (!await _readStore.HouseholdExistsAsync(
-                query.HouseholdId,
-                cancellationToken)
-            || !await _readStore.FilterScopeExistsAsync(
-                query.HouseholdId,
-                query.PortfolioId,
-                query.AccountId,
-                query.InstitutionId,
-                query.AssetId,
-                cancellationToken))
-        {
-            throw new InventoryScopeNotFoundException();
-        }
+            query.AssetId,
+            cancellationToken);
 
         var facts = await _readStore.ListPositionEntryFactsAsync(
             query.HouseholdId,
@@ -50,6 +37,7 @@ public sealed class ListPositionInventoryUseCase
             cancellationToken);
         var items = new List<PositionInventoryItem>();
 
+        // GroupBy keeps the deterministic fact order inside each group.
         foreach (var group in OrderPositionFacts(facts)
                      .GroupBy(
                          fact => new
@@ -59,7 +47,7 @@ public sealed class ListPositionInventoryUseCase
                              fact.Scope.AssetId
                          }))
         {
-            var ordered = OrderPositionFacts(group).ToArray();
+            var ordered = group.ToArray();
             var scope = ordered[0].Scope;
             long quantityRawE8 = 0;
 
@@ -95,11 +83,14 @@ public sealed class ListPositionInventoryUseCase
                 cancellationToken)
                 ?? throw new InventoryScopeNotFoundException();
 
-            if (query.InstitutionId is null
-                || exactScope.InstitutionId == query.InstitutionId)
+            if (query.InstitutionId is not null
+                && exactScope.InstitutionId != query.InstitutionId)
             {
-                items.Add(ToPositionItem(exactScope, 0, []));
+                throw new InventoryPersistenceException(
+                    "An exact inventory scope disagrees with its validated filters.");
             }
+
+            items.Add(ToPositionItem(exactScope, 0, []));
         }
 
         return new PositionInventory(
@@ -156,23 +147,6 @@ public sealed class ListPositionInventoryUseCase
             .ThenBy(fact => fact.EntrySequence)
             .ThenBy(fact => fact.EntryId);
 
-    internal static void ValidateScopeIdentities(
-        Guid householdId,
-        Guid? portfolioId,
-        Guid? accountId,
-        Guid? institutionId,
-        Guid? assetId)
-    {
-        if (householdId == Guid.Empty
-            || portfolioId == Guid.Empty
-            || accountId == Guid.Empty
-            || institutionId == Guid.Empty
-            || assetId == Guid.Empty)
-        {
-            throw new InventoryScopeNotFoundException();
-        }
-    }
-
     private static void EnsureSameScopeContext(
         InventoryScopeContext expected,
         InventoryScopeContext actual)
@@ -200,26 +174,14 @@ public sealed class ListLotInventoryUseCase
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        ListPositionInventoryUseCase.ValidateScopeIdentities(
+        await InventoryScopeValidation.EnsureScopeExistsAsync(
+            _readStore,
             query.HouseholdId,
             query.PortfolioId,
             query.AccountId,
             query.InstitutionId,
-            query.AssetId);
-
-        if (!await _readStore.HouseholdExistsAsync(
-                query.HouseholdId,
-                cancellationToken)
-            || !await _readStore.FilterScopeExistsAsync(
-                query.HouseholdId,
-                query.PortfolioId,
-                query.AccountId,
-                query.InstitutionId,
-                query.AssetId,
-                cancellationToken))
-        {
-            throw new InventoryScopeNotFoundException();
-        }
+            query.AssetId,
+            cancellationToken);
 
         var facts = await _readStore.ListLotFactsAsync(
             query.HouseholdId,
@@ -231,64 +193,67 @@ public sealed class ListLotInventoryUseCase
             .ToDictionary(
                 group => group.Key,
                 group => OrderLotAllocations(group).ToArray());
+
+        // The posting guards keep complete Posted history non-negative, so a
+        // negative current quantity is a persisted-shape fault. An as-of
+        // slice has no such guarantee: M008 and M009 check disposals and
+        // transfers against current custody only, so one may carry an
+        // earlier ExecutionDate than the acquisition or custody it consumed.
+        // Such a slice is reported with its signed quantities.
+        var completeHistory = query.AsOf is null;
         var items = new List<LotInventoryItem>();
 
-        foreach (var lot in facts.Lots
-                     .OrderBy(item => item.CreatedAtUtc)
-                     .ThenBy(item => item.AssetLotId))
+        foreach (var lot in facts.Lots.OrderBy(item => item.AssetLotId))
         {
-            if (!allocationsByLot.TryGetValue(
-                    lot.AssetLotId,
-                    out var allocations)
-                || allocations.Length == 0)
+            var allocations = allocationsByLot.GetValueOrDefault(
+                lot.AssetLotId,
+                []);
+            var originalQuantityRawE8 = RequireLineage(
+                lot,
+                allocations,
+                completeHistory);
+
+            if (allocations.Length == 0)
             {
-                // The lot did not yet exist at the requested as-of date.
+                // No effective allocation on or before the as-of date.
                 continue;
             }
 
-            var openingAllocations = allocations
-                .Where(
-                    allocation => allocation.TransactionEntryId
-                                  == lot.OpeningTransactionEntryId)
-                .ToArray();
-
-            if (openingAllocations.Length != 1
-                || openingAllocations[0].QuantityDeltaRawE8 <= 0)
-            {
-                throw new InventoryPersistenceException(
-                    "Asset-lot acquisition lineage is incomplete or ambiguous.");
-            }
-
             long globalQuantityRawE8 = 0;
+            int? globalPieceCount =
+                lot.AssetType == AssetType.PhysicalGold ? 0 : null;
 
             foreach (var allocation in allocations)
             {
                 globalQuantityRawE8 = checked(
                     globalQuantityRawE8 + allocation.QuantityDeltaRawE8);
+                globalPieceCount = AddPieceDelta(
+                    globalPieceCount,
+                    allocation);
             }
 
-            if (globalQuantityRawE8 < 0)
+            if (completeHistory
+                && (globalQuantityRawE8 < 0 || globalPieceCount < 0))
             {
                 throw new InventoryPersistenceException(
                     "Derived asset-lot quantity cannot be negative.");
             }
 
-            if (!query.IncludeExhausted && globalQuantityRawE8 == 0)
+            // Gross weight and whole pieces are independent physical facts:
+            // a lot is exhausted only when neither remains.
+            if (!query.IncludeExhausted
+                && globalQuantityRawE8 == 0
+                && globalPieceCount is null or 0)
             {
                 continue;
             }
 
-            var custody = DeriveCustody(lot, allocations);
+            var custody = DeriveCustody(lot, allocations, completeHistory);
 
             if (!MatchesRequestedCustody(query, allocations, custody))
             {
                 continue;
             }
-
-            var physicalGold = DerivePhysicalGold(
-                lot,
-                allocations,
-                globalQuantityRawE8);
 
             items.Add(
                 new LotInventoryItem(
@@ -307,7 +272,7 @@ public sealed class ListLotInventoryUseCase
                     lot.CostStatus,
                     lot.CostMinorUnits,
                     lot.CostCurrencyCode,
-                    openingAllocations[0].QuantityDeltaRawE8,
+                    originalQuantityRawE8,
                     globalQuantityRawE8,
                     custody,
                     allocations
@@ -323,7 +288,10 @@ public sealed class ListLotInventoryUseCase
                                 allocation.QuantityDeltaRawE8,
                                 allocation.PieceDelta))
                         .ToArray(),
-                    physicalGold));
+                    DerivePhysicalGold(
+                        lot,
+                        globalQuantityRawE8,
+                        globalPieceCount)));
         }
 
         return new LotInventory(
@@ -336,9 +304,32 @@ public sealed class ListLotInventoryUseCase
                 .ToArray());
     }
 
+    private static long RequireLineage(
+        InventoryLotDescriptor lot,
+        IReadOnlyList<InventoryLotAllocationFact> allocations,
+        bool completeHistory)
+    {
+        var openingAllocationCount = allocations.Count(
+            allocation => allocation.TransactionEntryId
+                          == lot.OpeningTransactionEntryId);
+
+        // Complete history must contain the acquisition itself. An as-of
+        // slice may end before a lot that was opened later.
+        if (lot.OriginalQuantityRawE8 is not > 0
+            || openingAllocationCount > 1
+            || (completeHistory && openingAllocationCount != 1))
+        {
+            throw new InventoryPersistenceException(
+                "Asset-lot acquisition lineage is incomplete or ambiguous.");
+        }
+
+        return lot.OriginalQuantityRawE8.Value;
+    }
+
     private static IReadOnlyList<LotCustodyInventoryItem> DeriveCustody(
         InventoryLotDescriptor lot,
-        IReadOnlyList<InventoryLotAllocationFact> allocations)
+        IReadOnlyList<InventoryLotAllocationFact> allocations,
+        bool completeHistory)
     {
         var result = new List<LotCustodyInventoryItem>();
 
@@ -349,12 +340,11 @@ public sealed class ListLotInventoryUseCase
                          allocation.Scope.AccountId
                      }))
         {
-            var ordered = OrderLotAllocations(group).ToArray();
-            var scope = ordered[0].Scope;
+            var scope = group.First().Scope;
             long quantityRawE8 = 0;
             int? pieceCount = lot.AssetType == AssetType.PhysicalGold ? 0 : null;
 
-            foreach (var allocation in ordered)
+            foreach (var allocation in group)
             {
                 if (allocation.Scope != scope)
                 {
@@ -364,38 +354,18 @@ public sealed class ListLotInventoryUseCase
 
                 quantityRawE8 = checked(
                     quantityRawE8 + allocation.QuantityDeltaRawE8);
-
-                if (pieceCount is not null)
-                {
-                    pieceCount = checked(
-                        pieceCount.Value
-                        + RequireGoldPieceDelta(allocation));
-                }
-                else if (allocation.PieceDelta is not null)
-                {
-                    throw new InventoryPersistenceException(
-                        "Non-physical-gold allocation contains piece movement.");
-                }
+                pieceCount = AddPieceDelta(pieceCount, allocation);
             }
 
-            if (quantityRawE8 < 0 || pieceCount is < 0)
+            if (completeHistory && (quantityRawE8 < 0 || pieceCount < 0))
             {
                 throw new InventoryPersistenceException(
                     "Derived lot custody cannot be negative.");
             }
 
-            if (quantityRawE8 == 0 && (pieceCount is null or 0))
+            if (quantityRawE8 == 0 && pieceCount is null or 0)
             {
                 continue;
-            }
-
-            decimal? fineWeightGrams = null;
-
-            if (lot.AssetType == AssetType.PhysicalGold)
-            {
-                fineWeightGrams = DeriveFineWeight(
-                    quantityRawE8,
-                    RequireFinenessPpm(lot));
             }
 
             result.Add(
@@ -416,7 +386,11 @@ public sealed class ListLotInventoryUseCase
                     scope.InstitutionIsActive,
                     quantityRawE8,
                     pieceCount,
-                    fineWeightGrams));
+                    pieceCount is null
+                        ? null
+                        : DeriveFineWeight(
+                            quantityRawE8,
+                            RequireFinenessPpm(lot))));
         }
 
         return result
@@ -429,14 +403,14 @@ public sealed class ListLotInventoryUseCase
 
     private static PhysicalGoldLotInventoryDetail? DerivePhysicalGold(
         InventoryLotDescriptor lot,
-        IReadOnlyList<InventoryLotAllocationFact> allocations,
-        long globalQuantityRawE8)
+        long globalQuantityRawE8,
+        int? globalPieceCount)
     {
-        if (lot.AssetType != AssetType.PhysicalGold)
+        // Only physical-gold lots carry a piece count (see AddPieceDelta).
+        if (globalPieceCount is not int pieceCount)
         {
             if (lot.FinenessPpm is not null
-                || lot.OriginalPieceCount is not null
-                || allocations.Any(allocation => allocation.PieceDelta is not null))
+                || lot.OriginalPieceCount is not null)
             {
                 throw new InventoryPersistenceException(
                     "Non-physical-gold lot contains physical-gold detail.");
@@ -449,30 +423,22 @@ public sealed class ListLotInventoryUseCase
         var originalPieceCount = lot.OriginalPieceCount
             ?? throw new InventoryPersistenceException(
                 "Physical-gold lot is missing original piece evidence.");
-        var globalPieceCount = 0;
-
-        foreach (var allocation in allocations)
-        {
-            globalPieceCount = checked(
-                globalPieceCount + RequireGoldPieceDelta(allocation));
-        }
-
-        if (globalPieceCount < 0)
-        {
-            throw new InventoryPersistenceException(
-                "Derived physical-gold piece count cannot be negative.");
-        }
 
         return new PhysicalGoldLotInventoryDetail(
             finenessPpm,
             originalPieceCount,
-            globalPieceCount,
+            pieceCount,
             DeriveFineWeight(globalQuantityRawE8, finenessPpm),
             lot.Hallmark,
             lot.CertificateReference,
             lot.Note);
     }
 
+    // Exhaustion is judged at the requested scope. Without a custody filter
+    // the scope is the household, so a lot is exhausted when nothing remains
+    // globally. With a filter, a lot is held there only through a non-empty
+    // custody row; IncludeExhausted also keeps lots that merely have history
+    // in that scope.
     private static bool MatchesRequestedCustody(
         ListLotInventoryQuery query,
         IReadOnlyList<InventoryLotAllocationFact> allocations,
@@ -506,11 +472,24 @@ public sealed class ListLotInventoryUseCase
                               == query.InstitutionId));
     }
 
-    private static int RequireGoldPieceDelta(
+    private static int? AddPieceDelta(
+        int? pieceCount,
         InventoryLotAllocationFact allocation)
-        => allocation.PieceDelta
-           ?? throw new InventoryPersistenceException(
-               "Physical-gold allocation is missing exact piece movement.");
+    {
+        if (pieceCount is not int count)
+        {
+            return allocation.PieceDelta is null
+                ? null
+                : throw new InventoryPersistenceException(
+                    "Non-physical-gold allocation contains piece movement.");
+        }
+
+        return checked(
+            count
+            + (allocation.PieceDelta
+               ?? throw new InventoryPersistenceException(
+                   "Physical-gold allocation is missing exact piece movement.")));
+    }
 
     private static int RequireFinenessPpm(InventoryLotDescriptor lot)
     {
@@ -524,22 +503,15 @@ public sealed class ListLotInventoryUseCase
         return ppm;
     }
 
+    // Same expression order as M009 custody and sale planning, so equal facts
+    // project the identical decimal value and scale. Signed, because an as-of
+    // custody slice may be negative.
     private static decimal DeriveFineWeight(
         long grossQuantityRawE8,
         int finenessPpm)
-    {
-        if (grossQuantityRawE8 < 0)
-        {
-            throw new InventoryPersistenceException(
-                "Physical-gold gross quantity cannot be negative.");
-        }
-
-        // Same expression order as M009 custody and sale planning, so equal
-        // facts project the identical decimal value and scale.
-        return checked((decimal)grossQuantityRawE8 * finenessPpm)
-               / Quantity.Scale
-               / Fineness.MaximumPpm;
-    }
+        => checked((decimal)grossQuantityRawE8 * finenessPpm)
+           / Quantity.Scale
+           / Fineness.MaximumPpm;
 
     private static IOrderedEnumerable<InventoryLotAllocationFact>
         OrderLotAllocations(IEnumerable<InventoryLotAllocationFact> allocations)
@@ -549,4 +521,40 @@ public sealed class ListLotInventoryUseCase
             .ThenBy(allocation => allocation.TransactionId)
             .ThenBy(allocation => allocation.EntrySequence)
             .ThenBy(allocation => allocation.AllocationId);
+}
+
+internal static class InventoryScopeValidation
+{
+    internal static async Task EnsureScopeExistsAsync(
+        IInventoryReadStore readStore,
+        Guid householdId,
+        Guid? portfolioId,
+        Guid? accountId,
+        Guid? institutionId,
+        Guid? assetId,
+        CancellationToken cancellationToken)
+    {
+        if (householdId == Guid.Empty
+            || portfolioId == Guid.Empty
+            || accountId == Guid.Empty
+            || institutionId == Guid.Empty
+            || assetId == Guid.Empty)
+        {
+            throw new InventoryScopeNotFoundException();
+        }
+
+        if (!await readStore.HouseholdExistsAsync(
+                householdId,
+                cancellationToken)
+            || !await readStore.FilterScopeExistsAsync(
+                householdId,
+                portfolioId,
+                accountId,
+                institutionId,
+                assetId,
+                cancellationToken))
+        {
+            throw new InventoryScopeNotFoundException();
+        }
+    }
 }

@@ -87,7 +87,7 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
         Guid assetId,
         CancellationToken cancellationToken = default)
     {
-        var rows = await (
+        var row = await (
                 from portfolio in _dbContext.Portfolios.AsNoTracking()
                 join account in _dbContext.Accounts.AsNoTracking()
                     on portfolio.HouseholdId equals account.HouseholdId
@@ -136,21 +136,12 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
                     AssetLotTrackingMode = asset.LotTrackingMode,
                     AssetIsActive = asset.IsActive
                 })
-            .Take(2)
-            .ToListAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (rows.Count == 0)
+        if (row is null)
         {
             return null;
         }
-
-        if (rows.Count != 1)
-        {
-            throw new InventoryPersistenceException(
-                "An exact inventory scope projected ambiguously.");
-        }
-
-        var row = rows[0];
 
         return new InventoryScopeContext(
             row.PortfolioId,
@@ -296,6 +287,9 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
         DateOnly? asOf,
         CancellationToken cancellationToken = default)
     {
+        // A lot is immutable lineage, so every Posted lot of the household is
+        // read regardless of asOf. The as-of bound applies to allocations: a
+        // backdated disposal can precede the opening of the lot it consumed.
         var lotQuery =
             from lot in _dbContext.AssetLots.AsNoTracking()
             join asset in _dbContext.Assets.AsNoTracking()
@@ -304,6 +298,19 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
                 on lot.OpeningTransactionEntryId equals openingEntry.Id
             join openingTransaction in _dbContext.LedgerTransactions.AsNoTracking()
                 on openingEntry.TransactionId equals openingTransaction.Id
+            join openingAllocation in _dbContext.LotEntryAllocations.AsNoTracking()
+                on new
+                {
+                    AssetLotId = lot.Id,
+                    TransactionEntryId = lot.OpeningTransactionEntryId
+                }
+                equals new
+                {
+                    openingAllocation.AssetLotId,
+                    openingAllocation.TransactionEntryId
+                }
+                into openingAllocations
+            from openingAllocation in openingAllocations.DefaultIfEmpty()
             join goldDetail in _dbContext.PhysicalGoldLotDetails.AsNoTracking()
                 on lot.Id equals goldDetail.AssetLotId
                 into goldDetails
@@ -312,7 +319,6 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
                   && openingTransaction.Status == TransactionStatus.Posted
                   && openingTransaction.ExecutionDate != null
                   && (assetId == null || asset.Id == assetId)
-                  && (asOf == null || openingTransaction.ExecutionDate <= asOf)
             select new
             {
                 AssetLotId = lot.Id,
@@ -330,7 +336,9 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
                 CostStatus = lot.CostBasisStatus,
                 CostMinorUnits = lot.OriginalCostBasisMinor,
                 lot.CostBasisCurrencyCode,
-                lot.CreatedAtUtc,
+                OriginalQuantityRawE8 = openingAllocation == null
+                    ? (long?)null
+                    : openingAllocation.QuantityDeltaE8,
                 FinenessPpm = goldDetail == null
                     ? (int?)null
                     : goldDetail.ActualFinenessPpm,
@@ -350,11 +358,16 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
             return new InventoryLotFactSet([], []);
         }
 
-        var lotIds = lotRows.Select(row => row.AssetLotId).ToArray();
+        // The same lot predicate as above, joined rather than sent as an id
+        // list, so the command keeps a fixed shape and parameter count.
         var allocationQuery =
             from allocation in _dbContext.LotEntryAllocations.AsNoTracking()
             join lot in _dbContext.AssetLots.AsNoTracking()
                 on allocation.AssetLotId equals lot.Id
+            join openingEntry in _dbContext.TransactionEntries.AsNoTracking()
+                on lot.OpeningTransactionEntryId equals openingEntry.Id
+            join openingTransaction in _dbContext.LedgerTransactions.AsNoTracking()
+                on openingEntry.TransactionId equals openingTransaction.Id
             join entry in _dbContext.TransactionEntries.AsNoTracking()
                 on allocation.TransactionEntryId equals entry.Id
             join transaction in _dbContext.LedgerTransactions.AsNoTracking()
@@ -374,7 +387,10 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
                 on allocation.Id equals pieceDetail.LotEntryAllocationId
                 into pieceDetails
             from pieceDetail in pieceDetails.DefaultIfEmpty()
-            where lotIds.Contains(allocation.AssetLotId)
+            where openingTransaction.HouseholdId == householdId
+                  && openingTransaction.Status == TransactionStatus.Posted
+                  && openingTransaction.ExecutionDate != null
+                  && (assetId == null || lot.AssetId == assetId)
                   && transaction.HouseholdId == householdId
                   && transaction.Status == TransactionStatus.Posted
                   && transaction.ExecutionDate != null
@@ -449,7 +465,7 @@ public sealed class EfCoreInventoryReadStore : IInventoryReadStore
                     row.CostStatus,
                     row.CostMinorUnits,
                     row.CostBasisCurrencyCode,
-                    ToDateTimeOffset(row.CreatedAtUtc),
+                    row.OriginalQuantityRawE8,
                     row.FinenessPpm,
                     row.OriginalPieceCount,
                     row.Hallmark,

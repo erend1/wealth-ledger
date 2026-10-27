@@ -10,16 +10,26 @@ namespace WealthLedger.Application.Tests.Inventory;
 
 public sealed class InventoryUseCaseTests
 {
+    private const long Unit = 100_000_000L;
+
     private static readonly Guid HouseholdId =
         Guid.Parse("10000000-0000-0000-0000-000000000001");
     private static readonly Guid PortfolioId =
         Guid.Parse("40000000-0000-0000-0000-000000000001");
+    private static readonly Guid SecondPortfolioId =
+        Guid.Parse("40000000-0000-0000-0000-000000000002");
     private static readonly Guid AccountId =
         Guid.Parse("50000000-0000-0000-0000-000000000001");
+    private static readonly Guid SecondAccountId =
+        Guid.Parse("50000000-0000-0000-0000-000000000002");
     private static readonly Guid InstitutionId =
         Guid.Parse("30000000-0000-0000-0000-000000000001");
+    private static readonly Guid SecondInstitutionId =
+        Guid.Parse("30000000-0000-0000-0000-000000000002");
     private static readonly Guid AssetId =
         Guid.Parse("60000000-0000-0000-0000-000000000001");
+    private static readonly Guid GoldAssetId =
+        Guid.Parse("60000000-0000-0000-0000-000000000009");
 
     [Fact]
     public async Task PositionInventory_DerivesAsOfAndPreservesExactZero()
@@ -100,6 +110,27 @@ public sealed class InventoryUseCaseTests
     }
 
     [Fact]
+    public async Task PositionInventory_ExactScopeDisagreeingWithFiltersFailsClosed()
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var store = new FakeInventoryReadStore
+        {
+            ExactScope = scope with { InstitutionId = SecondInstitutionId }
+        };
+
+        // A validated scope must never come back as an empty inventory.
+        await Assert.ThrowsAsync<InventoryPersistenceException>(
+            () => new ListPositionInventoryUseCase(store).ExecuteAsync(
+                new ListPositionInventoryQuery(
+                    HouseholdId,
+                    PortfolioId,
+                    AccountId,
+                    InstitutionId,
+                    AssetId,
+                    IncludeZero: true)));
+    }
+
+    [Fact]
     public async Task PositionInventory_CheckedAggregationRejectsOverflow()
     {
         var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
@@ -120,40 +151,17 @@ public sealed class InventoryUseCaseTests
     [Fact]
     public async Task LotInventory_DerivesCustodyExhaustionAndPhysicalGoldIndependently()
     {
-        var goldAssetId = Guid.Parse("60000000-0000-0000-0000-000000000009");
         var goldScope = Scope(
-            goldAssetId,
+            GoldAssetId,
             "GOLD",
             AssetType.PhysicalGold,
             AssetUnit.GrossGram);
         var lotId = Guid.Parse("80000000-0000-0000-0000-000000000001");
         var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000001");
-        var descriptor = new InventoryLotDescriptor(
-            lotId,
-            Guid.Parse("70000000-0000-0000-0000-000000000001"),
-            openingEntryId,
-            goldAssetId,
-            "GOLD",
-            "Physical Gold",
-            AssetType.PhysicalGold,
-            AssetUnit.GrossGram,
-            "TRY",
-            LotTrackingMode.Required,
-            true,
-            new DateOnly(2026, 1, 1),
-            CostBasisStatus.Known,
-            12_000,
-            "TRY",
-            new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero),
-            916_000,
-            2,
-            "TEST",
-            "CERT",
-            null);
         var store = new FakeInventoryReadStore
         {
             LotFacts = new InventoryLotFactSet(
-                [descriptor],
+                [GoldLot(lotId, openingEntryId, 20 * Unit, pieceCount: 2)],
                 [
                     Allocation(
                         goldScope,
@@ -161,37 +169,95 @@ public sealed class InventoryUseCaseTests
                         openingEntryId,
                         1,
                         new DateOnly(2026, 1, 1),
-                        20 * 100_000_000L,
-                        2),
+                        20 * Unit,
+                        2,
+                        TransactionType.OpeningBalance),
                     Allocation(
                         goldScope,
                         lotId,
                         Guid.Parse("81000000-0000-0000-0000-000000000002"),
                         2,
                         new DateOnly(2026, 2, 1),
-                        -5 * 100_000_000L,
-                        -1)
+                        -5 * Unit,
+                        -1,
+                        TransactionType.Sell)
                 ])
         };
         var result = await new ListLotInventoryUseCase(store)
             .ExecuteAsync(new ListLotInventoryQuery(HouseholdId));
 
         var item = Assert.Single(result.Items);
-        Assert.Equal(20 * 100_000_000L, item.OriginalQuantityRawE8);
-        Assert.Equal(15 * 100_000_000L, item.GlobalQuantityRawE8);
+        Assert.Equal(20 * Unit, item.OriginalQuantityRawE8);
+        Assert.Equal(15 * Unit, item.GlobalQuantityRawE8);
         var physical = Assert.IsType<PhysicalGoldLotInventoryDetail>(
             item.PhysicalGold);
         Assert.Equal(1, physical.GlobalPieceCount);
         Assert.Equal(13.74m, physical.GlobalFineWeightGrams);
         // Same value and decimal scale as the M009 Domain derivation.
         var m009FineWeight = new PhysicalGoldLotDetail(new Fineness(916_000), 2)
-            .CalculateFineWeightGrams(Quantity.FromRaw(15 * 100_000_000L));
+            .CalculateFineWeightGrams(Quantity.FromRaw(15 * Unit));
         Assert.Equal(
             m009FineWeight.ToString(CultureInfo.InvariantCulture),
             physical.GlobalFineWeightGrams.ToString(CultureInfo.InvariantCulture));
         var custody = Assert.Single(item.Custody);
         Assert.Equal(1, custody.PieceCount);
         Assert.Equal(13.74m, custody.FineWeightGrams);
+    }
+
+    [Fact]
+    public async Task LotInventory_PhysicalGoldPiecesKeepZeroGrossLotHeld()
+    {
+        // M009 bounds gross weight and pieces independently, so a sale of
+        // all the weight with fewer pieces leaves whole pieces at zero grams.
+        var goldScope = Scope(
+            GoldAssetId,
+            "GOLD",
+            AssetType.PhysicalGold,
+            AssetUnit.GrossGram);
+        var lotId = Guid.Parse("80000000-0000-0000-0000-000000000009");
+        var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000070");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [GoldLot(lotId, openingEntryId, 20 * Unit, pieceCount: 2)],
+                [
+                    Allocation(
+                        goldScope,
+                        lotId,
+                        openingEntryId,
+                        70,
+                        new DateOnly(2026, 1, 1),
+                        20 * Unit,
+                        2,
+                        TransactionType.Buy),
+                    Allocation(
+                        goldScope,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000071"),
+                        71,
+                        new DateOnly(2026, 2, 1),
+                        -20 * Unit,
+                        -1,
+                        TransactionType.Sell)
+                ])
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var current = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId));
+        var heldInAccount = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, AccountId: AccountId));
+
+        var lot = Assert.Single(current.Items);
+        Assert.Equal(0, lot.GlobalQuantityRawE8);
+        var gold = Assert.IsType<PhysicalGoldLotInventoryDetail>(
+            lot.PhysicalGold);
+        Assert.Equal(1, gold.GlobalPieceCount);
+        Assert.Equal(0m, gold.GlobalFineWeightGrams);
+        var custody = Assert.Single(lot.Custody);
+        Assert.Equal(0, custody.QuantityRawE8);
+        Assert.Equal(1, custody.PieceCount);
+        Assert.Equal(lotId, Assert.Single(heldInAccount.Items).AssetLotId);
     }
 
     [Fact]
@@ -203,7 +269,13 @@ public sealed class InventoryUseCaseTests
         var store = new FakeInventoryReadStore
         {
             LotFacts = new InventoryLotFactSet(
-                [FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1))],
+                [
+                    FundLot(
+                        lotId,
+                        openingEntryId,
+                        new DateOnly(2026, 1, 1),
+                        long.MaxValue)
+                ],
                 [
                     Allocation(
                         scope,
@@ -212,7 +284,8 @@ public sealed class InventoryUseCaseTests
                         20,
                         new DateOnly(2026, 1, 1),
                         long.MaxValue,
-                        null),
+                        null,
+                        TransactionType.OpeningBalance),
                     Allocation(
                         scope,
                         lotId,
@@ -220,7 +293,8 @@ public sealed class InventoryUseCaseTests
                         21,
                         new DateOnly(2026, 1, 2),
                         1,
-                        null)
+                        null,
+                        TransactionType.Adjustment)
                 ])
         };
 
@@ -238,7 +312,7 @@ public sealed class InventoryUseCaseTests
         var store = new FakeInventoryReadStore
         {
             LotFacts = new InventoryLotFactSet(
-                [FundLot(lotId, openingEntryId, new DateOnly(2026, 3, 1))],
+                [FundLot(lotId, openingEntryId, new DateOnly(2026, 3, 1), 100)],
                 [
                     Allocation(
                         scope,
@@ -247,7 +321,8 @@ public sealed class InventoryUseCaseTests
                         30,
                         new DateOnly(2026, 3, 1),
                         100,
-                        null)
+                        null,
+                        TransactionType.OpeningBalance)
                 ])
         };
         var useCase = new ListLotInventoryUseCase(store);
@@ -269,17 +344,202 @@ public sealed class InventoryUseCaseTests
     }
 
     [Fact]
+    public async Task LotInventory_AsOfReportsSignedCustodyFromBackdatedSale()
+    {
+        // M009 checks a sale against current custody only, so a sale from
+        // account B may be dated before the transfer that brought the gold.
+        var source = Scope(
+            GoldAssetId,
+            "GOLD",
+            AssetType.PhysicalGold,
+            AssetUnit.GrossGram);
+        var destination = source with
+        {
+            AccountId = SecondAccountId,
+            AccountCode = "VAULT_B",
+            AccountName = "Vault B"
+        };
+        var lotId = Guid.Parse("80000000-0000-0000-0000-00000000000a");
+        var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000080");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [GoldLot(lotId, openingEntryId, 20 * Unit, pieceCount: 2)],
+                [
+                    Allocation(
+                        source,
+                        lotId,
+                        openingEntryId,
+                        80,
+                        new DateOnly(2026, 9, 1),
+                        20 * Unit,
+                        2,
+                        TransactionType.Buy),
+                    Allocation(
+                        source,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000081"),
+                        81,
+                        new DateOnly(2026, 9, 10),
+                        -20 * Unit,
+                        -2,
+                        TransactionType.Transfer),
+                    Allocation(
+                        destination,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000082"),
+                        82,
+                        new DateOnly(2026, 9, 10),
+                        20 * Unit,
+                        2,
+                        TransactionType.Transfer),
+                    Allocation(
+                        destination,
+                        lotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000083"),
+                        83,
+                        new DateOnly(2026, 9, 5),
+                        -10 * Unit,
+                        -1,
+                        TransactionType.Sell)
+                ])
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var asOf = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AccountId: AccountId,
+                AsOf: new DateOnly(2026, 9, 7)));
+        var current = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId));
+
+        var slice = Assert.Single(asOf.Items);
+        Assert.Equal(10 * Unit, slice.GlobalQuantityRawE8);
+        Assert.Equal(1, slice.PhysicalGold!.GlobalPieceCount);
+        var heldInSource = Assert.Single(
+            slice.Custody,
+            item => item.AccountId == AccountId);
+        Assert.Equal(20 * Unit, heldInSource.QuantityRawE8);
+        Assert.Equal(2, heldInSource.PieceCount);
+        var overdrawn = Assert.Single(
+            slice.Custody,
+            item => item.AccountId == SecondAccountId);
+        Assert.Equal(-10 * Unit, overdrawn.QuantityRawE8);
+        Assert.Equal(-1, overdrawn.PieceCount);
+        Assert.Equal(-9.16m, overdrawn.FineWeightGrams);
+        var held = Assert.Single(Assert.Single(current.Items).Custody);
+        Assert.Equal(SecondAccountId, held.AccountId);
+        Assert.Equal(10 * Unit, held.QuantityRawE8);
+        Assert.Equal(1, held.PieceCount);
+    }
+
+    [Fact]
+    public async Task LotInventory_AsOfIncludesBackdatedDisposalOfLaterLot()
+    {
+        // M008 plans a sale over current custody, so a sale dated 09-03 can
+        // consume a lot that was first acquired on 09-05.
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var earlierLotId = Guid.Parse("80000000-0000-0000-0000-00000000000b");
+        var earlierEntryId = Guid.Parse("81000000-0000-0000-0000-000000000090");
+        var laterLotId = Guid.Parse("80000000-0000-0000-0000-00000000000c");
+        var laterEntryId = Guid.Parse("81000000-0000-0000-0000-000000000091");
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [
+                    FundLot(
+                        earlierLotId,
+                        earlierEntryId,
+                        new DateOnly(2026, 9, 1),
+                        10 * Unit),
+                    FundLot(
+                        laterLotId,
+                        laterEntryId,
+                        new DateOnly(2026, 9, 5),
+                        20 * Unit)
+                ],
+                [
+                    Allocation(
+                        scope,
+                        earlierLotId,
+                        earlierEntryId,
+                        90,
+                        new DateOnly(2026, 9, 1),
+                        10 * Unit,
+                        null,
+                        TransactionType.OpeningBalance),
+                    Allocation(
+                        scope,
+                        laterLotId,
+                        laterEntryId,
+                        91,
+                        new DateOnly(2026, 9, 5),
+                        20 * Unit,
+                        null,
+                        TransactionType.Buy),
+                    Allocation(
+                        scope,
+                        earlierLotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000092"),
+                        92,
+                        new DateOnly(2026, 9, 3),
+                        -10 * Unit,
+                        null,
+                        TransactionType.Sell),
+                    Allocation(
+                        scope,
+                        laterLotId,
+                        Guid.Parse("81000000-0000-0000-0000-000000000092"),
+                        93,
+                        new DateOnly(2026, 9, 3),
+                        -5 * Unit,
+                        null,
+                        TransactionType.Sell)
+                ])
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var asOf = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AsOf: new DateOnly(2026, 9, 4)));
+        var asOfWithExhausted = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                AsOf: new DateOnly(2026, 9, 4),
+                IncludeExhausted: true));
+        var current = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId));
+
+        // The slice keeps the disposal, so lots still sum to the position.
+        var later = Assert.Single(asOf.Items);
+        Assert.Equal(laterLotId, later.AssetLotId);
+        Assert.Equal(20 * Unit, later.OriginalQuantityRawE8);
+        Assert.Equal(-5 * Unit, later.GlobalQuantityRawE8);
+        Assert.Equal(-5 * Unit, Assert.Single(later.Custody).QuantityRawE8);
+        Assert.Equal(
+            -5 * Unit,
+            asOfWithExhausted.Items.Sum(item => item.GlobalQuantityRawE8));
+        Assert.Equal(2, asOfWithExhausted.Items.Count);
+        Assert.Equal(
+            15 * Unit,
+            Assert.Single(current.Items).GlobalQuantityRawE8);
+    }
+
+    [Fact]
     public async Task LotInventory_CustodyFiltersFollowDerivedHoldings()
     {
-        var secondAccountId = Guid.Parse("50000000-0000-0000-0000-000000000002");
-        var secondInstitutionId = Guid.Parse("30000000-0000-0000-0000-000000000002");
         var source = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
         var destination = source with
         {
-            AccountId = secondAccountId,
+            PortfolioId = SecondPortfolioId,
+            PortfolioCode = "SIDE",
+            PortfolioName = "Side Portfolio",
+            AccountId = SecondAccountId,
             AccountCode = "SECOND",
             AccountName = "Second Account",
-            InstitutionId = secondInstitutionId,
+            InstitutionId = SecondInstitutionId,
             InstitutionCode = "BANK",
             InstitutionName = "Bank",
             InstitutionType = InstitutionType.Bank
@@ -289,7 +549,7 @@ public sealed class InventoryUseCaseTests
         var store = new FakeInventoryReadStore
         {
             LotFacts = new InventoryLotFactSet(
-                [FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1))],
+                [FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1), 100)],
                 [
                     Allocation(
                         source,
@@ -298,7 +558,8 @@ public sealed class InventoryUseCaseTests
                         40,
                         new DateOnly(2026, 1, 1),
                         100,
-                        null),
+                        null,
+                        TransactionType.OpeningBalance),
                     Allocation(
                         source,
                         lotId,
@@ -306,7 +567,8 @@ public sealed class InventoryUseCaseTests
                         41,
                         new DateOnly(2026, 2, 1),
                         -100,
-                        null),
+                        null,
+                        TransactionType.Transfer),
                     Allocation(
                         destination,
                         lotId,
@@ -314,7 +576,8 @@ public sealed class InventoryUseCaseTests
                         42,
                         new DateOnly(2026, 2, 1),
                         100,
-                        null)
+                        null,
+                        TransactionType.Transfer)
                 ])
         };
         var useCase = new ListLotInventoryUseCase(store);
@@ -331,7 +594,13 @@ public sealed class InventoryUseCaseTests
         var destinationHeld = await useCase.ExecuteAsync(
             new ListLotInventoryQuery(
                 HouseholdId,
-                AccountId: secondAccountId));
+                AccountId: SecondAccountId));
+        var sourcePortfolio = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, PortfolioId: PortfolioId));
+        var destinationPortfolio = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(
+                HouseholdId,
+                PortfolioId: SecondPortfolioId));
         var sourceInstitution = await useCase.ExecuteAsync(
             new ListLotInventoryQuery(
                 HouseholdId,
@@ -339,17 +608,20 @@ public sealed class InventoryUseCaseTests
         var destinationInstitution = await useCase.ExecuteAsync(
             new ListLotInventoryQuery(
                 HouseholdId,
-                InstitutionId: secondInstitutionId));
+                InstitutionId: SecondInstitutionId));
 
         var lot = Assert.Single(all.Items);
         Assert.Equal(100, lot.GlobalQuantityRawE8);
         var custody = Assert.Single(lot.Custody);
-        Assert.Equal(secondAccountId, custody.AccountId);
-        Assert.Equal(secondInstitutionId, custody.InstitutionId);
+        Assert.Equal(SecondPortfolioId, custody.PortfolioId);
+        Assert.Equal(SecondAccountId, custody.AccountId);
+        Assert.Equal(SecondInstitutionId, custody.InstitutionId);
         Assert.Equal(100, custody.QuantityRawE8);
         Assert.Empty(sourceHeld.Items);
         Assert.Equal(3, Assert.Single(sourceHistory.Items).Allocations.Count);
         Assert.Single(destinationHeld.Items);
+        Assert.Empty(sourcePortfolio.Items);
+        Assert.Single(destinationPortfolio.Items);
         Assert.Empty(sourceInstitution.Items);
         Assert.Single(destinationInstitution.Items);
     }
@@ -360,12 +632,12 @@ public sealed class InventoryUseCaseTests
         var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
         var otherAccount = scope with
         {
-            AccountId = Guid.Parse("50000000-0000-0000-0000-000000000002"),
+            AccountId = SecondAccountId,
             AccountCode = "SECOND"
         };
         var lotId = Guid.Parse("80000000-0000-0000-0000-000000000006");
         var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000050");
-        var lot = FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1));
+        var lot = FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1), 100);
         var opening = Allocation(
             scope,
             lotId,
@@ -373,8 +645,19 @@ public sealed class InventoryUseCaseTests
             50,
             new DateOnly(2026, 1, 1),
             100,
-            null);
+            null,
+            TransactionType.OpeningBalance);
 
+        var missingOriginalQuantity = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet(
+                [lot with { OriginalQuantityRawE8 = null }],
+                [opening])
+        };
+        var missingAllocations = new FakeInventoryReadStore
+        {
+            LotFacts = new InventoryLotFactSet([lot], [])
+        };
         var missingOpening = new FakeInventoryReadStore
         {
             LotFacts = new InventoryLotFactSet(
@@ -387,7 +670,8 @@ public sealed class InventoryUseCaseTests
                         51,
                         new DateOnly(2026, 1, 1),
                         100,
-                        null)
+                        null,
+                        TransactionType.Adjustment)
                 ])
         };
         var negativeCustody = new FakeInventoryReadStore
@@ -403,7 +687,8 @@ public sealed class InventoryUseCaseTests
                         52,
                         new DateOnly(2026, 2, 1),
                         -40,
-                        null)
+                        null,
+                        TransactionType.Sell)
                 ])
         };
         var pieceMovementOnFund = new FakeInventoryReadStore
@@ -413,8 +698,12 @@ public sealed class InventoryUseCaseTests
                 [opening with { PieceDelta = 1 }])
         };
 
+        // Complete history is guarded at posting time, so each of these is a
+        // persisted-shape fault rather than a derivable state.
         foreach (var store in new[]
                  {
+                     missingOriginalQuantity,
+                     missingAllocations,
                      missingOpening,
                      negativeCustody,
                      pieceMovementOnFund
@@ -424,6 +713,13 @@ public sealed class InventoryUseCaseTests
                 () => new ListLotInventoryUseCase(store)
                     .ExecuteAsync(new ListLotInventoryQuery(HouseholdId)));
         }
+
+        await Assert.ThrowsAsync<InventoryPersistenceException>(
+            () => new ListLotInventoryUseCase(missingOriginalQuantity)
+                .ExecuteAsync(
+                    new ListLotInventoryQuery(
+                        HouseholdId,
+                        AsOf: new DateOnly(2026, 6, 30))));
     }
 
     [Fact]
@@ -442,13 +738,15 @@ public sealed class InventoryUseCaseTests
                         knownLotId,
                         knownEntryId,
                         new DateOnly(2026, 1, 1),
+                        100,
                         CostBasisStatus.Known,
                         12_345,
                         "TRY"),
                     FundLot(
                         unknownLotId,
                         unknownEntryId,
-                        new DateOnly(2026, 1, 2))
+                        new DateOnly(2026, 1, 2),
+                        200)
                 ],
                 [
                     Allocation(
@@ -458,7 +756,8 @@ public sealed class InventoryUseCaseTests
                         60,
                         new DateOnly(2026, 1, 1),
                         100,
-                        null),
+                        null,
+                        TransactionType.OpeningBalance),
                     Allocation(
                         scope,
                         unknownLotId,
@@ -466,7 +765,8 @@ public sealed class InventoryUseCaseTests
                         61,
                         new DateOnly(2026, 1, 2),
                         200,
-                        null)
+                        null,
+                        TransactionType.OpeningBalance)
                 ])
         };
 
@@ -493,32 +793,10 @@ public sealed class InventoryUseCaseTests
         var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
         var lotId = Guid.Parse("80000000-0000-0000-0000-000000000002");
         var openingEntryId = Guid.Parse("81000000-0000-0000-0000-000000000010");
-        var descriptor = new InventoryLotDescriptor(
-            lotId,
-            Guid.Parse("70000000-0000-0000-0000-000000000010"),
-            openingEntryId,
-            AssetId,
-            "FUND_A",
-            "Fund A",
-            AssetType.Fund,
-            AssetUnit.FundUnit,
-            "TRY",
-            LotTrackingMode.Required,
-            true,
-            new DateOnly(2026, 1, 1),
-            CostBasisStatus.Unknown,
-            null,
-            null,
-            new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero),
-            null,
-            null,
-            null,
-            null,
-            null);
         var store = new FakeInventoryReadStore
         {
             LotFacts = new InventoryLotFactSet(
-                [descriptor],
+                [FundLot(lotId, openingEntryId, new DateOnly(2026, 1, 1), 100)],
                 [
                     Allocation(
                         scope,
@@ -527,7 +805,8 @@ public sealed class InventoryUseCaseTests
                         10,
                         new DateOnly(2026, 1, 1),
                         100,
-                        null),
+                        null,
+                        TransactionType.OpeningBalance),
                     Allocation(
                         scope,
                         lotId,
@@ -535,7 +814,8 @@ public sealed class InventoryUseCaseTests
                         11,
                         new DateOnly(2026, 2, 1),
                         -100,
-                        null)
+                        null,
+                        TransactionType.Sell)
                 ])
         };
         var useCase = new ListLotInventoryUseCase(store);
@@ -588,6 +868,7 @@ public sealed class InventoryUseCaseTests
         Guid lotId,
         Guid openingEntryId,
         DateOnly acquiredOn,
+        long? originalQuantityRawE8,
         CostBasisStatus costStatus = CostBasisStatus.Unknown,
         long? costMinorUnits = null,
         string? costCurrencyCode = null)
@@ -607,18 +888,39 @@ public sealed class InventoryUseCaseTests
             costStatus,
             costMinorUnits,
             costCurrencyCode,
-            new DateTimeOffset(
-                acquiredOn.Year,
-                acquiredOn.Month,
-                acquiredOn.Day,
-                8,
-                0,
-                0,
-                TimeSpan.Zero),
+            originalQuantityRawE8,
             null,
             null,
             null,
             null,
+            null);
+
+    private static InventoryLotDescriptor GoldLot(
+        Guid lotId,
+        Guid openingEntryId,
+        long originalQuantityRawE8,
+        int pieceCount)
+        => new(
+            lotId,
+            Guid.Parse("70000000-0000-0000-0000-000000000001"),
+            openingEntryId,
+            GoldAssetId,
+            "GOLD",
+            "Physical Gold",
+            AssetType.PhysicalGold,
+            AssetUnit.GrossGram,
+            "TRY",
+            LotTrackingMode.Required,
+            true,
+            new DateOnly(2026, 1, 1),
+            CostBasisStatus.Known,
+            12_000,
+            "TRY",
+            originalQuantityRawE8,
+            916_000,
+            pieceCount,
+            "TEST",
+            "CERT",
             null);
 
     private static InventoryEntryFact Entry(
@@ -649,15 +951,14 @@ public sealed class InventoryUseCaseTests
         int ordinal,
         DateOnly executionDate,
         long delta,
-        int? pieceDelta)
+        int? pieceDelta,
+        TransactionType transactionType)
         => new(
             lotId,
             Guid.Parse($"93000000-0000-0000-0000-{ordinal:D12}"),
             entryId,
             Guid.Parse($"94000000-0000-0000-0000-{ordinal:D12}"),
-            ordinal == 1 || ordinal == 10
-                ? TransactionType.OpeningBalance
-                : TransactionType.Sell,
+            transactionType,
             executionDate,
             new DateTimeOffset(
                 executionDate.Year,
@@ -672,6 +973,8 @@ public sealed class InventoryUseCaseTests
             delta,
             pieceDelta);
 
+    // Mirrors EfCoreInventoryReadStore: lots are lineage and always returned,
+    // while the as-of bound applies to allocations only.
     private sealed class FakeInventoryReadStore : IInventoryReadStore
     {
         public bool HouseholdExists { get; set; } = true;
