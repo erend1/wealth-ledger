@@ -526,6 +526,25 @@ Do not persist these as mutable truth:
 
 Views or rebuildable projections may use similar names only when their non-authoritative nature is unmistakable and rebuilding from source facts is tested.
 
+M010 position and lot inventory is a query, not stored state. At read time it
+sums effective Posted `TransactionEntry` deltas, signed `LotEntryAllocation`
+quantities and `PhysicalGoldLotAllocationDetail` piece movement, optionally
+bounded by `ExecutionDate <= asOf`. A lot is immutable lineage, so its original
+quantity comes from its opening allocation whatever the as-of date; the bound
+applies to allocations. Fine weight is derived from gross quantity and the
+lot's immutable fineness.
+
+The posting guards keep complete history non-negative, so a negative current
+quantity is a persisted-shape fault and fails closed. They do not order
+history by `ExecutionDate`: a disposal or transfer may be dated before the
+acquisition or custody it consumed. An as-of reconstruction can therefore be
+negative, and inventory reports it signed rather than hiding or rejecting it.
+
+Inventory adds no table, column, index or migration. Real-SQLite query-plan
+tests show that its position, lot and allocation queries, with and without an
+as-of date and with account and asset filters, use only indexed searches on
+existing indexes: no full table scan and no automatic index.
+
 ## Deferred database regions
 
 Not part of 001_CoreLedger:
