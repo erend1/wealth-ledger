@@ -534,9 +534,11 @@ public sealed class ListLotInventoryUseCase
                 "Physical-gold gross quantity cannot be negative.");
         }
 
-        return checked(
-            grossQuantityRawE8 / (decimal)Quantity.Scale
-            * (finenessPpm / 1_000_000m));
+        // Same expression order as M009 custody and sale planning, so equal
+        // facts project the identical decimal value and scale.
+        return checked((decimal)grossQuantityRawE8 * finenessPpm)
+               / Quantity.Scale
+               / Fineness.MaximumPpm;
     }
 
     private static IOrderedEnumerable<InventoryLotAllocationFact>
