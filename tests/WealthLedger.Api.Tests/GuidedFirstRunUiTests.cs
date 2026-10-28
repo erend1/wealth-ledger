@@ -229,7 +229,7 @@ public sealed partial class GuidedFirstRunUiTests
 
         await using var context = factory.CreateDbContext();
         Assert.Equal(
-            8,
+            9,
             (await context.Database
                 .GetAppliedMigrationsAsync())
             .Count());
