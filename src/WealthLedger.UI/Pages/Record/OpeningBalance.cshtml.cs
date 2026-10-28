@@ -691,11 +691,7 @@ public sealed class OpeningBalanceModel : PageModel
     }
 
     private DateOnly CurrentOperatingDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    _timeProvider.GetUtcNow(),
-                    _presentationCulture.DisplayTimeZone)
-                .DateTime);
+        => OperatingDate.Today(_timeProvider);
 
     private void AddErrors(
         IReadOnlyList<OpeningBalanceFormError> errors,

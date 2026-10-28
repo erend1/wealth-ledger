@@ -286,11 +286,7 @@ public abstract class FundTradePageModel : PageModel
     }
 
     protected DateOnly CurrentLocalDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    TimeProvider.GetUtcNow(),
-                    PresentationCulture.DisplayTimeZone)
-                .DateTime);
+        => OperatingDate.Today(TimeProvider);
 
     /// <summary>
     /// Anchors an application failure to the field the user can act on.

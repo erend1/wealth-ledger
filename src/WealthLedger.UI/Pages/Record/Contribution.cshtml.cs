@@ -442,11 +442,7 @@ public sealed class ContributionModel : PageModel
     }
 
     private DateOnly CurrentLocalDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    _timeProvider.GetUtcNow(),
-                    _presentationCulture.DisplayTimeZone)
-                .DateTime);
+        => OperatingDate.Today(_timeProvider);
 
     private async Task<bool> LoadChoicesAsync(
         CancellationToken cancellationToken)

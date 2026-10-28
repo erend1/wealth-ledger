@@ -480,11 +480,7 @@ public abstract class PhysicalGoldPageModel : PageModel
     }
 
     private DateOnly CurrentLocalDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    TimeProvider.GetUtcNow(),
-                    PresentationCulture.DisplayTimeZone)
-                .DateTime);
+        => OperatingDate.Today(TimeProvider);
 
     private static string? SingleOrNull(IEnumerable<Guid> candidates)
     {
