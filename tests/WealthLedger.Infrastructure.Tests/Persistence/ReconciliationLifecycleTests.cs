@@ -384,6 +384,76 @@ public sealed class ReconciliationLifecycleTests
     }
 
     [Fact]
+    public async Task Resolve_ReplaysAndLostRacesReturnTheStoredResolution()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        var history = await SeedAsync(database.CreateContext);
+        var runId = await RunAsync(database, "replay-run", history.EvidenceId, Now);
+        var detail = await GetAsync(database, runId);
+        var goldItemId = Item(detail, CoreLedgerTestData.GoldAssetId).ReconciliationItemId;
+        var fundItemId = Item(detail, CoreLedgerTestData.FundAssetId).ReconciliationItemId;
+
+        await ResolveAsync(
+            database,
+            runId,
+            goldItemId,
+            ReconciliationResolutionKind.DocumentedException,
+            explanation: "Synthetic reason");
+
+        await using (var context = database.CreateContext())
+        {
+            var replay = await ResolveUseCase(context, Now.AddHours(1)).ExecuteAsync(
+                new ResolveReconciliationItemCommand(
+                    CoreLedgerTestData.HouseholdId,
+                    runId,
+                    goldItemId,
+                    ReconciliationResolutionKind.DocumentedException,
+                    Explanation: " Synthetic reason "));
+            var different = await Assert.ThrowsAsync<ReconciliationException>(
+                () => ResolveUseCase(context).ExecuteAsync(
+                    new ResolveReconciliationItemCommand(
+                        CoreLedgerTestData.HouseholdId,
+                        runId,
+                        goldItemId,
+                        ReconciliationResolutionKind.DocumentedException,
+                        Explanation: "Another synthetic reason")));
+
+            Assert.True(replay.WasAlreadyResolved);
+            Assert.Equal(ReconciliationErrorCodes.ItemAlreadyResolved, different.ErrorCode);
+        }
+
+        // As if another writer had resolved the item between the check and the
+        // insert: the key collision returns the stored resolution.
+        await using (var context = database.CreateContext())
+        {
+            var lost = await new EfCoreReconciliationStore(context).TryAddResolutionAsync(
+                ReconciliationItemResolution.DocumentedException(
+                    goldItemId,
+                    "A losing synthetic reason",
+                    Now.AddHours(2)));
+
+            Assert.False(lost.WasCommitted);
+            Assert.Equal("Synthetic reason", lost.Resolution.Explanation);
+            Assert.Equal(Now, lost.Resolution.ResolvedAtUtc);
+        }
+
+        // As if a matched item were resolved by a writer that skipped validation.
+        await using (var context = database.CreateContext())
+        {
+            var matched = await Assert.ThrowsAsync<ReconciliationException>(
+                () => new EfCoreReconciliationStore(context).TryAddResolutionAsync(
+                    ReconciliationItemResolution.DocumentedException(
+                        fundItemId,
+                        "Synthetic reason",
+                        Now)));
+
+            Assert.Equal(ReconciliationErrorCodes.ItemMatched, matched.ErrorCode);
+        }
+
+        Assert.Equal(1L, await CountAsync(database, "ReconciliationItemResolution"));
+    }
+
+    [Fact]
     public async Task List_PagesDeterministicallyAndBindsTheEvidenceFilter()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();

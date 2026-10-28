@@ -118,6 +118,31 @@ public sealed class ReconciliationUseCaseTests
     }
 
     [Fact]
+    public async Task Run_NarrowsTheDerivationToSharedScopeDimensions()
+    {
+        var fixture = new Fixture();
+        fixture.Entry(AccountId, CashAssetId, 1_000, new DateOnly(2026, 9, 1));
+        fixture.Entry(SecondAccountId, CashAssetId, 700, new DateOnly(2026, 9, 1));
+        fixture.Observe(EvidenceId, AccountId, CashAssetId, 1_000);
+        fixture.Observe(EvidenceId, AccountId, FundAssetId, 0);
+        fixture.Observe(SecondEvidenceId, SecondAccountId, GoldAssetId, 0);
+
+        await fixture.RunAsync("narrow-account", EvidenceId);
+        Assert.Equal((PortfolioId, AccountId, (Guid?)null), fixture.Inventory.LastPositionFilter);
+
+        // One exact scope with no effective entries is a valid zero.
+        await fixture.RunAsync("narrow-exact", SecondEvidenceId);
+        Assert.Equal((PortfolioId, SecondAccountId, GoldAssetId), fixture.Inventory.LastPositionFilter);
+
+        var exact = fixture.Store.Runs.Single(run => run.Key == "narrow-exact").Run;
+        Assert.Equal(0, Assert.Single(exact.Items).LedgerQuantityRawE8);
+        Assert.Equal(ReconciliationComparisonStatus.Matched, exact.Items[0].ComparisonStatus);
+        Assert.Equal(
+            (1_000L, ReconciliationComparisonStatus.Matched),
+            (fixture.Store.Runs[0].Run.Items[0].LedgerQuantityRawE8, fixture.Store.Runs[0].Run.Items[0].ComparisonStatus));
+    }
+
+    [Fact]
     public async Task Run_ReplayReturnsTheOriginalAndAnotherEvidenceIsAConflict()
     {
         var fixture = new Fixture();
@@ -787,13 +812,18 @@ public sealed class ReconciliationUseCaseTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(householdId == HouseholdId);
 
+        public (Guid? PortfolioId, Guid? AccountId, Guid? AssetId) LastPositionFilter { get; private set; }
+
         public Task<InventoryScopeContext?> FindExactPositionScopeAsync(
             Guid householdId,
             Guid portfolioId,
             Guid accountId,
             Guid assetId,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+            => Task.FromResult<InventoryScopeContext?>(
+                householdId == HouseholdId && portfolioId == PortfolioId
+                    ? ScopeContext(accountId, assetId)
+                    : null);
 
         public Task<IReadOnlyList<InventoryEntryFact>> ListPositionEntryFactsAsync(
             Guid householdId,
@@ -804,8 +834,11 @@ public sealed class ReconciliationUseCaseTests
             DateOnly? asOf,
             CancellationToken cancellationToken = default)
         {
+            LastPositionFilter = (portfolioId, accountId, assetId);
             IReadOnlyList<InventoryEntryFact> facts = Entries
-                .Where(fact => (assetId is null || fact.Scope.AssetId == assetId)
+                .Where(fact => (portfolioId is null || fact.Scope.PortfolioId == portfolioId)
+                               && (accountId is null || fact.Scope.AccountId == accountId)
+                               && (assetId is null || fact.Scope.AssetId == assetId)
                                && (asOf is null || fact.ExecutionDate <= asOf))
                 .ToArray();
             return Task.FromResult(facts);

@@ -46,14 +46,16 @@ internal sealed class ReconciliationLedgerDerivation
             IReadOnlyCollection<(ReconciliationScope Scope, bool WithPieces)> requests,
             CancellationToken cancellationToken)
     {
-        var assetIds = requests
-            .Select(request => request.Scope.AssetId)
-            .Distinct()
-            .ToArray();
+        var scopes = requests.Select(request => request.Scope).Distinct().ToArray();
+
+        // A statement usually covers one portfolio, account or asset, so a
+        // shared dimension narrows the derivation to the scopes it can touch.
         var positions = await _positions.ExecuteAsync(
             new ListPositionInventoryQuery(
                 householdId,
-                AssetId: assetIds.Length == 1 ? assetIds[0] : null,
+                PortfolioId: SharedOrNull(scopes, scope => scope.PortfolioId),
+                AccountId: SharedOrNull(scopes, scope => scope.AccountId),
+                AssetId: SharedOrNull(scopes, scope => scope.AssetId),
                 AsOf: asOf,
                 IncludeZero: true),
             cancellationToken);
@@ -64,15 +66,18 @@ internal sealed class ReconciliationLedgerDerivation
                 item.AssetId),
             item => item.QuantityRawE8);
 
-        var pieceAssetIds = requests
+        var pieceScopes = requests
             .Where(request => request.WithPieces)
-            .Select(request => request.Scope.AssetId)
-            .Distinct()
-            .ToArray();
+            .Select(request => request.Scope)
+            .ToHashSet();
         var pieces = new Dictionary<ReconciliationScope, int>();
 
-        if (pieceAssetIds.Length > 0)
+        if (pieceScopes.Count > 0)
         {
+            var pieceAssetIds = pieceScopes
+                .Select(scope => scope.AssetId)
+                .Distinct()
+                .ToArray();
             var lots = await _lots.ExecuteAsync(
                 new ListLotInventoryQuery(
                     householdId,
@@ -98,15 +103,21 @@ internal sealed class ReconciliationLedgerDerivation
             }
         }
 
-        return requests
-            .Select(request => request.Scope)
-            .Distinct()
-            .ToDictionary(
-                scope => scope,
-                scope => new ReconciliationLedgerSide(
-                    quantities.GetValueOrDefault(scope),
-                    requests.Any(request => request.Scope == scope && request.WithPieces)
-                        ? pieces.GetValueOrDefault(scope)
-                        : null));
+        return scopes.ToDictionary(
+            scope => scope,
+            scope => new ReconciliationLedgerSide(
+                quantities.GetValueOrDefault(scope),
+                pieceScopes.Contains(scope)
+                    ? pieces.GetValueOrDefault(scope)
+                    : null));
+    }
+
+    private static Guid? SharedOrNull(
+        IReadOnlyCollection<ReconciliationScope> scopes,
+        Func<ReconciliationScope, Guid> dimension)
+    {
+        var values = scopes.Select(dimension).Distinct().Take(2).ToArray();
+
+        return values.Length == 1 ? values[0] : null;
     }
 }

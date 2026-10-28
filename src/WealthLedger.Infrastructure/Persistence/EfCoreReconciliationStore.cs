@@ -304,6 +304,17 @@ public sealed class EfCoreReconciliationStore : IReconciliationStore
             }
 
             if (sqlite.Message.Contains(
+                    "WL_M010_RECONCILIATION_RESOLUTION_INVALID",
+                    StringComparison.Ordinal))
+            {
+                return new ReconciliationException(
+                    ReconciliationErrorCategory.Validation,
+                    ReconciliationErrorCodes.ItemMatched,
+                    "Only an out-of-tolerance reconciliation item can be resolved.",
+                    exception);
+            }
+
+            if (sqlite.Message.Contains(
                     "WL_M010_RECONCILIATION_CORRECTION_INVALID",
                     StringComparison.Ordinal))
             {

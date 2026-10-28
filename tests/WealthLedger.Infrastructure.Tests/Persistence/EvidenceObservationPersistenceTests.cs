@@ -2,7 +2,10 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.Evidence;
 using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Evidence;
+using WealthLedger.Domain.Portfolios;
 using WealthLedger.Infrastructure.Persistence;
+using WealthLedger.Infrastructure.Persistence.Rows;
 
 namespace WealthLedger.Infrastructure.Tests.Persistence;
 
@@ -184,6 +187,72 @@ public sealed class EvidenceObservationPersistenceTests
     }
 
     [Fact]
+    public async Task Store_MapsGuardsThatFireAfterValidationToStableErrors()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        var evidenceId = await RecordEvidenceAsync(database, "observation-guards");
+
+        // Observations built here skip the use case's validation, as a
+        // concurrent or careless writer would.
+        var foreignAccount = await StoreAddFailsAsync(
+            database,
+            Observation(evidenceId, CoreLedgerTestData.OtherAccountId, CoreLedgerTestData.CashAssetId));
+        var cashPieces = await StoreAddFailsAsync(
+            database,
+            Observation(evidenceId, CoreLedgerTestData.AccountId, CoreLedgerTestData.CashAssetId, pieces: 1));
+
+        Assert.Equal(EvidenceErrorCodes.ObservationScopeMismatch, foreignAccount.ErrorCode);
+        Assert.Equal(EvidenceErrorCodes.ObservationInvalid, cashPieces.ErrorCode);
+
+        var accountIds = new List<Guid>();
+
+        await using (var context = database.CreateContext())
+        {
+            for (var index = 0; index < 25; index++)
+            {
+                var accountId = Guid.NewGuid();
+                accountIds.Add(accountId);
+                context.Accounts.Add(new AccountRow
+                {
+                    Id = accountId,
+                    HouseholdId = CoreLedgerTestData.HouseholdId,
+                    InstitutionId = CoreLedgerTestData.InstitutionId,
+                    Code = $"SYN_LIMIT_{index:D2}",
+                    Name = $"Synthetic Limit Account {index:D2}",
+                    Type = AccountType.Investment,
+                    IsActive = true,
+                    OpenedOn = new DateOnly(2026, 1, 1)
+                });
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        var full = accountIds
+            .SelectMany(accountId => new[]
+            {
+                CoreLedgerTestData.CashAssetId,
+                CoreLedgerTestData.FundAssetId,
+                CoreLedgerTestData.OtherFundAssetId,
+                CoreLedgerTestData.GoldAssetId
+            }.Select(assetId => Observation(evidenceId, accountId, assetId)))
+            .ToArray();
+
+        await using (var context = database.CreateContext())
+        {
+            Assert.Equal(100, await new EfCoreEvidenceStore(context).AddObservationsAsync(evidenceId, full));
+        }
+
+        var overLimit = await StoreAddFailsAsync(
+            database,
+            Observation(evidenceId, CoreLedgerTestData.AccountId, CoreLedgerTestData.CashAssetId));
+
+        Assert.Equal(EvidenceErrorCodes.ObservationLimitExceeded, overLimit.ErrorCode);
+        Assert.Equal(100L, await CountObservationsAsync(database));
+    }
+
+    [Fact]
     public async Task Observations_LeaveLedgerRowsUntouched()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();
@@ -245,6 +314,34 @@ public sealed class EvidenceObservationPersistenceTests
                     CoreLedgerTestData.HouseholdId,
                     evidenceId,
                     [observation])));
+    }
+
+    private static EvidenceObservation Observation(
+        Guid evidenceId,
+        Guid accountId,
+        Guid assetId,
+        int? pieces = null)
+        => EvidenceObservation.Create(
+            Guid.NewGuid(),
+            evidenceId,
+            CoreLedgerTestData.PortfolioId,
+            accountId,
+            assetId,
+            1,
+            0,
+            pieces,
+            EvidenceTestData.Now);
+
+    private static async Task<EvidenceException> StoreAddFailsAsync(
+        SqliteTestDatabase database,
+        EvidenceObservation observation)
+    {
+        await using var context = database.CreateContext();
+
+        return await Assert.ThrowsAsync<EvidenceException>(
+            () => new EfCoreEvidenceStore(context).AddObservationsAsync(
+                observation.EvidenceId,
+                [observation]));
     }
 
     private static async Task<long> CountObservationsAsync(SqliteTestDatabase database)
