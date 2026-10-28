@@ -162,8 +162,11 @@ public sealed class InventoryUseCaseTests
 
         // A second entry of the same transaction in the same scope counts as
         // one more entry but no further transaction.
-        var sameTransaction = Entry(scope, 2, new DateOnly(2026, 1, 1), 100)
-            with { TransactionId = first.TransactionId, EntrySequence = 1 };
+        var sameTransaction = Entry(scope, 2, new DateOnly(2026, 1, 1), 100) with
+        {
+            TransactionId = first.TransactionId,
+            EntrySequence = 1
+        };
         var store = new FakeInventoryReadStore
         {
             PositionFacts =
@@ -1078,13 +1081,12 @@ public sealed class InventoryUseCaseTests
         foreach (var (ordinal, acquiredOn) in lots)
         {
             var openingEntryId = Guid.Parse($"81000000-0000-0000-0001-{ordinal:D12}");
-            descriptors.Add(
-                FundLot(
-                    LotIdOf(ordinal),
-                    openingEntryId,
-                    new DateOnly(2026, 1, 1),
-                    10 * Unit)
-                with { AcquiredOn = acquiredOn });
+            var lot = FundLot(
+                LotIdOf(ordinal),
+                openingEntryId,
+                new DateOnly(2026, 1, 1),
+                10 * Unit);
+            descriptors.Add(lot with { AcquiredOn = acquiredOn });
             allocations.Add(
                 Allocation(
                     scope,
