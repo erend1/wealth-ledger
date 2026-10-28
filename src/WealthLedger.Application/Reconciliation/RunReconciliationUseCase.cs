@@ -104,23 +104,23 @@ public sealed class RunReconciliationUseCase
                 "The evidence record has no observations to reconcile.");
         }
 
-        var ledger = await _ledger.DeriveAsync(
-            command.HouseholdId,
-            evidence.EffectiveDate,
-            observations
-                .Select(observation => (
-                    new ReconciliationScope(
-                        observation.PortfolioId,
-                        observation.AccountId,
-                        observation.AssetId),
-                    observation.ObservedPieceCount is not null))
-                .ToArray(),
-            cancellationToken);
-
         ReconciliationRun run;
 
         try
         {
+            var ledger = await _ledger.DeriveAsync(
+                command.HouseholdId,
+                evidence.EffectiveDate,
+                observations
+                    .Select(observation => (
+                        new ReconciliationScope(
+                            observation.PortfolioId,
+                            observation.AccountId,
+                            observation.AssetId),
+                        observation.ObservedPieceCount is not null))
+                    .ToArray(),
+                cancellationToken);
+
             run = ReconciliationRun.Create(
                 Guid.NewGuid(),
                 command.HouseholdId,
@@ -145,10 +145,7 @@ public sealed class RunReconciliationUseCase
         }
         catch (OverflowException exception)
         {
-            throw ReconciliationException.Invalid(
-                ReconciliationErrorCodes.ArithmeticOverflow,
-                "A reconciliation difference does not fit the fixed-point range.",
-                exception);
+            throw ReconciliationException.ArithmeticOverflow(exception);
         }
 
         var commit = await _store.TryCommitRunAsync(

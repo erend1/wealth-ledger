@@ -147,13 +147,22 @@ public sealed class GetReconciliationRunUseCase
                 "A persisted reconciliation run has no items.");
         }
 
-        var current = await _ledger.DeriveAsync(
-            stored.HouseholdId,
-            stored.EvidenceEffectiveDate,
-            stored.Items
-                .Select(item => (ScopeOf(item), item.ObservedPieceCount is not null))
-                .ToArray(),
-            cancellationToken);
+        IReadOnlyDictionary<ReconciliationScope, ReconciliationLedgerSide> current;
+
+        try
+        {
+            current = await _ledger.DeriveAsync(
+                stored.HouseholdId,
+                stored.EvidenceEffectiveDate,
+                stored.Items
+                    .Select(item => (ScopeOf(item), item.ObservedPieceCount is not null))
+                    .ToArray(),
+                cancellationToken);
+        }
+        catch (OverflowException exception)
+        {
+            throw ReconciliationException.ArithmeticOverflow(exception);
+        }
 
         var items = stored.Items
             .OrderBy(item => item.Sequence)

@@ -225,6 +225,22 @@ public sealed class ReconciliationUseCaseTests
     }
 
     [Fact]
+    public async Task OverflowingLedgerSideIsAStableErrorForRunsAndReads()
+    {
+        var fixture = await Fixture.WithMismatchedRunAsync();
+        fixture.Entry(AccountId, CashAssetId, long.MaxValue, new DateOnly(2026, 9, 2));
+
+        var run = await Assert.ThrowsAsync<ReconciliationException>(
+            () => fixture.RunAsync("run-ledger-overflow", EvidenceId));
+        var read = await Assert.ThrowsAsync<ReconciliationException>(
+            () => fixture.GetAsync());
+
+        Assert.Equal(ReconciliationErrorCodes.ArithmeticOverflow, run.ErrorCode);
+        Assert.Equal(ReconciliationErrorCodes.ArithmeticOverflow, read.ErrorCode);
+        Assert.Single(fixture.Store.Runs);
+    }
+
+    [Fact]
     public async Task Run_ValidatesTheRetryKeyAndIdentities()
     {
         var fixture = new Fixture();

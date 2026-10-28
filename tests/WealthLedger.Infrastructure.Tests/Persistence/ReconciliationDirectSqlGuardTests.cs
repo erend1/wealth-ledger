@@ -426,6 +426,59 @@ public sealed class ReconciliationDirectSqlGuardTests
     }
 
     [Fact]
+    public async Task DirectSql_ItemArithmeticStaysInsideTheIntegerRanges()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        var evidenceId = await InsertRecordAsync(database);
+        var minimumId = Guid.NewGuid();
+        var goldId = Guid.NewGuid();
+        await database.ExecuteNonQueryAsync(
+            InsertObservationSql,
+            ObservationParameters(minimumId, evidenceId, observed: long.MinValue));
+        await database.ExecuteNonQueryAsync(
+            InsertObservationSql,
+            ObservationParameters(goldId, evidenceId, asset: CoreLedgerTestData.GoldAssetId, observed: 300, pieces: 2));
+        var runId = Guid.NewGuid();
+        await database.ExecuteNonQueryAsync(
+            InsertRunSql,
+            RunParameters(runId, evidenceId, count: 2));
+
+        // long.MinValue - 1 overflows; SQLite would turn it into a REAL that
+        // compares equal to long.MinValue.
+        var overflowing = ItemParameters(runId, minimumId, observed: long.MinValue, ledger: 0, tolerance: 0);
+        Set(overflowing, "$ledger", 1L);
+        Set(overflowing, "$delta", long.MinValue);
+        Set(overflowing, "$status", "OUT_OF_TOLERANCE");
+
+        await AssertRejectedAsync(
+            database,
+            "CK_ReconciliationItem_Delta",
+            InsertItemSql,
+            overflowing);
+
+        var widePieces = ItemParameters(
+            runId,
+            goldId,
+            observed: 300,
+            ledger: 300,
+            tolerance: 0,
+            asset: CoreLedgerTestData.GoldAssetId,
+            observedPieces: 2,
+            ledgerPieces: 0,
+            sequence: 2);
+        Set(widePieces, "$ledgerPieces", 3_000_000_002L);
+        Set(widePieces, "$pieceDelta", -3_000_000_000L);
+        Set(widePieces, "$status", "OUT_OF_TOLERANCE");
+
+        await AssertRejectedAsync(
+            database,
+            "CK_ReconciliationItem_Pieces",
+            InsertItemSql,
+            widePieces);
+    }
+
+    [Fact]
     public async Task DirectSql_ResolutionNeedsAnOutOfToleranceItemAndAPostedSameHouseholdCorrection()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();
@@ -657,6 +710,9 @@ public sealed class ReconciliationDirectSqlGuardTests
 
         return ids;
     }
+
+    private static void Set(SqliteParameter[] parameters, string name, object value)
+        => parameters.Single(parameter => parameter.ParameterName == name).Value = value;
 
     private static async Task AssertRejectedAsync(
         SqliteTestDatabase database,

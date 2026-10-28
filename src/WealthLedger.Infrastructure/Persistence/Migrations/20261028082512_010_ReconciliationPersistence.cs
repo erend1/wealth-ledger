@@ -114,8 +114,8 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                 {
                     table.PrimaryKey("PK_ReconciliationItem", x => x.Id);
                     table.CheckConstraint("CK_ReconciliationItem_ComparisonStatus", "\"ComparisonStatusCode\" IN ('MATCHED', 'OUT_OF_TOLERANCE') AND (\"ComparisonStatusCode\" = 'MATCHED') = (\"DeltaE8\" BETWEEN -\"ToleranceE8\" AND \"ToleranceE8\" AND coalesce(\"PieceDelta\", 0) = 0)");
-                    table.CheckConstraint("CK_ReconciliationItem_Delta", "\"DeltaE8\" = \"ObservedQuantityE8\" - \"LedgerQuantityE8\"");
-                    table.CheckConstraint("CK_ReconciliationItem_Pieces", "(\"ObservedPieceCount\" IS NULL AND \"LedgerPieceCount\" IS NULL AND \"PieceDelta\" IS NULL) OR (\"ObservedPieceCount\" IS NOT NULL AND \"LedgerPieceCount\" IS NOT NULL AND \"PieceDelta\" IS NOT NULL AND \"ObservedPieceCount\" BETWEEN 0 AND 2147483647 AND \"PieceDelta\" = \"ObservedPieceCount\" - \"LedgerPieceCount\")");
+                    table.CheckConstraint("CK_ReconciliationItem_Delta", "\"DeltaE8\" = \"ObservedQuantityE8\" - \"LedgerQuantityE8\" AND typeof(\"ObservedQuantityE8\" - \"LedgerQuantityE8\") = 'integer'");
+                    table.CheckConstraint("CK_ReconciliationItem_Pieces", "(\"ObservedPieceCount\" IS NULL AND \"LedgerPieceCount\" IS NULL AND \"PieceDelta\" IS NULL) OR (\"ObservedPieceCount\" IS NOT NULL AND \"LedgerPieceCount\" IS NOT NULL AND \"PieceDelta\" IS NOT NULL AND \"ObservedPieceCount\" BETWEEN 0 AND 2147483647 AND \"LedgerPieceCount\" BETWEEN -2147483648 AND 2147483647 AND \"PieceDelta\" BETWEEN -2147483648 AND 2147483647 AND \"PieceDelta\" =\"ObservedPieceCount\" - \"LedgerPieceCount\")");
                     table.CheckConstraint("CK_ReconciliationItem_Sequence", "\"Sequence\" BETWEEN 1 AND 100");
                     table.CheckConstraint("CK_ReconciliationItem_Tolerance", "\"ToleranceE8\" >= 0");
                     table.ForeignKey(

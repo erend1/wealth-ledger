@@ -63,6 +63,16 @@ public sealed class ReconciliationException : Exception
         string message)
         => new(ReconciliationErrorCategory.Conflict, errorCode, message);
 
+    /// <summary>
+    /// A derived ledger quantity or a difference does not fit 64-bit fixed
+    /// point; checked arithmetic refused it instead of wrapping.
+    /// </summary>
+    internal static ReconciliationException ArithmeticOverflow(OverflowException exception)
+        => Invalid(
+            ReconciliationErrorCodes.ArithmeticOverflow,
+            "A reconciliation quantity or difference does not fit the fixed-point range.",
+            exception);
+
     internal static ReconciliationException Missing(
         string errorCode,
         string message)
