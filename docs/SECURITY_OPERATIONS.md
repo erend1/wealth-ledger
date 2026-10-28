@@ -114,8 +114,9 @@ screenshot or trace by default.
 ## M010 evidence storage boundary
 
 The M010 evidence persistence and reconciliation slices add Application use
-cases, SQLite storage and tests. They add no API endpoint or page, so no process
-accepts an upload, serves a download or runs a reconciliation on request yet.
+cases, SQLite storage and tests. The M010 API slice exposes them as Ready-only
+loopback JSON routes (see "M010 HTTP boundary" below); no page captures
+evidence or runs a reconciliation yet.
 
 - Retained evidence files are BLOBs inside the same SQLite database, never a
   sidecar directory. The M004 `.wlbackup` package therefore captures evidence
@@ -152,10 +153,36 @@ accepts an upload, serves a download or runs a reconciliation on request yet.
 - Recording observations and running or resolving a reconciliation writes no
   ledger row; a real-SQLite test compares every ledger table before and after.
 
-Rules that only an HTTP surface can carry are deferred to M010's API slice:
-downloads as `Content-Disposition: attachment` with
-`X-Content-Type-Options: nosniff`, bounded upload bodies, and log capture tests
-over those routes.
+### M010 HTTP boundary
+
+Only a `Ready` process maps the M010 search, inventory, evidence and
+reconciliation routes. They carry the rules only an HTTP surface can:
+
+- A retained file arrives only through the dedicated multipart upload route,
+  never as base64 in JSON, and leaves only through the explicit download route.
+  Metadata reads return the file name, type, length and SHA-256, never bytes.
+- Downloads are `Content-Disposition: attachment` with
+  `X-Content-Type-Options: nosniff`, `Cache-Control: no-store` and
+  `Content-Security-Policy: default-src 'none'; sandbox`, so the browser never
+  renders, runs, frames or caches a retained file.
+- The upload body is read through a fixed bound of 10 MiB plus 64 KiB whether
+  or not it declares a length, and JSON command bodies through 64 KiB. Larger
+  bodies are refused with 413 before anything is stored. The file part's
+  declared content type selects the retained format; the attachment policy
+  still checks extension and content.
+- Upload, evidence record and reconciliation run commands require an
+  `Idempotency-Key` header, and JSON commands require a JSON content type. A
+  cross-site page can set neither without a CORS preflight, which the host
+  never grants, so a hostile page cannot post evidence to the loopback API.
+- Query strings and bodies are strictly shaped: an unsupported parameter or
+  member, a repeated single value or a malformed identity, date or code is a
+  stable 400 before any query or write. Every error is a sanitized problem with
+  a stable code.
+- Each M010 request writes one log line with the route template, outcome,
+  status, stable code, item count, size class and duration. A real-host test
+  drives every route through success and refusal and proves the log holds no
+  identities, idempotency keys, cursors, labels, notes, references, file
+  names, digests, bytes, master names, quantities, paths, SQL or stack traces.
 
 ## Remaining operational boundaries
 

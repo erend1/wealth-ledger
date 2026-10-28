@@ -242,6 +242,69 @@ position route still returns a genuine zero for a valid empty scope, while an
 unknown or cross-household scope returns the sanitized 404 code
 `POSITION_SCOPE_NOT_FOUND`.
 
+## M010 search, inventory, evidence and reconciliation API
+
+In progress under M010: these Ready-only loopback routes expose the bounded
+M010 Application contracts. They read and record audit data, but never post,
+edit or delete a ledger transaction:
+
+```text
+GET  /api/households/{householdId}/ledger/search
+GET  /api/households/{householdId}/inventory/positions
+GET  /api/households/{householdId}/inventory/lots
+GET  /api/households/{householdId}/evidence
+POST /api/households/{householdId}/evidence
+POST /api/households/{householdId}/evidence/uploads
+GET  /api/households/{householdId}/evidence/{evidenceId}
+GET  /api/households/{householdId}/evidence/{evidenceId}/attachment
+POST /api/households/{householdId}/evidence/{evidenceId}/transaction-links
+GET  /api/households/{householdId}/evidence/{evidenceId}/observations
+POST /api/households/{householdId}/evidence/{evidenceId}/observations
+GET  /api/households/{householdId}/reconciliations
+POST /api/households/{householdId}/reconciliations
+GET  /api/households/{householdId}/reconciliations/{reconciliationRunId}
+POST /api/households/{householdId}/reconciliations/{reconciliationRunId}/items/{reconciliationItemId}/resolution
+```
+
+Ledger search returns effective Posted history by execution date, posting time
+and transaction ID, descending, in the recent-feed entry shape. Its optional
+filters are `executedFrom` and `executedTo` (`YYYY-MM-DD`), repeatable `type`
+codes, `status=POSTED`, `assetId`, `institutionId`, `accountId`, `portfolioId`,
+`externalReference` (trimmed, case-insensitive contains, at most 256
+characters) and `reversal` (`ANY`, `ORIGINAL_ONLY`, `REVERSAL_ONLY` or
+`REVERSED_ORIGINAL`). Categories combine with AND and repeated types with OR.
+Every identity must exist in the household; entry-level filters match any
+entry, so an account and a different institution still select a transfer
+between them. The cursor is bound to the household and the exact filters.
+
+Position inventory derives one item per exact scope from Posted history, with
+source entry and transaction counts; `asOf` bounds the execution date and
+`includeZero=true` keeps exact zeros. Lot inventory returns pages of lots with
+custody, allocations and, for physical gold, fineness, pieces and derived fine
+weight; `includeExhausted=true` keeps exhausted lots. Both accept
+`portfolioId`, `accountId`, `institutionId`, `assetId` and `asOf`. A filter
+combination that names no existing scope is `INVENTORY_SCOPE_NOT_FOUND`, never
+zero.
+
+Evidence metadata is recorded as JSON. A record with a retained file is
+recorded through `evidence/uploads` as `multipart/form-data` with exactly a
+`metadata` JSON part and one `file` part of at most 10 MiB, whose content type
+is `application/pdf`, `image/png`, `image/jpeg`, `text/plain`, `text/csv` or
+`application/vnd.ms-excel` for CSV. The download is always an attachment.
+Evidence is corrected by a superseding record; there is no update or delete
+route. Evidence record, upload and reconciliation run commands require exactly
+one `Idempotency-Key` header. Linking, observing and resolving are
+insert-only: repeating the same command is a no-op and a different one is a
+conflict.
+
+Collections accept `pageSize` from 1 through 100 (default 50) and an opaque
+`cursor`; position inventory and observations are returned whole. Malformed,
+repeated or unsupported query parameters and malformed bodies return stable
+400 codes, oversized bodies 413, and unknown or cross-household identities
+sanitized 404 codes. See the
+[M010 contract](docs/milestones/M010_searchable_inventory_evidence_reconciliation.md)
+for the search, inventory, evidence and reconciliation rules.
+
 ## Verification
 
 Run the full test suite:

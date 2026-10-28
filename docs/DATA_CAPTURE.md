@@ -277,9 +277,9 @@ cost. M007 neither asks for nor stores current value, gain/loss, or performance.
 
 After review and posting, read the persisted transaction and derived position.
 An incorrect opening is corrected with a separate reversal and a new opening;
-never edit or delete the original. Once M010's API and UI slices expose it, an
-evidence record (see "Evidence records") can retain the source and link it to
-the opening. Neither the note/reference nor a linked evidence record proves
+never edit or delete the original. An evidence record (see "Evidence records")
+can retain the source and link it to the opening; the M010 JSON API exposes
+this now, and the capture screens arrive with M010's UI slice. Neither the note/reference nor a linked evidence record proves
 that an independent reconciliation occurred; only a reconciliation run (see
 "Reconciliation evidence") records that comparison.
 
@@ -362,8 +362,8 @@ a human submits a validated command.
 An evidence record is retained external support for ledger facts. It is audit
 data, not a ledger fact: recording or linking it never posts, edits or deletes
 a transaction and never changes a balance. The rules below are enforced by the
-Application and SQLite; the capture screens and endpoints arrive with M010's API
-and UI slices.
+Application and SQLite. The Ready-mode JSON API exposes them (see the README's
+M010 API section); the capture screens arrive with M010's UI slice.
 
 Capture:
 
@@ -412,8 +412,8 @@ only in the owner's live database and its backups.
 A reconciliation compares what a statement or physical count observed with what
 the ledger derives for the same scopes on the same date. It is audit data: it
 never posts, edits or deletes a transaction and adds no Adjustment shortcut. The
-rules below are enforced by the Application and SQLite; the capture screens and
-endpoints arrive with M010's API and UI slices.
+rules below are enforced by the Application and SQLite. The Ready-mode JSON API
+exposes them; the capture and review screens arrive with M010's UI slice.
 
 Observations belong to an evidence record, whose effective date applies to all
 of them. Capture, per observed scope:
