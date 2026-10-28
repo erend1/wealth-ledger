@@ -393,6 +393,63 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceObservationRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EvidenceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ObservedPieceCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ObservedQuantityE8")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PortfolioId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordedAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ToleranceE8")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("IX_EvidenceObservation_Account");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("IX_EvidenceObservation_Asset");
+
+                    b.HasIndex("PortfolioId")
+                        .HasDatabaseName("IX_EvidenceObservation_Portfolio");
+
+                    b.HasIndex("EvidenceId", "PortfolioId", "AccountId", "AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_EvidenceObservation_Evidence_Scope");
+
+                    b.ToTable("EvidenceObservation", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EvidenceObservation_PieceCount", "\"ObservedPieceCount\" IS NULL OR \"ObservedPieceCount\" BETWEEN 0 AND 2147483647");
+
+                            t.HasCheckConstraint("CK_EvidenceObservation_Tolerance", "\"ToleranceE8\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", b =>
                 {
                     b.Property<string>("Id")
@@ -815,6 +872,194 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationItemResolutionRow", b =>
+                {
+                    b.Property<string>("ItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CorrectiveTransactionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ResolutionCode");
+
+                    b.Property<string>("ResolvedAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ItemId");
+
+                    b.HasIndex("CorrectiveTransactionId")
+                        .HasDatabaseName("IX_ReconciliationItemResolution_CorrectiveTransaction");
+
+                    b.ToTable("ReconciliationItemResolution", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconciliationItemResolution_Shape", "(\"ResolutionCode\" = 'CORRECTED_BY_TRANSACTION' AND \"CorrectiveTransactionId\" IS NOT NULL AND \"Explanation\" IS NULL) OR (\"ResolutionCode\" = 'DOCUMENTED_EXCEPTION' AND \"CorrectiveTransactionId\" IS NULL AND \"Explanation\" IS NOT NULL AND length(\"Explanation\") BETWEEN 1 AND 2000)");
+                        });
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationItemRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComparisonStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ComparisonStatusCode");
+
+                    b.Property<long>("DeltaE8")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LedgerPieceCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LedgerQuantityE8")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ObservationId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ObservedPieceCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ObservedQuantityE8")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PieceDelta")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PortfolioId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RunId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ToleranceE8")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("IX_ReconciliationItem_Account");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("IX_ReconciliationItem_Asset");
+
+                    b.HasIndex("ObservationId")
+                        .HasDatabaseName("IX_ReconciliationItem_Observation");
+
+                    b.HasIndex("PortfolioId")
+                        .HasDatabaseName("IX_ReconciliationItem_Portfolio");
+
+                    b.HasIndex("RunId", "ObservationId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ReconciliationItem_Run_Observation");
+
+                    b.HasIndex("RunId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ReconciliationItem_Run_Sequence");
+
+                    b.ToTable("ReconciliationItem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconciliationItem_ComparisonStatus", "\"ComparisonStatusCode\" IN ('MATCHED', 'OUT_OF_TOLERANCE') AND (\"ComparisonStatusCode\" = 'MATCHED') = (\"DeltaE8\" BETWEEN -\"ToleranceE8\" AND \"ToleranceE8\" AND coalesce(\"PieceDelta\", 0) = 0)");
+
+                            t.HasCheckConstraint("CK_ReconciliationItem_Delta", "\"DeltaE8\" = \"ObservedQuantityE8\" - \"LedgerQuantityE8\"");
+
+                            t.HasCheckConstraint("CK_ReconciliationItem_Pieces", "(\"ObservedPieceCount\" IS NULL AND \"LedgerPieceCount\" IS NULL AND \"PieceDelta\" IS NULL) OR (\"ObservedPieceCount\" IS NOT NULL AND \"LedgerPieceCount\" IS NOT NULL AND \"PieceDelta\" IS NOT NULL AND \"ObservedPieceCount\" BETWEEN 0 AND 2147483647 AND \"PieceDelta\" = \"ObservedPieceCount\" - \"LedgerPieceCount\")");
+
+                            t.HasCheckConstraint("CK_ReconciliationItem_Sequence", "\"Sequence\" BETWEEN 1 AND 100");
+
+                            t.HasCheckConstraint("CK_ReconciliationItem_Tolerance", "\"ToleranceE8\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationRunRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EvidenceEffectiveDate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EvidenceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HouseholdId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("MethodCode");
+
+                    b.Property<int>("MethodVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RunAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ReconciliationRun_Household_IdempotencyKey");
+
+                    b.HasIndex("EvidenceId", "RunAtUtc", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_ReconciliationRun_Evidence_RunAt_Id");
+
+                    b.HasIndex("HouseholdId", "RunAtUtc", "Id")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_ReconciliationRun_Household_RunAt_Id");
+
+                    b.ToTable("ReconciliationRun", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ReconciliationRun_IdempotencyKey_Length", "length(\"IdempotencyKey\") BETWEEN 1 AND 256");
+
+                            t.HasCheckConstraint("CK_ReconciliationRun_ItemCount", "\"ItemCount\" BETWEEN 1 AND 100");
+
+                            t.HasCheckConstraint("CK_ReconciliationRun_Method", "\"MethodCode\" IN ('EXACT_SCOPE_QUANTITY_AS_OF')");
+
+                            t.HasCheckConstraint("CK_ReconciliationRun_MethodVersion", "\"MethodVersion\" >= 1");
+                        });
+                });
+
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.TransactionCostComponentRow", b =>
                 {
                     b.Property<string>("Id")
@@ -1039,6 +1284,33 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceObservationRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AssetRow", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.PortfolioRow", null)
+                        .WithMany()
+                        .HasForeignKey("PortfolioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", b =>
                 {
                     b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AccountRow", null)
@@ -1159,6 +1431,68 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.PortfolioRow", b =>
                 {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.HouseholdRow", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationItemResolutionRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.LedgerTransactionRow", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectiveTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationItemRow", null)
+                        .WithOne()
+                        .HasForeignKey("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationItemResolutionRow", "ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationItemRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AssetRow", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceObservationRow", null)
+                        .WithMany()
+                        .HasForeignKey("ObservationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.PortfolioRow", null)
+                        .WithMany()
+                        .HasForeignKey("PortfolioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationRunRow", null)
+                        .WithMany()
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.ReconciliationRunRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.HouseholdRow", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId")

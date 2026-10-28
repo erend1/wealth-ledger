@@ -3,6 +3,7 @@ using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.Reconciliation;
 using WealthLedger.Infrastructure.Persistence.Mapping;
 
 namespace WealthLedger.Infrastructure.Tests.Persistence;
@@ -210,6 +211,32 @@ public sealed class StableCodeMappingsTests
             },
             StableCodeMappings.EvidenceMediaTypeToCode,
             StableCodeMappings.EvidenceMediaTypeFromCode);
+
+        AssertRoundTrip(
+            new Dictionary<ReconciliationMethod, string>
+            {
+                [ReconciliationMethod.ExactScopeQuantityAsOf] = "EXACT_SCOPE_QUANTITY_AS_OF"
+            },
+            StableCodeMappings.ReconciliationMethodToCode,
+            StableCodeMappings.ReconciliationMethodFromCode);
+
+        AssertRoundTrip(
+            new Dictionary<ReconciliationComparisonStatus, string>
+            {
+                [ReconciliationComparisonStatus.Matched] = "MATCHED",
+                [ReconciliationComparisonStatus.OutOfTolerance] = "OUT_OF_TOLERANCE"
+            },
+            StableCodeMappings.ReconciliationComparisonStatusToCode,
+            StableCodeMappings.ReconciliationComparisonStatusFromCode);
+
+        AssertRoundTrip(
+            new Dictionary<ReconciliationResolutionKind, string>
+            {
+                [ReconciliationResolutionKind.CorrectedByTransaction] = "CORRECTED_BY_TRANSACTION",
+                [ReconciliationResolutionKind.DocumentedException] = "DOCUMENTED_EXCEPTION"
+            },
+            StableCodeMappings.ReconciliationResolutionKindToCode,
+            StableCodeMappings.ReconciliationResolutionKindFromCode);
     }
 
     private static void AssertRoundTrip<T>(

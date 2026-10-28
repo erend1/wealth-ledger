@@ -4,6 +4,7 @@ using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.Reconciliation;
 
 namespace WealthLedger.Infrastructure.Persistence.Mapping;
 
@@ -68,6 +69,20 @@ internal static class StableCodeMappings
     internal static readonly ValueConverter<EvidenceMediaType, string> EvidenceMediaTypeConverter = new(
         value => EvidenceMediaTypeToCode(value),
         value => EvidenceMediaTypeFromCode(value));
+
+    internal static readonly ValueConverter<ReconciliationMethod, string> ReconciliationMethodConverter = new(
+        value => ReconciliationMethodToCode(value),
+        value => ReconciliationMethodFromCode(value));
+
+    internal static readonly ValueConverter<ReconciliationComparisonStatus, string>
+        ReconciliationComparisonStatusConverter = new(
+            value => ReconciliationComparisonStatusToCode(value),
+            value => ReconciliationComparisonStatusFromCode(value));
+
+    internal static readonly ValueConverter<ReconciliationResolutionKind, string>
+        ReconciliationResolutionKindConverter = new(
+            value => ReconciliationResolutionKindToCode(value),
+            value => ReconciliationResolutionKindFromCode(value));
 
     internal static string AssetTypeToCode(AssetType value)
         => value switch
@@ -435,6 +450,56 @@ internal static class StableCodeMappings
             "PLAIN_TEXT" => EvidenceMediaType.PlainText,
             "CSV" => EvidenceMediaType.Csv,
             _ => ThrowUnknownCode<EvidenceMediaType>(value)
+        };
+
+    internal static string ReconciliationMethodToCode(ReconciliationMethod value)
+        => value switch
+        {
+            ReconciliationMethod.ExactScopeQuantityAsOf => "EXACT_SCOPE_QUANTITY_AS_OF",
+            _ => ThrowUnknownValue<ReconciliationMethod, string>(value)
+        };
+
+    internal static ReconciliationMethod ReconciliationMethodFromCode(string value)
+        => value switch
+        {
+            "EXACT_SCOPE_QUANTITY_AS_OF" => ReconciliationMethod.ExactScopeQuantityAsOf,
+            _ => ThrowUnknownCode<ReconciliationMethod>(value)
+        };
+
+    internal static string ReconciliationComparisonStatusToCode(
+        ReconciliationComparisonStatus value)
+        => value switch
+        {
+            ReconciliationComparisonStatus.Matched => "MATCHED",
+            ReconciliationComparisonStatus.OutOfTolerance => "OUT_OF_TOLERANCE",
+            _ => ThrowUnknownValue<ReconciliationComparisonStatus, string>(value)
+        };
+
+    internal static ReconciliationComparisonStatus ReconciliationComparisonStatusFromCode(
+        string value)
+        => value switch
+        {
+            "MATCHED" => ReconciliationComparisonStatus.Matched,
+            "OUT_OF_TOLERANCE" => ReconciliationComparisonStatus.OutOfTolerance,
+            _ => ThrowUnknownCode<ReconciliationComparisonStatus>(value)
+        };
+
+    internal static string ReconciliationResolutionKindToCode(
+        ReconciliationResolutionKind value)
+        => value switch
+        {
+            ReconciliationResolutionKind.CorrectedByTransaction => "CORRECTED_BY_TRANSACTION",
+            ReconciliationResolutionKind.DocumentedException => "DOCUMENTED_EXCEPTION",
+            _ => ThrowUnknownValue<ReconciliationResolutionKind, string>(value)
+        };
+
+    internal static ReconciliationResolutionKind ReconciliationResolutionKindFromCode(
+        string value)
+        => value switch
+        {
+            "CORRECTED_BY_TRANSACTION" => ReconciliationResolutionKind.CorrectedByTransaction,
+            "DOCUMENTED_EXCEPTION" => ReconciliationResolutionKind.DocumentedException,
+            _ => ThrowUnknownCode<ReconciliationResolutionKind>(value)
         };
 
     private static TResult ThrowUnknownValue<TValue, TResult>(TValue value)
