@@ -277,9 +277,10 @@ cost. M007 neither asks for nor stores current value, gain/loss, or performance.
 
 After review and posting, read the persisted transaction and derived position.
 An incorrect opening is corrected with a separate reversal and a new opening;
-never edit or delete the original. M010 will add evidence objects and broader
-reconciliation. Until then, the note/reference identifies external evidence but
-does not prove that an independent reconciliation occurred.
+never edit or delete the original. Once M010's API and UI slices expose it, an
+evidence record (see "Evidence records") can retain the source and link it to
+the opening. Until M010 reconciliation exists, neither the note/reference nor a
+linked evidence record proves that an independent reconciliation occurred.
 
 ## Adjustment
 
@@ -354,6 +355,48 @@ A decision entry may capture:
 
 An agent suggestion is labeled as generated analysis and remains unposted until
 a human submits a validated command.
+
+## Evidence records
+
+An evidence record is retained external support for ledger facts. It is audit
+data, not a ledger fact: recording or linking it never posts, edits or deletes
+a transaction and never changes a balance. The rules below are enforced by the
+Application and SQLite; the capture screens and endpoints arrive with M010's API
+and UI slices.
+
+Capture:
+
+- source kind: Statement, Receipt, PhysicalCount, ContractOrCertificate, or
+  Other;
+- the source's effective date, which cannot lie in the future;
+- a required single-line label of at most 256 characters;
+- optional single-line reference of at most 256 characters and optional note
+  of at most 2000 characters. None of the three may contain bidirectional
+  control characters or broken Unicode;
+- optional institution and household account. When both are given, the account
+  must belong to that institution;
+- zero or more links to Posted transactions of the same household; and
+- optionally, one retained source file.
+
+A retained file must be PDF, PNG, JPEG, UTF-8 plain text or CSV, at most
+10 MiB. Its extension and content signature must match the declared type, and
+text must not open with markup. SVG, HTML, scripts, executables, Office macro
+formats and other binary content are refused before anything is stored. Only
+the file name's last segment is kept, with unsafe characters replaced. The
+application computes the SHA-256 and byte length itself; the digest proves
+byte identity, not financial truth.
+
+A record and its file are immutable. To correct one, record a new evidence
+record that supersedes it; the original stays readable. A record can be
+superseded once, and a superseded record takes no new links. Links can be added
+later but never removed. There is no evidence delete.
+
+Recording is retry-safe under ADR-006. A retry with the same idempotency key
+and the same content returns the original record without storing a second
+copy; different content under the same key is a conflict.
+
+Use synthetic files for tests and examples. Real statements and receipts belong
+only in the owner's live database and its backups.
 
 ## Reconciliation evidence
 

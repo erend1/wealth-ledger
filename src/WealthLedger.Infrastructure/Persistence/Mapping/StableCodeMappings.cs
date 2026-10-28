@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
@@ -59,6 +60,14 @@ internal static class StableCodeMappings
     internal static readonly ValueConverter<CostBasisStatus, string> CostBasisStatusConverter = new(
         value => CostBasisStatusToCode(value),
         value => CostBasisStatusFromCode(value));
+
+    internal static readonly ValueConverter<EvidenceSourceKind, string> EvidenceSourceKindConverter = new(
+        value => EvidenceSourceKindToCode(value),
+        value => EvidenceSourceKindFromCode(value));
+
+    internal static readonly ValueConverter<EvidenceMediaType, string> EvidenceMediaTypeConverter = new(
+        value => EvidenceMediaTypeToCode(value),
+        value => EvidenceMediaTypeFromCode(value));
 
     internal static string AssetTypeToCode(AssetType value)
         => value switch
@@ -382,6 +391,50 @@ internal static class StableCodeMappings
             "UNKNOWN" => CostBasisStatus.Unknown,
             "NOT_APPLICABLE" => CostBasisStatus.NotApplicable,
             _ => ThrowUnknownCode<CostBasisStatus>(value)
+        };
+
+    internal static string EvidenceSourceKindToCode(EvidenceSourceKind value)
+        => value switch
+        {
+            EvidenceSourceKind.Statement => "STATEMENT",
+            EvidenceSourceKind.Receipt => "RECEIPT",
+            EvidenceSourceKind.PhysicalCount => "PHYSICAL_COUNT",
+            EvidenceSourceKind.ContractOrCertificate => "CONTRACT_OR_CERTIFICATE",
+            EvidenceSourceKind.Other => "OTHER",
+            _ => ThrowUnknownValue<EvidenceSourceKind, string>(value)
+        };
+
+    internal static EvidenceSourceKind EvidenceSourceKindFromCode(string value)
+        => value switch
+        {
+            "STATEMENT" => EvidenceSourceKind.Statement,
+            "RECEIPT" => EvidenceSourceKind.Receipt,
+            "PHYSICAL_COUNT" => EvidenceSourceKind.PhysicalCount,
+            "CONTRACT_OR_CERTIFICATE" => EvidenceSourceKind.ContractOrCertificate,
+            "OTHER" => EvidenceSourceKind.Other,
+            _ => ThrowUnknownCode<EvidenceSourceKind>(value)
+        };
+
+    internal static string EvidenceMediaTypeToCode(EvidenceMediaType value)
+        => value switch
+        {
+            EvidenceMediaType.Pdf => "PDF",
+            EvidenceMediaType.Png => "PNG",
+            EvidenceMediaType.Jpeg => "JPEG",
+            EvidenceMediaType.PlainText => "PLAIN_TEXT",
+            EvidenceMediaType.Csv => "CSV",
+            _ => ThrowUnknownValue<EvidenceMediaType, string>(value)
+        };
+
+    internal static EvidenceMediaType EvidenceMediaTypeFromCode(string value)
+        => value switch
+        {
+            "PDF" => EvidenceMediaType.Pdf,
+            "PNG" => EvidenceMediaType.Png,
+            "JPEG" => EvidenceMediaType.Jpeg,
+            "PLAIN_TEXT" => EvidenceMediaType.PlainText,
+            "CSV" => EvidenceMediaType.Csv,
+            _ => ThrowUnknownCode<EvidenceMediaType>(value)
         };
 
     private static TResult ThrowUnknownValue<TValue, TResult>(TValue value)

@@ -13,6 +13,7 @@ Migrations:
 - `20260910101810_006_OpeningBalanceCutoverGuards`
 - `20260913054039_007_FundTradeLifecycleGuards`
 - `20260915082550_008_PhysicalGoldLifecycle`
+- `20261028065838_009_EvidencePersistence`
 
 Last distilled: 2026-09-16
 
@@ -348,7 +349,9 @@ At minimum, explicit converters/checks are required for:
 - CashFlowCategoryCode;
 - CostTypeCode;
 - TreatmentCode;
-- CostBasisStatusCode.
+- CostBasisStatusCode;
+- Evidence SourceKindCode;
+- Evidence attachment MediaTypeCode.
 
 Adding or renaming a code is a migration/API compatibility decision. Never depend on enum numeric values or default ToString behavior without an explicit, tested mapping.
 
@@ -508,7 +511,10 @@ Beyond PK/unique indexes, evaluate query-driven indexes for:
 - TransactionEntry by AccountId, AssetId;
 - AssetLot by AssetId, AcquiredOn;
 - LotEntryAllocation by AssetLotId;
-- LotEntryAllocation by TransactionEntryId.
+- LotEntryAllocation by TransactionEntryId;
+- EvidenceRecord by HouseholdId, EffectiveDate descending, CreatedAtUtc
+  descending, and Id descending for the M010 evidence list and its cursor;
+- EvidenceTransactionLink by LedgerTransactionId.
 
 Add indexes in response to actual first-slice queries and query plans. Avoid speculative indexing of deferred tables.
 
@@ -665,3 +671,71 @@ then restores the exact corrected migration-007 Fund guard. Real-SQLite tests
 cover fresh Up, M007 backfill, fail-closed preflight, direct-SQL refusal, Fund
 regression, concurrent races, Down/Up, 007 -> 008 -> 007 -> 008, foreign-key
 integrity, and EF model agreement.
+
+## Evidence persistence (migration 009)
+
+`009_EvidencePersistence` adds M010 evidence as adjunct audit data. Evidence
+references ledger facts but is never one: no evidence write inserts, updates or
+deletes a ledger row, and no evidence value enters ledger arithmetic.
+
+| Table | Purpose |
+|---|---|
+| `EvidenceRecord` | One household-scoped source: `SourceKindCode`, business `EffectiveDate`, optional global `InstitutionId` and household `AccountId`, `Label` (1-256), optional `Reference` (1-256) and `Note` (1-2000), optional `SupersedesEvidenceId`, `CreatedAtUtc`. |
+| `EvidenceAttachment` | At most one retained file per record, keyed by `EvidenceId`: sanitized `FileName` (1-255), `MediaTypeCode`, `ByteLength`, lowercase hex `Sha256`, `Content` BLOB, `CreatedAtUtc`. |
+| `EvidenceTransactionLink` | One row per evidence/transaction pair, keyed by both, with `LinkedAtUtc`. |
+| `EvidenceCommandReceipt` | ADR-006 retry receipts for evidence commands, shaped like `CommandReceipt` but resulting in `ResultEvidenceId`. |
+
+`CommandReceipt` is not reused because its `ResultTransactionId` is a required
+ledger reference. Evidence receipts therefore live in their own table and leave
+the verified ledger receipt table unchanged.
+
+Stable codes: `SourceKindCode` is `STATEMENT`, `RECEIPT`, `PHYSICAL_COUNT`,
+`CONTRACT_OR_CERTIFICATE` or `OTHER`; `MediaTypeCode` is `PDF`, `PNG`, `JPEG`,
+`PLAIN_TEXT` or `CSV`.
+
+Retained bytes stay inside the SQLite file, so the M004 `.wlbackup` snapshot
+captures evidence and ledger together, with no sidecar directory.
+
+Database protections:
+
+- every foreign key is restrictive, including the self-reference that forms a
+  supersession chain;
+- `CK_EvidenceAttachment_Content` requires a BLOB of 1 to 10,485,760 bytes whose
+  length equals `ByteLength`, and `CK_EvidenceAttachment_Sha256` requires 64
+  lowercase hex characters;
+- `UX_EvidenceRecord_Supersedes` lets a record be superseded at most once, and a
+  check forbids self-supersession;
+- `TR_EvidenceRecord_ValidateInsert` keeps the account inside the record's
+  household and, when both are named, inside the named institution; it also
+  keeps the superseded record in the same household;
+- `TR_EvidenceAttachment_ValidateInsert` requires an attachment to carry its
+  record's `CreatedAtUtc`. SQLite cannot see transaction boundaries, so direct
+  SQL that copies the timestamp can still attach a file to an existing record;
+  the Application writes an attachment only in its record's own commit;
+- `TR_EvidenceTransactionLink_ValidateInsert` admits only Posted transactions of
+  the record's household and refuses new links on a superseded record;
+- `TR_EvidenceCommandReceipt_ValidateInsert` requires a receipt's result record
+  to belong to the receipt's household; and
+- update and delete triggers on all four evidence tables, receipts included,
+  raise `WL_M010_EVIDENCE_IMMUTABLE`, so corrections use supersession, a retry
+  key keeps resolving to the same record, and there is no delete path.
+
+Trust boundaries the database cannot carry: the Application computes the
+SHA-256 from the retained bytes and accepts a file only when its extension and
+content signature match the declared type. Before returning bytes for download
+it checks length, digest, declared type and sanitized name again, so a row
+written outside the Application still fails closed.
+
+A same-key retry that loses a race returns the winner's receipt even when its
+own record collides first, for example on `UX_EvidenceRecord_Supersedes`.
+
+The household list reads through
+`IX_EvidenceRecord_Household_Effective_Created_Id` in key order without a
+temporary sort. List and detail projections never select `Content`; only the
+explicit attachment read does.
+
+The migration creates no evidence rows for existing history. Down drops the
+twelve triggers and four tables and restores the exact migration-008 schema.
+Real-SQLite tests cover byte-for-byte round trips, replay and lost-race
+retries that retain one copy, every direct-SQL guard, the query plans, backup,
+verify and stage readback, and 008 -> 009 -> 008 -> 009.

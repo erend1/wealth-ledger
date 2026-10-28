@@ -294,6 +294,201 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceAttachmentRow", b =>
+                {
+                    b.Property<string>("EvidenceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ByteLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("CreatedAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("MediaTypeCode");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EvidenceId");
+
+                    b.ToTable("EvidenceAttachment", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EvidenceAttachment_Content", "typeof(\"Content\") = 'blob' AND \"ByteLength\" BETWEEN 1 AND 10485760 AND \"ByteLength\" = length(\"Content\")");
+
+                            t.HasCheckConstraint("CK_EvidenceAttachment_FileName_Length", "length(\"FileName\") BETWEEN 1 AND 255");
+
+                            t.HasCheckConstraint("CK_EvidenceAttachment_MediaType", "\"MediaTypeCode\" IN ('PDF', 'PNG', 'JPEG', 'PLAIN_TEXT', 'CSV')");
+
+                            t.HasCheckConstraint("CK_EvidenceAttachment_Sha256", "length(\"Sha256\") = 64 AND \"Sha256\" NOT GLOB '*[^0-9a-f]*'");
+                        });
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceCommandReceiptRow", b =>
+                {
+                    b.Property<string>("HouseholdId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FingerprintAlgorithmCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FingerprintValue")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FingerprintVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResultEvidenceId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("HouseholdId", "OperationCode", "IdempotencyKey");
+
+                    b.HasIndex("ResultEvidenceId")
+                        .HasDatabaseName("IX_EvidenceCommandReceipt_ResultEvidence");
+
+                    b.ToTable("EvidenceCommandReceipt", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EvidenceCommandReceipt_FingerprintAlgorithm_Length", "length(\"FingerprintAlgorithmCode\") BETWEEN 1 AND 32");
+
+                            t.HasCheckConstraint("CK_EvidenceCommandReceipt_FingerprintValue_Length", "length(\"FingerprintValue\") BETWEEN 1 AND 256");
+
+                            t.HasCheckConstraint("CK_EvidenceCommandReceipt_FingerprintVersion", "\"FingerprintVersion\" >= 1");
+
+                            t.HasCheckConstraint("CK_EvidenceCommandReceipt_IdempotencyKey_Length", "length(\"IdempotencyKey\") BETWEEN 1 AND 256");
+
+                            t.HasCheckConstraint("CK_EvidenceCommandReceipt_OperationCode_Length", "length(\"OperationCode\") BETWEEN 1 AND 64");
+                        });
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EffectiveDate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HouseholdId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstitutionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("SourceKindCode");
+
+                    b.Property<string>("SupersedesEvidenceId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("IX_EvidenceRecord_Account");
+
+                    b.HasIndex("InstitutionId")
+                        .HasDatabaseName("IX_EvidenceRecord_Institution");
+
+                    b.HasIndex("SupersedesEvidenceId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_EvidenceRecord_Supersedes")
+                        .HasFilter("\"SupersedesEvidenceId\" IS NOT NULL");
+
+                    b.HasIndex("HouseholdId", "EffectiveDate", "CreatedAtUtc", "Id")
+                        .IsDescending(false, true, true, true)
+                        .HasDatabaseName("IX_EvidenceRecord_Household_Effective_Created_Id");
+
+                    b.ToTable("EvidenceRecord", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EvidenceRecord_Label_Length", "length(\"Label\") BETWEEN 1 AND 256");
+
+                            t.HasCheckConstraint("CK_EvidenceRecord_Note_Length", "\"Note\" IS NULL OR length(\"Note\") BETWEEN 1 AND 2000");
+
+                            t.HasCheckConstraint("CK_EvidenceRecord_Reference_Length", "\"Reference\" IS NULL OR length(\"Reference\") BETWEEN 1 AND 256");
+
+                            t.HasCheckConstraint("CK_EvidenceRecord_SourceKind", "\"SourceKindCode\" IN ('STATEMENT', 'RECEIPT', 'PHYSICAL_COUNT', 'CONTRACT_OR_CERTIFICATE', 'OTHER')");
+
+                            t.HasCheckConstraint("CK_EvidenceRecord_SupersedesOther", "\"SupersedesEvidenceId\" IS NULL OR \"SupersedesEvidenceId\" <> \"Id\"");
+                        });
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceTransactionLinkRow", b =>
+                {
+                    b.Property<string>("EvidenceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LedgerTransactionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinkedAtUtc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EvidenceId", "LedgerTransactionId");
+
+                    b.HasIndex("LedgerTransactionId")
+                        .HasDatabaseName("IX_EvidenceTransactionLink_Transaction");
+
+                    b.ToTable("EvidenceTransactionLink", (string)null);
+                });
+
             modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.HouseholdMemberRow", b =>
                 {
                     b.Property<string>("Id")
@@ -816,6 +1011,69 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations
                     b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.LedgerTransactionRow", null)
                         .WithMany()
                         .HasForeignKey("ResultTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceAttachmentRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", null)
+                        .WithOne()
+                        .HasForeignKey("WealthLedger.Infrastructure.Persistence.Rows.EvidenceAttachmentRow", "EvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceCommandReceiptRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.HouseholdRow", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", null)
+                        .WithMany()
+                        .HasForeignKey("ResultEvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.HouseholdRow", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.InstitutionRow", null)
+                        .WithMany()
+                        .HasForeignKey("InstitutionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", null)
+                        .WithMany()
+                        .HasForeignKey("SupersedesEvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("WealthLedger.Infrastructure.Persistence.Rows.EvidenceTransactionLinkRow", b =>
+                {
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.EvidenceRecordRow", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WealthLedger.Infrastructure.Persistence.Rows.LedgerTransactionRow", null)
+                        .WithMany()
+                        .HasForeignKey("LedgerTransactionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

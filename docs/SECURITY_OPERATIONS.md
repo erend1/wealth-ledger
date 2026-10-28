@@ -111,6 +111,41 @@ key, request body, SQL, storage internals, and stack traces are absent from
 routine logs and errors. Browser tests make no external request and generate no
 screenshot or trace by default.
 
+## M010 evidence storage boundary
+
+The M010 evidence persistence slice adds Application use cases, SQLite storage
+and tests. It adds no API endpoint or page, so no process accepts an upload or
+serves a download yet.
+
+- Retained evidence files are BLOBs inside the same SQLite database, never a
+  sidecar directory. The M004 `.wlbackup` package therefore captures evidence
+  and ledger in one consistent snapshot, and a real-SQLite test proves that
+  create, verify and stage carry the bytes, digests, links and supersession.
+  Packages stay plaintext, so retained statements and receipts are exactly as
+  private as the database: destination separation and encryption remain
+  operator responsibilities.
+- Only PDF, PNG, JPEG, UTF-8 text and CSV files of at most 10 MiB are retained.
+  The extension and the content signature must match the declared type, and
+  text that opens with markup is refused, so SVG, HTML, script, executable,
+  Office macro and other binary content is rejected before persistence. Only a
+  sanitized last segment of the file name is kept.
+- Trusted code computes the SHA-256 and length from the retained bytes. Reading
+  bytes for a download recomputes both and re-applies the format rules, and
+  fails closed with a stable integrity error when anything no longer matches,
+  including rows written outside the Application.
+- Evidence rows, retry receipts included, are insert-only in SQLite. There is
+  no delete workflow. A
+  retention or privacy deletion policy must first account for backup
+  generations and audit links, and is not part of M010.
+- Evidence errors carry stable codes and messages that never echo labels,
+  references, notes, file names, digests, content or master names. Evidence
+  commands and attachment carriers also hide their content from `ToString()`.
+
+Rules that only an HTTP surface can carry are deferred to M010's API slice:
+downloads as `Content-Disposition: attachment` with
+`X-Content-Type-Options: nosniff`, bounded upload bodies, and log capture tests
+over those routes.
+
 ## Remaining operational boundaries
 
 M004-M007 do not implement application-managed encryption, authentication,
