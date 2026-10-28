@@ -389,11 +389,9 @@ public sealed class EvidenceApiTests
             System.Text.Json.JsonSerializerOptions.Web);
 
         // Windows tools often write UTF-8 with a byte-order mark.
-        using (var request = new HttpRequestMessage(HttpMethod.Post, route)
-               {
-                   Content = new ByteArrayContent([.. byteOrderMark, .. json])
-               })
+        using (var request = new HttpRequestMessage(HttpMethod.Post, route))
         {
+            request.Content = new ByteArrayContent([.. byteOrderMark, .. json]);
             request.Content.Headers.ContentType = new("application/json");
             request.Headers.Add("Idempotency-Key", "evidence-bom");
             using var response = await client.SendAsync(request);
@@ -419,13 +417,11 @@ public sealed class EvidenceApiTests
         var before = await M010ApiTestData.ReadAuditCountsAsync(factory);
 
         // Without a declared length the read bound itself refuses the body.
-        using (var request = new HttpRequestMessage(HttpMethod.Post, route)
-               {
-                   Content = new EvidenceAttachmentApiTests.UnknownLengthContent(
-                       JsonContent.Create(
-                           M010ApiTestData.Statement(history) with { Note = new string('N', 70 * 1024) }))
-               })
+        using (var request = new HttpRequestMessage(HttpMethod.Post, route))
         {
+            request.Content = new EvidenceAttachmentApiTests.UnknownLengthContent(
+                JsonContent.Create(
+                    M010ApiTestData.Statement(history) with { Note = new string('N', 70 * 1024) }));
             request.Headers.Add("Idempotency-Key", "evidence-chunked");
             using var response = await client.SendAsync(request);
             await M010ApiTestData.AssertProblemAsync(
@@ -440,13 +436,9 @@ public sealed class EvidenceApiTests
             client,
             route)).Items[0].EvidenceId;
 
-        using (var request = new HttpRequestMessage(
-                   HttpMethod.Post,
-                   $"{route}/{evidenceId}/observations")
-               {
-                   Content = new StringContent("{\"observations\":[null]}", Encoding.UTF8, "application/json")
-               })
+        using (var request = new HttpRequestMessage(HttpMethod.Post, $"{route}/{evidenceId}/observations"))
         {
+            request.Content = new StringContent("{\"observations\":[null]}", Encoding.UTF8, "application/json");
             using var response = await client.SendAsync(request);
             await M010ApiTestData.AssertProblemAsync(
                 response,
