@@ -37,8 +37,99 @@ internal static class EvidenceEndpoints
             .WithName("ListEvidenceObservations");
         group.MapPost("/{evidenceId:guid}/observations", RecordObservationsAsync)
             .WithName("RecordEvidenceObservations");
+        group.MapPost("/uploads", RecordUploadAsync)
+            .WithName("RecordEvidenceUpload");
+        group.MapGet("/{evidenceId:guid}/attachment", DownloadAttachmentAsync)
+            .WithName("DownloadEvidenceAttachment");
 
         return endpoints;
+    }
+
+    private static async Task<IResult> DownloadAttachmentAsync(
+        HttpContext httpContext,
+        Guid householdId,
+        Guid evidenceId,
+        GetEvidenceAttachmentContentUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        // A retained file is never rendered here: it is always a download
+        // that the browser must not sniff, run, frame or cache.
+        var headers = httpContext.Response.Headers;
+        headers.XContentTypeOptions = "nosniff";
+        headers.CacheControl = "no-store";
+        headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+
+        var query = new BoundedQueryReader(httpContext.Request, Problems);
+
+        if (!query.TryRouteIdentity(householdId)
+            || !query.TryRouteIdentity(evidenceId)
+            || !query.TryRejectUnsupported())
+        {
+            return query.Error!;
+        }
+
+        var attachment = await useCase.ExecuteAsync(
+            new GetEvidenceAttachmentContentQuery(householdId, evidenceId),
+            cancellationToken);
+        M010RequestLogFilter.SetItemCount(httpContext, 1);
+        M010RequestLogFilter.SetSizeClass(httpContext, attachment.ByteLength);
+
+        return Results.Bytes(
+            attachment.Content,
+            EvidenceUploadMediaTypes.ToContentType(attachment.MediaType),
+            fileDownloadName: attachment.FileName);
+    }
+
+    // One evidence record with its retained file, in one commit. The body is
+    // multipart/form-data with exactly a "metadata" JSON part and one "file"
+    // part. Requiring the Idempotency-Key header also means a cross-site
+    // HTML form, which cannot set it, can never post a file here.
+    private static async Task<IResult> RecordUploadAsync(
+        HttpContext httpContext,
+        Guid householdId,
+        RecordEvidenceUseCase useCase,
+        CancellationToken cancellationToken)
+    {
+        var query = new BoundedQueryReader(httpContext.Request, Problems);
+
+        if (!query.TryRouteIdentity(householdId)
+            || !query.TryRejectUnsupported())
+        {
+            return query.Error!;
+        }
+
+        if (!LedgerEndpoints.TryGetIdempotencyKey(
+                httpContext.Request,
+                out var idempotencyKey,
+                out var keyError))
+        {
+            return keyError!;
+        }
+
+        var upload = await EvidenceUploadReader.ReadAsync(
+            httpContext.Request,
+            cancellationToken);
+
+        if (upload.Error is not null)
+        {
+            return upload.Error;
+        }
+
+        M010RequestLogFilter.SetSizeClass(httpContext, upload.Attachment!.Content.Length);
+
+        if (!EvidenceContractMapper.SourceKindCodes.TryGetValue(
+                upload.Metadata!.SourceKindCode,
+                out var sourceKind))
+        {
+            return BoundedJsonBody.Malformed(Problems);
+        }
+
+        return await RecordCommandAsync(
+            httpContext,
+            useCase,
+            idempotencyKey,
+            upload.Metadata.ToCommand(householdId, sourceKind, upload.Attachment),
+            cancellationToken);
     }
 
     private static async Task<IResult> ListAsync(
