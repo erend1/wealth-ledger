@@ -736,7 +736,12 @@ Database protections:
 
 Trust boundaries the database cannot carry: the Application computes the
 SHA-256 from the retained bytes and accepts a file only when its extension and
-content signature match the declared type. Before returning bytes for download
+content signature match the declared type. One record holds at most 500
+transaction links. The link write counts them inside its own SQLite write
+transaction after inserting, and rolls back with
+`EVIDENCE_TRANSACTION_LINK_LIMIT_EXCEEDED` when the record would exceed the
+cap, so concurrent writers cannot pass it; relinking existing pairs stays a
+no-op. Before returning bytes for download
 it checks length, digest, declared type and sanitized name again, so a row
 written outside the Application still fails closed.
 

@@ -141,7 +141,7 @@ internal static class EvidenceTestData
             Domain.Evidence.EvidenceMediaType.Pdf,
             content ?? SyntheticPdf);
 
-    private static async Task<Guid> PostContributionAsync(
+    internal static async Task<Guid> PostContributionAsync(
         Func<WealthLedgerDbContext> createContext,
         string idempotencyKey,
         Guid householdId,

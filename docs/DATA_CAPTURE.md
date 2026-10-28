@@ -376,11 +376,18 @@ Capture:
   control characters or broken Unicode;
 - optional institution and household account. When both are given, the account
   must belong to that institution;
-- zero or more links to Posted transactions of the same household; and
+- zero or more links to Posted transactions of the same household: at most
+  100 per command and 500 per record; and
 - optionally, one retained source file.
 
 A retained file must be PDF, PNG, JPEG, UTF-8 plain text or CSV, at most
-10 MiB. Its extension and content signature must match the declared type, and
+10 MiB. An upload declares its type through the file's content type:
+`application/pdf`, `image/png`, `image/jpeg`, `text/plain` or `text/csv`.
+`application/vnd.ms-excel`, which Windows browsers send for a `.csv` file, also
+selects CSV; the `.csv` extension and the UTF-8 content check still apply, so a
+workbook is refused. CSV and text are accepted only as UTF-8, so export bank or
+spreadsheet files in UTF-8 before retaining them. Its extension and content
+signature must match the declared type, and
 text must not open with markup. SVG, HTML, scripts, executables, Office macro
 formats and other binary content are refused before anything is stored. Only
 the file name's last segment is kept, with unsafe characters replaced. The
