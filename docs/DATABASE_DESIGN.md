@@ -550,6 +550,16 @@ history by `ExecutionDate`: a disposal or transfer may be dated before the
 acquisition or custody it consumed. An as-of reconstruction can therefore be
 negative, and inventory reports it signed rather than hiding or rejecting it.
 
+Results stay bounded without stored balances. Position inventory returns one
+item per exact scope with its source entry and transaction counts, not their
+identities; ledger search over the same scope with an upper execution date
+lists them. Lot inventory returns pages of 1-100 lots, ordered by asset code,
+evidenced acquisition date (unknown first) and lot identity, with an opaque
+cursor bound to the household and every filter. Each page is derived from
+complete history, and reconciliation uses the unpaged derivation. A checked-
+arithmetic overflow over persisted history is reported as
+`INVENTORY_ARITHMETIC_OVERFLOW`, not as a numeric-input error.
+
 Inventory adds no table, column, index or migration. Real-SQLite query-plan
 tests show that its position, lot and allocation queries, with and without an
 as-of date and with account and asset filters, use only indexed searches on

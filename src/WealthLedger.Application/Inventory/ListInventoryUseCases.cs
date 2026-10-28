@@ -13,9 +13,30 @@ public sealed class ListPositionInventoryUseCase
             ?? throw new ArgumentNullException(nameof(readStore));
     }
 
+    /// <remarks>
+    /// One item per exact scope, so the result grows with master data rather
+    /// than history. Items carry source counts, not source identities; ledger
+    /// search with the same scope and an upper execution date lists them.
+    /// </remarks>
     public async Task<PositionInventory> ExecuteAsync(
         ListPositionInventoryQuery query,
         CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await DeriveAsync(query, cancellationToken);
+        }
+        catch (OverflowException exception)
+        {
+            throw new InventoryArithmeticOverflowException(exception);
+        }
+    }
+
+    // Leaves an overflow unwrapped, so reconciliation can report it under its
+    // own stable code.
+    internal async Task<PositionInventory> DeriveAsync(
+        ListPositionInventoryQuery query,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         await InventoryScopeValidation.EnsureScopeExistsAsync(
@@ -135,8 +156,7 @@ public sealed class ListPositionInventoryUseCase
             scope.AssetIsActive,
             quantityRawE8,
             facts.Count,
-            facts.Select(fact => fact.EntryId).ToArray(),
-            facts.Select(fact => fact.TransactionId).Distinct().ToArray());
+            facts.Select(fact => fact.TransactionId).Distinct().Count());
 
     private static IOrderedEnumerable<InventoryEntryFact> OrderPositionFacts(
         IEnumerable<InventoryEntryFact> facts)
@@ -169,9 +189,74 @@ public sealed class ListLotInventoryUseCase
             ?? throw new ArgumentNullException(nameof(readStore));
     }
 
+    /// <remarks>
+    /// Lots grow with acquisition history, so the result is a bounded page in
+    /// the derivation order with a cursor bound to the household and filters.
+    /// Each page is derived from complete history, never from stored balances.
+    /// </remarks>
     public async Task<LotInventory> ExecuteAsync(
         ListLotInventoryQuery query,
         CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (query.PageSize is < 1 or > 100)
+        {
+            throw new InventoryRequestException(
+                InventoryRequestException.PageSizeInvalidCode,
+                "Page size must be an integer between 1 and 100.");
+        }
+
+        var fingerprint = LotInventoryCursorCodec.ComputeFingerprint(query);
+
+        // An empty household is refused by scope validation below.
+        var after = query.HouseholdId == Guid.Empty
+            ? null
+            : LotInventoryCursorCodec.Decode(
+                query.Cursor,
+                query.HouseholdId,
+                fingerprint);
+
+        LotInventory all;
+
+        try
+        {
+            all = await DeriveAllAsync(query, cancellationToken);
+        }
+        catch (OverflowException exception)
+        {
+            throw new InventoryArithmeticOverflowException(exception);
+        }
+
+        var remaining = after is null
+            ? all.Items
+            : all.Items
+                .Where(item => CompareKeys(KeyOf(item), after) > 0)
+                .ToArray();
+
+        if (remaining.Count <= query.PageSize)
+        {
+            return all with { Items = remaining };
+        }
+
+        var page = remaining.Take(query.PageSize).ToArray();
+
+        return all with
+        {
+            Items = page,
+            NextCursor = LotInventoryCursorCodec.Encode(
+                query.HouseholdId,
+                fingerprint,
+                KeyOf(page[^1]))
+        };
+    }
+
+    // Every matching lot, unpaged, with an overflow left unwrapped. The
+    // reconciliation ledger side needs complete custody.
+    internal async Task<LotInventory> DeriveAllAsync(
+        ListLotInventoryQuery query,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         await InventoryScopeValidation.EnsureScopeExistsAsync(
@@ -294,14 +379,36 @@ public sealed class ListLotInventoryUseCase
                         globalPieceCount)));
         }
 
+        items.Sort((left, right) => CompareKeys(KeyOf(left), KeyOf(right)));
+
         return new LotInventory(
             query.HouseholdId,
             query.AsOf,
-            items
-                .OrderBy(item => item.AssetCode, StringComparer.Ordinal)
-                .ThenBy(item => item.AcquiredOn)
-                .ThenBy(item => item.AssetLotId)
-                .ToArray());
+            items.ToArray(),
+            NextCursor: null);
+    }
+
+    private static LotInventoryCursorKey KeyOf(LotInventoryItem item)
+        => new(item.AssetCode, item.AcquiredOn, item.AssetLotId);
+
+    // The one lot order: asset code, then evidenced acquisition date with
+    // unknown dates first, then lot identity. Paging compares with it too.
+    private static int CompareKeys(
+        LotInventoryCursorKey left,
+        LotInventoryCursorKey right)
+    {
+        var result = string.CompareOrdinal(left.AssetCode, right.AssetCode);
+
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = Nullable.Compare(left.AcquiredOn, right.AcquiredOn);
+
+        return result != 0
+            ? result
+            : left.AssetLotId.CompareTo(right.AssetLotId);
     }
 
     private static long RequireLineage(
