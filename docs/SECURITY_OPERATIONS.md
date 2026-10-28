@@ -113,9 +113,9 @@ screenshot or trace by default.
 
 ## M010 evidence storage boundary
 
-The M010 evidence persistence slice adds Application use cases, SQLite storage
-and tests. It adds no API endpoint or page, so no process accepts an upload or
-serves a download yet.
+The M010 evidence persistence and reconciliation slices add Application use
+cases, SQLite storage and tests. They add no API endpoint or page, so no process
+accepts an upload, serves a download or runs a reconciliation on request yet.
 
 - Retained evidence files are BLOBs inside the same SQLite database, never a
   sidecar directory. The M004 `.wlbackup` package therefore captures evidence
@@ -140,6 +140,17 @@ serves a download yet.
 - Evidence errors carry stable codes and messages that never echo labels,
   references, notes, file names, digests, content or master names. Evidence
   commands and attachment carriers also hide their content from `ToString()`.
+- Evidence observations, reconciliation runs, items and resolutions live in the
+  same SQLite file and are insert-only. A real-SQLite test proves that create,
+  verify and stage carry them, and that the staged copy re-derives the same
+  ledger side. Observed and ledger quantities and resolution explanations are
+  household financial facts with the same privacy as the ledger.
+- Reconciliation errors carry stable codes and messages that never echo
+  observed or ledger quantities, differences, explanations or master names.
+  Reconciliation commands, observation inputs and read models hide their
+  content from `ToString()`.
+- Recording observations and running or resolving a reconciliation writes no
+  ledger row; a real-SQLite test compares every ledger table before and after.
 
 Rules that only an HTTP surface can carry are deferred to M010's API slice:
 downloads as `Content-Disposition: attachment` with
