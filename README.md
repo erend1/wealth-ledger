@@ -250,10 +250,9 @@ Run the full test suite:
 dotnet test WealthLedger.slnx --no-restore
 ```
 
-The verified M007 checkpoint contains 676 passing tests: Domain 98,
-Application 156, Infrastructure 195, UI 71, API/UI host 130, Operations 23, and
-Playwright browser 3. Run the browser project directly when iterating on UI
-journeys:
+The current verified checkpoint and its per-project test counts are recorded in
+[`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md#current-checkpoint). Run the
+browser project directly when iterating on UI journeys:
 
 ```powershell
 dotnet test tests/WealthLedger.UI.BrowserTests/WealthLedger.UI.BrowserTests.csproj --no-restore --verbosity minimal
