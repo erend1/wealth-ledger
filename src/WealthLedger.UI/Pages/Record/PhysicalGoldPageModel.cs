@@ -288,7 +288,7 @@ public abstract class PhysicalGoldPageModel : PageModel
                 goldAccounts[1].AccountId.ToString("D");
         }
 
-        Input.ExecutionDate ??= CurrentLocalDate().ToString("yyyy-MM-dd");
+        Input.ExecutionDate ??= OperatingDate.Today(TimeProvider).ToString("yyyy-MM-dd");
         Input.FinenessChoice ??= "916";
         Input.IdempotencyKey ??= Guid.NewGuid().ToString("D");
         if (Input.Costs.Count == 0)
@@ -478,9 +478,6 @@ public abstract class PhysicalGoldPageModel : PageModel
                && Guid.TryParseExact(account, "D", out accountId)
                && Guid.TryParseExact(Input.GoldAssetId, "D", out assetId);
     }
-
-    private DateOnly CurrentLocalDate()
-        => OperatingDate.Today(TimeProvider);
 
     private static string? SingleOrNull(IEnumerable<Guid> candidates)
     {

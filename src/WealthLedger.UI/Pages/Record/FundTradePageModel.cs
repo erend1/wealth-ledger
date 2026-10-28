@@ -270,7 +270,7 @@ public abstract class FundTradePageModel : PageModel
         Input.CashAssetId ??= SingleOrNull(
             Choices.CashAssets.Items.Select(x => x.AssetId));
 
-        Input.ExecutionDate ??= CurrentLocalDate().ToString("yyyy-MM-dd");
+        Input.ExecutionDate ??= OperatingDate.Today(TimeProvider).ToString("yyyy-MM-dd");
 
         /*
          * The idempotency key identifies this attempt, not the trade. It is
@@ -284,9 +284,6 @@ public abstract class FundTradePageModel : PageModel
             Input.Costs.Add(new FundTradeCostForm());
         }
     }
-
-    protected DateOnly CurrentLocalDate()
-        => OperatingDate.Today(TimeProvider);
 
     /// <summary>
     /// Anchors an application failure to the field the user can act on.

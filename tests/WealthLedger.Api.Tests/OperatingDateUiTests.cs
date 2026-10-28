@@ -71,6 +71,50 @@ public sealed partial class OperatingDateUiTests
         Assert.DoesNotContain("bugünden ileri olamaz", reviewHtml, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(HostOperatingDate, true)]
+    // The display zone's date, which is tomorrow for the host.
+    [InlineData("2026-09-02", false)]
+    public async Task ContributionReview_PreChecksAgainstTheHostOperatingDate(
+        string executionDate,
+        bool accepted)
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var host = WithHostClock(factory);
+        using var client = CreateClient(host);
+
+        using var page = await client.GetAsync("/record/contribution");
+        var rawHtml = await page.Content.ReadAsStringAsync();
+        var setup = factory.ReadySetup;
+
+        using var review = await client.PostAsync(
+            "/record/contribution?handler=Review",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = InputValue(rawHtml, "__RequestVerificationToken"),
+                ["Input.IdempotencyKey"] = InputValue(rawHtml, "Input.IdempotencyKey"),
+                ["Input.PortfolioId"] = setup.PortfolioId.ToString("D"),
+                ["Input.AccountId"] = setup.AccountId.ToString("D"),
+                ["Input.CashAssetId"] = setup.CashAssetId.ToString("D"),
+                ["Input.CategoryCode"] = "SALARY",
+                ["Input.Amount"] = "1500",
+                ["Input.ExecutionDate"] = executionDate,
+                ["Input.Note"] = "Synthetic contribution reviewed late in the evening."
+            }));
+        var reviewHtml = WebUtility.HtmlDecode(await review.Content.ReadAsStringAsync());
+
+        // The date error is the only refusal this form can raise here.
+        Assert.Equal(
+            !accepted,
+            reviewHtml.Contains("Gelecek tarih olamaz", StringComparison.Ordinal));
+
+        if (accepted)
+        {
+            Assert.Equal(HttpStatusCode.OK, review.StatusCode);
+            Assert.Contains("1.500,00 TRY", reviewHtml, StringComparison.Ordinal);
+        }
+    }
+
     private static WebApplicationFactory<Program> WithHostClock(WealthLedgerApiFactory factory)
         => factory.WithWebHostBuilder(
             builder => builder.ConfigureTestServices(

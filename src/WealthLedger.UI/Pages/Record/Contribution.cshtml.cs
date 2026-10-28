@@ -157,7 +157,7 @@ public sealed class ContributionModel : PageModel
             Choices!.CashAssets.Items.Select(x => x.AssetId));
 
         Input.CategoryCode ??= "OTHER";
-        Input.ExecutionDate ??= CurrentLocalDate().ToString("yyyy-MM-dd");
+        Input.ExecutionDate ??= OperatingDate.Today(_timeProvider).ToString("yyyy-MM-dd");
         Input.IdempotencyKey ??= Guid.NewGuid().ToString("D");
 
         return Page();
@@ -400,7 +400,7 @@ public sealed class ContributionModel : PageModel
                 "Fund_Validation_Date");
         }
 
-        if (parsed > CurrentLocalDate())
+        if (parsed > OperatingDate.Today(_timeProvider))
         {
             return Invalid<DateOnly?>(
                 nameof(Input.ExecutionDate),
@@ -440,9 +440,6 @@ public sealed class ContributionModel : PageModel
         ModelState.AddModelError(string.Empty, _text[resourceKey]);
         Response.StatusCode = statusCode;
     }
-
-    private DateOnly CurrentLocalDate()
-        => OperatingDate.Today(_timeProvider);
 
     private async Task<bool> LoadChoicesAsync(
         CancellationToken cancellationToken)
