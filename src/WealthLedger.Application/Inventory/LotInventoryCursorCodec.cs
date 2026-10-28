@@ -10,9 +10,14 @@ internal static class LotInventoryCursorCodec
 {
     private const int CursorVersion = 1;
     private const string Resource = "INVENTORY_LOTS";
-    private const int MaximumEncodedLength = 1_024;
-    private const int MaximumDecodedLength = 768;
-    private const int MaximumAssetCodeLength = 64;
+
+    // Room for a JSON-escaped asset code of MaximumAssetCodeLength characters.
+    private const int MaximumEncodedLength = 2_816;
+    private const int MaximumDecodedLength = 2_048;
+
+    // The Domain caps codes at 64 characters, but the database does not, so
+    // a cursor carries any persisted code up to this generous bound.
+    private const int MaximumAssetCodeLength = 256;
 
     private static readonly UTF8Encoding StrictUtf8 = new(
         encoderShouldEmitUTF8Identifier: false,
@@ -50,9 +55,8 @@ internal static class LotInventoryCursorCodec
 
         if (!IsAssetCode(key.AssetCode))
         {
-            throw new ArgumentException(
-                "A valid asset code is required.",
-                nameof(key));
+            throw new InventoryPersistenceException(
+                "A persisted asset code exceeds the bound a lot cursor can carry.");
         }
 
         var payload = new CursorPayload(
@@ -238,14 +242,8 @@ internal static class LotInventoryCursorCodec
                character => character is >= '0' and <= '9'
                    or >= 'a' and <= 'f');
 
-    // Same alphabet and bound as the Domain asset code.
     private static bool IsAssetCode(string? value)
-        => value is { Length: > 0 and <= MaximumAssetCodeLength }
-           && value.All(
-               character => character is >= 'A' and <= 'Z'
-                   or >= '0' and <= '9'
-                   or '_'
-                   or '-');
+        => value is { Length: > 0 and <= MaximumAssetCodeLength };
 
     private static string FormatGuid(Guid? value)
         => value?.ToString("D") ?? string.Empty;

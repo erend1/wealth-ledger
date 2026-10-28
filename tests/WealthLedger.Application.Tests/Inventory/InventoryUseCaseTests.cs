@@ -383,6 +383,34 @@ public sealed class InventoryUseCaseTests
             paged);
     }
 
+    [Fact]
+    public async Task LotInventory_PagesAPersistedAssetCodeOutsideTheDomainAlphabet()
+    {
+        // The database does not constrain asset codes, so a row written
+        // outside the Domain may carry lowercase or other characters.
+        var lots = FundLots(
+            (1, new DateOnly(2026, 1, 1)),
+            (2, new DateOnly(2026, 2, 1)));
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = lots with
+            {
+                Lots = lots.Lots
+                    .Select(lot => lot with { AssetCode = "legacy.fund-ü" })
+                    .ToArray()
+            }
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var first = await useCase.ExecuteAsync(new ListLotInventoryQuery(HouseholdId, PageSize: 1));
+        var second = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, PageSize: 1, Cursor: first.NextCursor));
+
+        Assert.Equal(LotIdOf(1), Assert.Single(first.Items).AssetLotId);
+        Assert.Equal(LotIdOf(2), Assert.Single(second.Items).AssetLotId);
+        Assert.Null(second.NextCursor);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(101)]
@@ -432,6 +460,19 @@ public sealed class InventoryUseCaseTests
         var malformed = await Assert.ThrowsAsync<InventoryRequestException>(
             () => useCase.ExecuteAsync(
                 new ListLotInventoryQuery(HouseholdId, Cursor: "not+a/cursor")));
+
+        foreach (var changedScope in new[]
+                 {
+                     new ListLotInventoryQuery(HouseholdId, PortfolioId: PortfolioId, PageSize: 1, Cursor: cursor),
+                     new ListLotInventoryQuery(HouseholdId, AccountId: AccountId, PageSize: 1, Cursor: cursor),
+                     new ListLotInventoryQuery(HouseholdId, InstitutionId: InstitutionId, PageSize: 1, Cursor: cursor),
+                     new ListLotInventoryQuery(HouseholdId, AssetId: AssetId, PageSize: 1, Cursor: cursor)
+                 })
+        {
+            var mismatch = await Assert.ThrowsAsync<InventoryRequestException>(
+                () => useCase.ExecuteAsync(changedScope));
+            Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, mismatch.ErrorCode);
+        }
 
         Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, changedFilter.ErrorCode);
         Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, changedAsOf.ErrorCode);
