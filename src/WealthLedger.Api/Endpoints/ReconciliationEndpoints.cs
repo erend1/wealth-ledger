@@ -123,9 +123,12 @@ internal static class ReconciliationEndpoints
             return body.Error;
         }
 
-        if (!query.TryRouteIdentity(body.Value!.EvidenceId))
+        if (body.Value!.EvidenceId == Guid.Empty)
         {
-            return query.Error!;
+            return BoundedProblems.BadRequest(
+                Problems,
+                RequestInvalidCode,
+                "The evidence identity must not be empty.");
         }
 
         var result = await useCase.ExecuteAsync(

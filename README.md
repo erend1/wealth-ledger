@@ -281,7 +281,8 @@ Position inventory derives one item per exact scope from Posted history, with
 source entry and transaction counts; `asOf` bounds the execution date and
 `includeZero=true` keeps exact zeros. Lot inventory returns pages of lots with
 custody, allocations and, for physical gold, fineness, pieces and derived fine
-weight; `includeExhausted=true` keeps exhausted lots. Both accept
+weight as an exact decimal string; `includeExhausted=true` keeps exhausted
+lots. Both accept
 `portfolioId`, `accountId`, `institutionId`, `assetId` and `asOf`. A filter
 combination that names no existing scope is `INVENTORY_SCOPE_NOT_FOUND`, never
 zero.
@@ -293,9 +294,10 @@ is `application/pdf`, `image/png`, `image/jpeg`, `text/plain`, `text/csv` or
 `application/vnd.ms-excel` for CSV. The download is always an attachment.
 Evidence is corrected by a superseding record; there is no update or delete
 route. Evidence record, upload and reconciliation run commands require exactly
-one `Idempotency-Key` header. Linking, observing and resolving are
-insert-only: repeating the same command is a no-op and a different one is a
-conflict.
+one `Idempotency-Key` header. Linking adds new pairs, up to 500 per record, and
+leaves pairs already linked untouched. Observing and resolving are
+insert-only: repeating the same observation or resolution is a no-op, and a
+different one for the same scope or item is a conflict.
 
 Collections accept `pageSize` from 1 through 100 (default 50) and an opaque
 `cursor`; position inventory and observations are returned whole. Malformed,

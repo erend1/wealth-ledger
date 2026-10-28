@@ -89,7 +89,7 @@ internal static class InventoryContractMapper
                         custody.InstitutionIsActive,
                         custody.QuantityRawE8,
                         custody.PieceCount,
-                        custody.FineWeightGrams))
+                        OpeningBalanceContractMapper.FormatExact(custody.FineWeightGrams)))
                 .ToArray(),
             item.Allocations
                 .Select(
@@ -110,7 +110,7 @@ internal static class InventoryContractMapper
                     item.PhysicalGold.FinenessPpm,
                     item.PhysicalGold.OriginalPieceCount,
                     item.PhysicalGold.GlobalPieceCount,
-                    item.PhysicalGold.GlobalFineWeightGrams,
+                    OpeningBalanceContractMapper.FormatExact(item.PhysicalGold.GlobalFineWeightGrams)!,
                     item.PhysicalGold.Hallmark,
                     item.PhysicalGold.CertificateReference,
                     item.PhysicalGold.Note));

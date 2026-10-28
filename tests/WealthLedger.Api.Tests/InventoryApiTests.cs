@@ -148,7 +148,7 @@ public sealed class InventoryApiTests
         var fundCustody = Assert.Single(fund.Custody);
         Assert.Equal((setup.AccountId, 125_000_000L), (fundCustody.AccountId, fundCustody.QuantityRawE8));
         Assert.Null(fundCustody.PieceCount);
-        Assert.Null(fundCustody.FineWeightGrams);
+        Assert.Null(fundCustody.FineWeightGramsExact);
         var opening = Assert.Single(fund.Allocations);
         Assert.Equal(("BUY", history.FundPurchaseId), (opening.TransactionTypeCode, opening.TransactionId));
 
@@ -157,12 +157,12 @@ public sealed class InventoryApiTests
         Assert.Equal((20 * Unit, 20 * Unit), (goldLot.OriginalQuantityRawE8, goldLot.GlobalQuantityRawE8));
         var physical = Assert.IsType<PhysicalGoldLotInventoryResponse>(goldLot.PhysicalGold);
         Assert.Equal((916_000, 2, 2), (physical.FinenessPpm, physical.OriginalPieceCount, physical.GlobalPieceCount));
-        Assert.Equal(18.32m, physical.GlobalFineWeightGrams);
+        Assert.Equal("18.32", physical.GlobalFineWeightGramsExact);
         Assert.Equal("SYNTH-CERT-001", physical.CertificateReference);
         var source = Assert.Single(goldLot.Custody, item => item.AccountId == gold.SourceVaultId);
-        Assert.Equal((15 * Unit, 1, 13.74m), (source.QuantityRawE8, source.PieceCount, source.FineWeightGrams));
+        Assert.Equal((15 * Unit, 1, "13.74"), (source.QuantityRawE8, source.PieceCount, source.FineWeightGramsExact));
         var destination = Assert.Single(goldLot.Custody, item => item.AccountId == gold.DestinationVaultId);
-        Assert.Equal((5 * Unit, 1, 4.58m), (destination.QuantityRawE8, destination.PieceCount, destination.FineWeightGrams));
+        Assert.Equal((5 * Unit, 1, "4.58"), (destination.QuantityRawE8, destination.PieceCount, destination.FineWeightGramsExact));
         // Purchase, then the transfer's paired allocations; signed pieces sum
         // to the two still held.
         Assert.Equal(3, goldLot.Allocations.Count);

@@ -125,7 +125,66 @@ public sealed class M010ApiLoggingTests
         {
         }
 
+        // A metadata-only record, then one refusal for every remaining route.
+        await M010ApiTestData.PostAsync<RecordEvidenceResponse>(
+            client,
+            $"{households}/evidence",
+            statement with { Label = "Synthetic logged metadata" },
+            "m010-log-metadata-key");
+
+        foreach (var (method, route, body) in new (HttpMethod, string, object?)[]
+                 {
+                     (HttpMethod.Get, $"{households}/evidence?pageSize=0", null),
+                     (HttpMethod.Get, $"{households}/evidence/{unknownEvidenceId}/attachment", null),
+                     (HttpMethod.Post, $"{evidence}/transaction-links", new LinkEvidenceTransactionsRequest([history.OtherHouseholdTransactionId])),
+                     (HttpMethod.Get, $"{households}/evidence/{unknownEvidenceId}/observations", null),
+                     (HttpMethod.Get, $"{households}/reconciliations?cursor=PRIVATE-CURSOR-PAYLOAD", null),
+                     (HttpMethod.Get, $"{households}/reconciliations/{Guid.NewGuid()}", null)
+                 })
+        {
+            using var request = new HttpRequestMessage(method, route)
+            {
+                Content = body is null ? null : JsonContent.Create(body)
+            };
+            using var response = await client.SendAsync(request);
+            Assert.True((int)response.StatusCode >= 400, $"Expected a refusal from {method} {route}.");
+        }
+
+        using (await M010ApiTestData.SendJsonAsync(
+                   client,
+                   $"{households}/reconciliations",
+                   new RunReconciliationRequest(unknownEvidenceId),
+                   "m010-log-refused-run"))
+        {
+        }
+
         var logs = string.Join(Environment.NewLine, factory.Logs.Messages);
+
+        // Every M010 route template logs both a success and a refusal.
+        foreach (var template in new[]
+                 {
+                     "/ledger/search",
+                     "/inventory/positions",
+                     "/inventory/lots",
+                     "/evidence",
+                     "/evidence/uploads",
+                     "/evidence/{evidenceId:guid}",
+                     "/evidence/{evidenceId:guid}/attachment",
+                     "/evidence/{evidenceId:guid}/transaction-links",
+                     "/evidence/{evidenceId:guid}/observations",
+                     "/reconciliations",
+                     "/reconciliations/{reconciliationRunId:guid}",
+                     "/reconciliations/{reconciliationRunId:guid}/items/{reconciliationItemId:guid}/resolution"
+                 })
+        {
+            foreach (var outcome in new[] { "SUCCESS", "REJECTED" })
+            {
+                Assert.Contains(
+                    $"route /api/households/{{householdId:guid}}{template} with outcome {outcome},",
+                    logs,
+                    StringComparison.Ordinal);
+            }
+        }
 
         Assert.Contains(
             "route /api/households/{householdId:guid}/ledger/search with outcome SUCCESS, status 200, code NONE, item count 1, size class NONE",
@@ -194,6 +253,9 @@ public sealed class M010ApiLoggingTests
                      outOfTolerance.ReconciliationItemId.ToString("D"),
                      "m010-log-upload-key",
                      "m010-log-run-key",
+                     "m010-log-metadata-key",
+                     "m010-log-refused-run",
+                     "Synthetic logged metadata",
                      "PRIVATE-CURSOR-PAYLOAD",
                      searchCursor,
                      lotCursor,

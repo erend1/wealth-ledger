@@ -53,11 +53,19 @@ internal static class EvidenceEndpoints
         CancellationToken cancellationToken)
     {
         // A retained file is never rendered here: it is always a download
-        // that the browser must not sniff, run, frame or cache.
-        var headers = httpContext.Response.Headers;
-        headers.XContentTypeOptions = "nosniff";
-        headers.CacheControl = "no-store";
-        headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+        // that the browser must not sniff, run, frame or cache. The headers
+        // are applied as the response starts, so a problem written after the
+        // exception handler clears the response carries them too.
+        httpContext.Response.OnStarting(
+            static state =>
+            {
+                var headers = ((HttpResponse)state).Headers;
+                headers.XContentTypeOptions = "nosniff";
+                headers.CacheControl = "no-store";
+                headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+                return Task.CompletedTask;
+            },
+            httpContext.Response);
 
         var query = new BoundedQueryReader(httpContext.Request, Problems);
 
@@ -326,13 +334,19 @@ internal static class EvidenceEndpoints
             return body.Error;
         }
 
+        // Nullable annotations are not enforced on collection elements.
+        if (body.Value!.Observations.Any(observation => observation is null))
+        {
+            return BoundedJsonBody.Malformed(Problems);
+        }
+
         // An identical observation is already recorded and a different one
         // for the same scope is a conflict, so a retry needs no key.
         var result = await useCase.ExecuteAsync(
             new RecordEvidenceObservationsCommand(
                 householdId,
                 evidenceId,
-                body.Value!.Observations
+                body.Value.Observations
                     .Select(
                         observation => new EvidenceObservationInput(
                             observation.PortfolioId,

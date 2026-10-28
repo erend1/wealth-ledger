@@ -376,6 +376,87 @@ public sealed class EvidenceApiTests
         }
     }
 
+    [Fact]
+    public async Task Evidence_AcceptsAByteOrderMarkAndBoundsBodiesWithoutADeclaredLength()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = factory.CreateClient();
+        var history = await M010ApiTestData.SeedAsync(factory, client);
+        var route = $"{history.HouseholdRoute}/evidence";
+        byte[] byteOrderMark = [0xEF, 0xBB, 0xBF];
+        var json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+            M010ApiTestData.Statement(history),
+            System.Text.Json.JsonSerializerOptions.Web);
+
+        // Windows tools often write UTF-8 with a byte-order mark.
+        using (var request = new HttpRequestMessage(HttpMethod.Post, route)
+               {
+                   Content = new ByteArrayContent([.. byteOrderMark, .. json])
+               })
+        {
+            request.Content.Headers.ContentType = new("application/json");
+            request.Headers.Add("Idempotency-Key", "evidence-bom");
+            using var response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        }
+
+        using (var form = new MultipartFormDataContent())
+        {
+            var metadata = new ByteArrayContent([.. byteOrderMark, .. json]);
+            metadata.Headers.ContentType = new("application/json");
+            form.Add(metadata, "metadata");
+            var file = new ByteArrayContent(Encoding.ASCII.GetBytes("%PDF-1.7\n%synthetic\n%%EOF\n"));
+            file.Headers.ContentType = new("application/pdf");
+            form.Add(file, "file", "synthetic-bom.pdf");
+            using var response = await EvidenceAttachmentApiTests.UploadAsync(
+                client,
+                history,
+                form,
+                "evidence-bom-upload");
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        }
+
+        var before = await M010ApiTestData.ReadAuditCountsAsync(factory);
+
+        // Without a declared length the read bound itself refuses the body.
+        using (var request = new HttpRequestMessage(HttpMethod.Post, route)
+               {
+                   Content = new EvidenceAttachmentApiTests.UnknownLengthContent(
+                       JsonContent.Create(
+                           M010ApiTestData.Statement(history) with { Note = new string('N', 70 * 1024) }))
+               })
+        {
+            request.Headers.Add("Idempotency-Key", "evidence-chunked");
+            using var response = await client.SendAsync(request);
+            await M010ApiTestData.AssertProblemAsync(
+                response,
+                HttpStatusCode.RequestEntityTooLarge,
+                "EVIDENCE_REQUEST_INVALID");
+        }
+
+        // Nullable annotations do not reach collection elements; a null
+        // observation is malformed input, not a server failure.
+        var evidenceId = (await M010ApiTestData.GetAsync<NavigationPageResponse<EvidenceSummaryResponse>>(
+            client,
+            route)).Items[0].EvidenceId;
+
+        using (var request = new HttpRequestMessage(
+                   HttpMethod.Post,
+                   $"{route}/{evidenceId}/observations")
+               {
+                   Content = new StringContent("{\"observations\":[null]}", Encoding.UTF8, "application/json")
+               })
+        {
+            using var response = await client.SendAsync(request);
+            await M010ApiTestData.AssertProblemAsync(
+                response,
+                HttpStatusCode.BadRequest,
+                "EVIDENCE_REQUEST_INVALID");
+        }
+
+        Assert.Equal(before, await M010ApiTestData.ReadAuditCountsAsync(factory));
+    }
+
     private static async Task<string?> ReadCodeAsync(HttpResponseMessage response)
     {
         using var document = System.Text.Json.JsonDocument.Parse(

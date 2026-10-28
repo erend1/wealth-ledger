@@ -303,6 +303,15 @@ public sealed class EvidenceAttachmentApiTests
             "synthetic-statement",
             sha256,
             "%PDF");
+
+        // The refusal keeps the download's protective headers, and the log
+        // records a fault to notice rather than a routine refusal.
+        Assert.Equal("nosniff", Assert.Single(refused.Headers.GetValues("X-Content-Type-Options")));
+        Assert.Contains("no-store", refused.Headers.CacheControl!.ToString(), StringComparison.Ordinal);
+        Assert.Contains(
+            "/attachment with outcome FAILED, status 409, code EVIDENCE_ATTACHMENT_INTEGRITY_FAILED",
+            string.Join(Environment.NewLine, factory.Logs.Messages),
+            StringComparison.Ordinal);
     }
 
     internal static MultipartFormDataContent Upload(
@@ -379,7 +388,7 @@ public sealed class EvidenceAttachmentApiTests
         };
 
     // Sends the inner content without Content-Length, as a chunked body.
-    private sealed class UnknownLengthContent : HttpContent
+    internal sealed class UnknownLengthContent : HttpContent
     {
         private readonly HttpContent _inner;
 

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using WealthLedger.Api.Contracts;
@@ -120,7 +119,11 @@ internal static class EvidenceUploadReader
                          && attachment is null
                          && disposition.IsFileDisposition())
                 {
-                    var file = await ReadFileAsync(section, disposition, cancellationToken);
+                    var file = await ReadFileAsync(
+                        section,
+                        disposition,
+                        body.Length,
+                        cancellationToken);
 
                     if (file.Error is not null)
                     {
@@ -164,26 +167,16 @@ internal static class EvidenceUploadReader
         using var buffer = new MemoryStream();
         await section.Body.CopyToAsync(buffer, cancellationToken);
 
-        if (buffer.Length > BoundedJsonBody.MaximumCommandBytes)
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<RecordEvidenceRequest>(
-                buffer.ToArray(),
-                BoundedJsonBody.StrictOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return buffer.Length > BoundedJsonBody.MaximumCommandBytes
+            ? null
+            : BoundedJsonBody.Deserialize<RecordEvidenceRequest>(
+                buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
     }
 
     private static async Task<(EvidenceAttachmentUpload? Attachment, IResult? Error)> ReadFileAsync(
         MultipartSection section,
         ContentDispositionHeaderValue disposition,
+        int bodyLength,
         CancellationToken cancellationToken)
     {
         var fileName = HeaderUtilities.RemoveQuotes(
@@ -206,7 +199,9 @@ internal static class EvidenceUploadReader
                     "Retained evidence files must be PDF, PNG, JPEG, UTF-8 text or CSV.").Error);
         }
 
-        using var buffer = new MemoryStream();
+        // The section cannot outgrow the already-bounded body, so one
+        // allocation of that size avoids repeated growth.
+        using var buffer = new MemoryStream(bodyLength);
         await section.Body.CopyToAsync(buffer, cancellationToken);
 
         if (buffer.Length > EvidenceAttachmentPolicy.MaximumByteLength)

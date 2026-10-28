@@ -84,7 +84,7 @@ public sealed record LotCustodyInventoryResponse(
     bool? InstitutionIsActive,
     long QuantityRawE8,
     int? PieceCount,
-    decimal? FineWeightGrams);
+    string? FineWeightGramsExact);
 
 public sealed record LotAllocationInventoryResponse(
     Guid AllocationId,
@@ -101,7 +101,7 @@ public sealed record PhysicalGoldLotInventoryResponse(
     int FinenessPpm,
     int OriginalPieceCount,
     int GlobalPieceCount,
-    decimal GlobalFineWeightGrams,
+    string GlobalFineWeightGramsExact,
     string? Hallmark,
     string? CertificateReference,
     string? Note);

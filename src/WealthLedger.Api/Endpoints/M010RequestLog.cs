@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http.HttpResults;
 using WealthLedger.Api.ErrorHandling;
+using WealthLedger.Application.Evidence;
 
 namespace WealthLedger.Api.Endpoints;
 
@@ -42,13 +43,35 @@ internal sealed class M010RequestLogFilter : IEndpointFilter
                 ? code as string
                 : null;
 
-            Write(httpContext, statusCode, errorCode, startedAt);
+            Write(httpContext, OutcomeOf(statusCode), statusCode, errorCode, startedAt);
             return result;
+        }
+        catch (OperationCanceledException)
+            when (httpContext.RequestAborted.IsCancellationRequested)
+        {
+            // The client went away; nothing failed on the server.
+            Write(
+                httpContext,
+                "CANCELLED",
+                StatusCodes.Status499ClientClosedRequest,
+                errorCode: null,
+                startedAt);
+            throw;
         }
         catch (Exception exception)
         {
             var (statusCode, errorCode) = ApiExceptionHandler.Describe(exception);
-            Write(httpContext, statusCode, errorCode, startedAt);
+
+            // Stored bytes that no longer match their digest are a fault to
+            // notice, not a routine refusal, whatever status the caller sees.
+            var outcome = exception is EvidenceException
+            {
+                Category: EvidenceErrorCategory.Integrity
+            }
+                ? "FAILED"
+                : OutcomeOf(statusCode);
+
+            Write(httpContext, outcome, statusCode, errorCode, startedAt);
             throw;
         }
     }
@@ -66,8 +89,17 @@ internal sealed class M010RequestLogFilter : IEndpointFilter
             _ => "OVER_10_MIB"
         };
 
+    private static string OutcomeOf(int statusCode)
+        => statusCode switch
+        {
+            < 400 => "SUCCESS",
+            < 500 => "REJECTED",
+            _ => "FAILED"
+        };
+
     private static void Write(
         HttpContext httpContext,
+        string outcome,
         int statusCode,
         string? errorCode,
         long startedAt)
@@ -77,12 +109,6 @@ internal sealed class M010RequestLogFilter : IEndpointFilter
         var route = (httpContext.GetEndpoint() as RouteEndpoint)
                     ?.RoutePattern.RawText?.TrimEnd('/')
                     ?? "UNKNOWN";
-        var outcome = statusCode switch
-        {
-            < 400 => "SUCCESS",
-            < 500 => "REJECTED",
-            _ => "FAILED"
-        };
         var itemCount = httpContext.Items[ItemCountKey] as int? ?? 0;
         var sizeClass = httpContext.Items[SizeClassKey] as string ?? "NONE";
         var durationMilliseconds = checked(

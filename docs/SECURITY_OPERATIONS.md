@@ -179,8 +179,11 @@ reconciliation routes. They carry the rules only an HTTP surface can:
   stable 400 before any query or write. Every error is a sanitized problem with
   a stable code.
 - Each M010 request writes one log line with the route template, outcome,
-  status, stable code, item count, size class and duration. A real-host test
-  drives every route through success and refusal and proves the log holds no
+  status, stable code, item count, size class and duration. An attachment
+  whose stored bytes no longer match their digest logs as `FAILED` at Warning,
+  and a client that disconnects logs as `CANCELLED`. A real-host test drives
+  every M010 route template through a success and a refusal, checks a line
+  for each, and proves the log holds no
   identities, idempotency keys, cursors, labels, notes, references, file
   names, digests, bytes, master names, quantities, paths, SQL or stack traces.
 

@@ -1,11 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Api.Contracts;
 using WealthLedger.Domain.Portfolios;
-using WealthLedger.Infrastructure.Persistence;
 using WealthLedger.Infrastructure.Persistence.Rows;
 
 namespace WealthLedger.Api.Tests;
@@ -57,7 +55,7 @@ internal static class M010ApiTestData
         var goldAssetId = Guid.Parse("62000000-0000-0000-0000-0000000000a1");
         var counterpartyId = Guid.Parse("32000000-0000-0000-0000-0000000000a1");
 
-        await using (var context = CreateContext(factory))
+        await using (var context = factory.CreateDbContext())
         {
             context.Accounts.AddRange(
                 new AccountRow
@@ -360,28 +358,13 @@ internal static class M010ApiTestData
         return await AssertProblemAsync(response, expectedStatus, expectedCode, privateMarkers);
     }
 
-    internal static WealthLedgerDbContext CreateContext(WealthLedgerApiFactory factory)
-    {
-        var connectionString = new SqliteConnectionStringBuilder
-        {
-            DataSource = factory.DatabasePath,
-            ForeignKeys = true,
-            Pooling = false
-        }.ToString();
-
-        return new WealthLedgerDbContext(
-            new DbContextOptionsBuilder<WealthLedgerDbContext>()
-                .UseSqlite(connectionString)
-                .Options);
-    }
-
     /// <summary>
     /// Row counts of every ledger table, to prove reads and audit writes
     /// leave the ledger untouched.
     /// </summary>
     internal static async Task<int[]> ReadLedgerCountsAsync(WealthLedgerApiFactory factory)
     {
-        await using var context = CreateContext(factory);
+        await using var context = factory.CreateDbContext();
 
         return
         [
@@ -402,7 +385,7 @@ internal static class M010ApiTestData
     /// </summary>
     internal static async Task<int[]> ReadAuditCountsAsync(WealthLedgerApiFactory factory)
     {
-        await using var context = CreateContext(factory);
+        await using var context = factory.CreateDbContext();
 
         return
         [
@@ -448,7 +431,7 @@ internal static class M010ApiTestData
         WealthLedgerApiFactory factory,
         InitializeCoreLedgerResponse setup)
     {
-        await using var context = CreateContext(factory);
+        await using var context = factory.CreateDbContext();
         var createdAtUtc = DateTime.UtcNow;
 
         context.Households.Add(new HouseholdRow

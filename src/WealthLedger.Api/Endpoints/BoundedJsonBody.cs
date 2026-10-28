@@ -55,19 +55,40 @@ internal static class BoundedJsonBody
             return new(null, TooLarge(problems));
         }
 
+        var value = Deserialize<T>(bytes);
+
+        return value is null
+            ? new(null, Malformed(problems))
+            : new(value, null);
+    }
+
+    /// <summary>
+    /// Strictly deserializes UTF-8 JSON, or returns null when it is malformed.
+    /// </summary>
+    /// <remarks>
+    /// A leading UTF-8 byte-order mark is skipped, as the stream-based
+    /// binding of the other routes does; span deserialization alone would
+    /// refuse it.
+    /// </remarks>
+    internal static T? Deserialize<T>(ReadOnlySpan<byte> utf8Json)
+        where T : class
+    {
+        if (utf8Json.StartsWith(Utf8ByteOrderMark))
+        {
+            utf8Json = utf8Json[Utf8ByteOrderMark.Length..];
+        }
+
         try
         {
-            var value = JsonSerializer.Deserialize<T>(bytes, StrictOptions);
-
-            return value is null
-                ? new(null, Malformed(problems))
-                : new(value, null);
+            return JsonSerializer.Deserialize<T>(utf8Json, StrictOptions);
         }
         catch (JsonException)
         {
-            return new(null, Malformed(problems));
+            return null;
         }
     }
+
+    private static ReadOnlySpan<byte> Utf8ByteOrderMark => [0xEF, 0xBB, 0xBF];
 
     internal static IResult Malformed(BoundedRequestProblems problems)
         => BoundedProblems.BadRequest(
@@ -102,7 +123,10 @@ internal static class BoundedRequestStream
             return null;
         }
 
-        using var buffer = new MemoryStream();
+        // A declared length sizes the buffer once; the bound still applies
+        // to what is actually read.
+        using var buffer = new MemoryStream(
+            (int)(request.ContentLength ?? 0) + 1);
         var chunk = new byte[16 * 1024];
 
         while (true)
