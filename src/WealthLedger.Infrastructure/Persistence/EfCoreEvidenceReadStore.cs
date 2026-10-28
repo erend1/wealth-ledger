@@ -245,6 +245,87 @@ public sealed class EfCoreEvidenceReadStore : IEvidenceReadStore
             ToUtc(row.AttachmentCreatedAtUtc.Value));
     }
 
+    public async Task<EvidenceObservationList?> ListObservationsAsync(
+        Guid householdId,
+        Guid evidenceId,
+        CancellationToken cancellationToken = default)
+    {
+        var evidence = await _dbContext.EvidenceRecords
+            .AsNoTracking()
+            .Where(record => record.Id == evidenceId
+                             && record.HouseholdId == householdId)
+            .Select(record => new
+            {
+                record.Id,
+                record.HouseholdId,
+                record.EffectiveDate,
+                SupersededByEvidenceId = _dbContext.EvidenceRecords
+                    .Where(successor => successor.SupersedesEvidenceId == record.Id)
+                    .Select(successor => (Guid?)successor.Id)
+                    .FirstOrDefault()
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (evidence is null)
+        {
+            return null;
+        }
+
+        var rows = await (
+                from observation in _dbContext.EvidenceObservations.AsNoTracking()
+                join portfolio in _dbContext.Portfolios.AsNoTracking()
+                    on observation.PortfolioId equals portfolio.Id
+                join account in _dbContext.Accounts.AsNoTracking()
+                    on observation.AccountId equals account.Id
+                join asset in _dbContext.Assets.AsNoTracking()
+                    on observation.AssetId equals asset.Id
+                join institution in _dbContext.Institutions.AsNoTracking()
+                    on account.InstitutionId equals (Guid?)institution.Id
+                    into accountInstitutions
+                from institution in accountInstitutions.DefaultIfEmpty()
+                where observation.EvidenceId == evidenceId
+                orderby observation.RecordedAtUtc, observation.Id
+                select new
+                {
+                    observation.Id,
+                    observation.ObservedQuantityE8,
+                    observation.ToleranceE8,
+                    observation.ObservedPieceCount,
+                    observation.RecordedAtUtc,
+                    Scope = new EvidenceObservationScope(
+                        portfolio.Id,
+                        portfolio.Code,
+                        portfolio.Name,
+                        account.Id,
+                        account.Code,
+                        account.Name,
+                        institution == null ? null : (Guid?)institution.Id,
+                        institution == null ? null : institution.Code,
+                        institution == null ? null : institution.Name,
+                        asset.Id,
+                        asset.Code,
+                        asset.Name,
+                        asset.Type,
+                        asset.BaseUnit)
+                })
+            .ToListAsync(cancellationToken);
+
+        return new EvidenceObservationList(
+            evidence.Id,
+            evidence.HouseholdId,
+            evidence.EffectiveDate,
+            evidence.SupersededByEvidenceId,
+            rows
+                .Select(row => new EvidenceObservationItem(
+                    row.Id,
+                    row.Scope,
+                    row.ObservedQuantityE8,
+                    row.ToleranceE8,
+                    row.ObservedPieceCount,
+                    ToUtc(row.RecordedAtUtc)))
+                .ToArray());
+    }
+
     private static DateTimeOffset ToUtc(DateTime value)
         => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
 

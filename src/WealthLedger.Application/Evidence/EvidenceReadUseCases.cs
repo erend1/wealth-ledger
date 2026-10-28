@@ -184,6 +184,44 @@ public sealed class GetEvidenceAttachmentContentUseCase
     }
 }
 
+/// <summary>
+/// Reads one evidence record's observations with current scope labels.
+/// </summary>
+public sealed class ListEvidenceObservationsUseCase
+{
+    private readonly IEvidenceReadStore _readStore;
+
+    public ListEvidenceObservationsUseCase(IEvidenceReadStore readStore)
+    {
+        _readStore = readStore
+            ?? throw new ArgumentNullException(nameof(readStore));
+    }
+
+    public async Task<EvidenceObservationList> ExecuteAsync(
+        ListEvidenceObservationsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        EvidenceReadValidation.EnsureIdentities(query.HouseholdId, query.EvidenceId);
+
+        var list = await _readStore.ListObservationsAsync(
+            query.HouseholdId,
+            query.EvidenceId,
+            cancellationToken);
+
+        if (list is null
+            || list.EvidenceId != query.EvidenceId
+            || list.HouseholdId != query.HouseholdId)
+        {
+            throw EvidenceException.Missing(
+                EvidenceErrorCodes.NotFound,
+                "The evidence record does not exist in this household.");
+        }
+
+        return list;
+    }
+}
+
 internal static class EvidenceReadValidation
 {
     internal static void EnsureIdentities(Guid householdId, Guid evidenceId)

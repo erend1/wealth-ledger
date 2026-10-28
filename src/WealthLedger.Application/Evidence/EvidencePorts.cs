@@ -1,4 +1,5 @@
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 
@@ -55,6 +56,30 @@ public interface IEvidenceStore
     Task<int> AddTransactionLinksAsync(
         IReadOnlyCollection<EvidenceTransactionLink> links,
         CancellationToken cancellationToken = default);
+
+    Task<EvidenceObservationReferences> FindObservationReferencesAsync(
+        IReadOnlyCollection<Guid> portfolioIds,
+        IReadOnlyCollection<Guid> accountIds,
+        IReadOnlyCollection<Guid> assetIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a record's observations in recording order.
+    /// </summary>
+    Task<IReadOnlyList<EvidenceObservation>> ListObservationsAsync(
+        Guid evidenceId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically inserts the observations whose scope has none yet and
+    /// returns how many were added. An observation that repeats a stored one
+    /// is left untouched; one that contradicts a stored one is a conflict, and
+    /// then nothing is inserted.
+    /// </summary>
+    Task<int> AddObservationsAsync(
+        Guid evidenceId,
+        IReadOnlyCollection<EvidenceObservation> observations,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IEvidenceReadStore
@@ -78,6 +103,15 @@ public interface IEvidenceReadStore
         Guid householdId,
         Guid evidenceId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the record's observations, or null when the record does not
+    /// exist in the household.
+    /// </summary>
+    Task<EvidenceObservationList?> ListObservationsAsync(
+        Guid householdId,
+        Guid evidenceId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record EvidenceAccountReference(
@@ -93,7 +127,23 @@ public sealed record EvidenceTransactionReference(
 public sealed record EvidenceRecordReference(
     Guid EvidenceId,
     Guid HouseholdId,
-    Guid? SupersededByEvidenceId);
+    Guid? SupersededByEvidenceId,
+    DateOnly EffectiveDate,
+    Guid? InstitutionId,
+    Guid? AccountId);
+
+public sealed record EvidencePortfolioReference(
+    Guid PortfolioId,
+    Guid HouseholdId);
+
+public sealed record EvidenceAssetReference(
+    Guid AssetId,
+    AssetType AssetType);
+
+public sealed record EvidenceObservationReferences(
+    IReadOnlyList<EvidencePortfolioReference> Portfolios,
+    IReadOnlyList<EvidenceAccountReference> Accounts,
+    IReadOnlyList<EvidenceAssetReference> Assets);
 
 /// <summary>
 /// Retry operation codes for evidence commands. Evidence is not a ledger

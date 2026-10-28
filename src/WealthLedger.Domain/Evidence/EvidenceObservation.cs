@@ -15,6 +15,8 @@ namespace WealthLedger.Domain.Evidence
     /// </remarks>
     public sealed class EvidenceObservation
     {
+        public const int MaximumPerEvidenceRecord = 100;
+
         private EvidenceObservation(
             Guid id,
             Guid evidenceId,
