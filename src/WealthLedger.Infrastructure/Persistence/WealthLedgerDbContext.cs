@@ -64,6 +64,18 @@ public sealed class WealthLedgerDbContext : DbContext
     internal DbSet<EvidenceCommandReceiptRow> EvidenceCommandReceipts
         => Set<EvidenceCommandReceiptRow>();
 
+    internal DbSet<EvidenceObservationRow> EvidenceObservations
+        => Set<EvidenceObservationRow>();
+
+    internal DbSet<ReconciliationRunRow> ReconciliationRuns
+        => Set<ReconciliationRunRow>();
+
+    internal DbSet<ReconciliationItemRow> ReconciliationItems
+        => Set<ReconciliationItemRow>();
+
+    internal DbSet<ReconciliationItemResolutionRow> ReconciliationItemResolutions
+        => Set<ReconciliationItemResolutionRow>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(SqliteConnectionPragmaInterceptor.Instance);
@@ -96,5 +108,10 @@ public sealed class WealthLedgerDbContext : DbContext
             new EvidenceTransactionLinkConfiguration());
         modelBuilder.ApplyConfiguration(
             new EvidenceCommandReceiptConfiguration());
+        modelBuilder.ApplyConfiguration(new EvidenceObservationConfiguration());
+        modelBuilder.ApplyConfiguration(new ReconciliationRunConfiguration());
+        modelBuilder.ApplyConfiguration(new ReconciliationItemConfiguration());
+        modelBuilder.ApplyConfiguration(
+            new ReconciliationItemResolutionConfiguration());
     }
 }

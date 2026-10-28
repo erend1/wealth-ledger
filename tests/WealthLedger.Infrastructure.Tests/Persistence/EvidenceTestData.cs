@@ -100,6 +100,17 @@ internal static class EvidenceTestData
             new EfCoreEvidenceStore(context),
             new FixedTimeProvider(now ?? Now));
 
+    internal static RecordEvidenceObservationsUseCase ObservationUseCase(
+        WealthLedgerDbContext context,
+        DateTimeOffset? now = null)
+        => new(
+            new EfCoreEvidenceStore(context),
+            new FixedTimeProvider(now ?? Now));
+
+    internal static ListEvidenceObservationsUseCase ListObservationsUseCase(
+        WealthLedgerDbContext context)
+        => new(new EfCoreEvidenceReadStore(context));
+
     internal static RecordEvidenceCommand Command(
         string label = "Synthetic statement",
         Guid? householdId = null,

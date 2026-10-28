@@ -34,6 +34,11 @@ public static class EvidenceErrorCodes
     public const string PageSizeInvalid = "EVIDENCE_PAGE_SIZE_INVALID";
     public const string CursorInvalid = "EVIDENCE_CURSOR_INVALID";
     public const string CursorScopeMismatch = "EVIDENCE_CURSOR_SCOPE_MISMATCH";
+    public const string ObservationInvalid = "EVIDENCE_OBSERVATION_INVALID";
+    public const string ObservationScopeNotFound = "EVIDENCE_OBSERVATION_SCOPE_NOT_FOUND";
+    public const string ObservationScopeMismatch = "EVIDENCE_OBSERVATION_SCOPE_MISMATCH";
+    public const string ObservationConflict = "EVIDENCE_OBSERVATION_CONFLICT";
+    public const string ObservationLimitExceeded = "EVIDENCE_OBSERVATION_LIMIT_EXCEEDED";
 }
 
 /// <summary>

@@ -759,9 +759,9 @@ public sealed class EvidenceUseCaseTests
             CallCount++;
             EvidenceRecordReference? evidence = evidenceId switch
             {
-                _ when evidenceId == ExistingEvidenceId => new(ExistingEvidenceId, HouseholdId, null),
-                _ when evidenceId == SupersededEvidenceId => new(SupersededEvidenceId, HouseholdId, ExistingEvidenceId),
-                _ when evidenceId == OtherHouseholdEvidenceId => new(OtherHouseholdEvidenceId, OtherHouseholdId, null),
+                _ when evidenceId == ExistingEvidenceId => new(ExistingEvidenceId, HouseholdId, null, new DateOnly(2026, 9, 30), null, null),
+                _ when evidenceId == SupersededEvidenceId => new(SupersededEvidenceId, HouseholdId, ExistingEvidenceId, new DateOnly(2026, 9, 30), null, null),
+                _ when evidenceId == OtherHouseholdEvidenceId => new(OtherHouseholdEvidenceId, OtherHouseholdId, null, new DateOnly(2026, 9, 30), null, null),
                 _ => null
             };
             return Task.FromResult(evidence);
@@ -811,6 +811,25 @@ public sealed class EvidenceUseCaseTests
 
             return Task.FromResult(added);
         }
+
+        // Observations are covered by EvidenceObservationUseCaseTests.
+        public Task<EvidenceObservationReferences> FindObservationReferencesAsync(
+            IReadOnlyCollection<Guid> portfolioIds,
+            IReadOnlyCollection<Guid> accountIds,
+            IReadOnlyCollection<Guid> assetIds,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<EvidenceObservation>> ListObservationsAsync(
+            Guid evidenceId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<int> AddObservationsAsync(
+            Guid evidenceId,
+            IReadOnlyCollection<EvidenceObservation> observations,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeEvidenceReadStore : IEvidenceReadStore
@@ -859,5 +878,11 @@ public sealed class EvidenceUseCaseTests
             => Task.FromResult(householdId == HouseholdId
                 ? Attachments.SingleOrDefault(x => x.EvidenceId == evidenceId)
                 : null);
+
+        public Task<EvidenceObservationList?> ListObservationsAsync(
+            Guid householdId,
+            Guid evidenceId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }

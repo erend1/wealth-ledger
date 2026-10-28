@@ -60,7 +60,7 @@ public sealed class EvidenceBackupRecoveryTests
             LocalDatabaseCompatibility.Compatible,
             verified.Value!.Compatibility);
         Assert.Equal(
-            "20261028065838_009_EvidencePersistence",
+            "20261028082512_010_ReconciliationPersistence",
             verified.Value.LatestMigration);
 
         var target = Path.Combine(harness.RootPath, "restore-drill", "restored.db");

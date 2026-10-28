@@ -279,8 +279,9 @@ After review and posting, read the persisted transaction and derived position.
 An incorrect opening is corrected with a separate reversal and a new opening;
 never edit or delete the original. Once M010's API and UI slices expose it, an
 evidence record (see "Evidence records") can retain the source and link it to
-the opening. Until M010 reconciliation exists, neither the note/reference nor a
-linked evidence record proves that an independent reconciliation occurred.
+the opening. Neither the note/reference nor a linked evidence record proves
+that an independent reconciliation occurred; only a reconciliation run (see
+"Reconciliation evidence") records that comparison.
 
 ## Adjustment
 
@@ -388,8 +389,9 @@ byte identity, not financial truth.
 
 A record and its file are immutable. To correct one, record a new evidence
 record that supersedes it; the original stays readable. A record can be
-superseded once, and a superseded record takes no new links. Links can be added
-later but never removed. There is no evidence delete.
+superseded once, and a superseded record takes no new links, observations or
+reconciliation runs. Links and observations can be added later but never
+removed. There is no evidence delete.
 
 Recording is retry-safe under ADR-006. A retry with the same idempotency key
 and the same content returns the original record without storing a second
@@ -400,16 +402,54 @@ only in the owner's live database and its backups.
 
 ## Reconciliation evidence
 
-Capture:
+A reconciliation compares what a statement or physical count observed with what
+the ledger derives for the same scopes on the same date. It is audit data: it
+never posts, edits or deletes a transaction and adds no Adjustment shortcut. The
+rules below are enforced by the Application and SQLite; the capture screens and
+endpoints arrive with M010's API and UI slices.
 
-- statement or physical-count effective date;
-- source institution or custody location;
-- observed quantities and cash;
-- comparison run timestamp;
-- differences and tolerance;
-- evidence reference;
-- resolution status;
-- linked corrective transaction or documented explanation.
+Observations belong to an evidence record, whose effective date applies to all
+of them. Capture, per observed scope:
+
+- the exact portfolio, account and asset. They must belong to the record's
+  household and, when the record names an account or an institution, lie
+  inside it;
+- the observed quantity in the asset's base unit, signed, exact to eight
+  decimal places (cash in currency units, Fund units, shares, gross grams);
+- an explicit non-negative quantity tolerance in the same unit, zero by
+  default; and
+- for physical gold only, the counted whole pieces when the source states them.
+  Piece tolerance is always zero.
+
+A record holds at most 100 observations, one per scope. Repeating a stored
+observation adds nothing; different facts for a stored scope are refused, and a
+wrong observation is corrected by superseding the evidence record. A scope the
+source did not cover is simply not observed: it is never treated as zero.
+
+A run compares every observation of one record. For each, the ledger side is
+the scope's effective Posted quantity on the evidence date, and for physical
+gold the pieces in that scope's lot custody on that date. The run stores, per
+item, the observed and ledger quantities, `delta = observed - ledger`, the
+tolerance, and `Matched` only when the absolute delta is within the tolerance
+and any piece delta is zero; otherwise `OutOfTolerance`. Backdated history can
+make an as-of ledger quantity negative; it is compared as it is and shows up as
+a difference. A run is retry-safe: the same idempotency key for the same
+evidence returns the original run.
+
+Each out-of-tolerance item stays `Open` until it is resolved once, by either:
+
+- `CorrectedByTransaction`, linking a Posted transaction of the same household
+  that was recorded through the normal workflows; or
+- `DocumentedException`, with an explanation of at most 2000 characters.
+
+A resolution never changes the item's delta or its `OutOfTolerance` status. To
+see a correction take effect, run the reconciliation again: the new run compares
+against the corrected history.
+
+Opening a run derives its ledger side again. When later effective history, such
+as a reversal dated on or before the evidence date, no longer reproduces the
+stored ledger quantity or pieces, the run is shown as stale and a new run is
+needed; the old run is never rewritten.
 
 Never resolve a difference by editing a posted transaction in place.
 

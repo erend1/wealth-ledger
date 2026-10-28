@@ -11,6 +11,7 @@ using WealthLedger.Application.Navigation;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Positions;
 using WealthLedger.Application.PhysicalGold;
+using WealthLedger.Application.Reconciliation;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure.LocalData;
 using WealthLedger.Infrastructure.Persistence;
@@ -149,6 +150,10 @@ public static class DependencyInjection
         services.AddScoped<IInventoryReadStore, EfCoreInventoryReadStore>();
         services.AddScoped<IEvidenceStore, EfCoreEvidenceStore>();
         services.AddScoped<IEvidenceReadStore, EfCoreEvidenceReadStore>();
+        services.AddScoped<IReconciliationStore, EfCoreReconciliationStore>();
+        services.AddScoped<
+            IReconciliationReadStore,
+            EfCoreReconciliationReadStore>();
 
         services.AddScoped<EfCoreOpeningBalanceReferenceStore>();
         services.AddScoped<IOpeningBalanceReferenceReadStore>(

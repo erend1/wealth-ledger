@@ -1,3 +1,4 @@
+using WealthLedger.Domain.Assets;
 using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 
@@ -149,6 +150,89 @@ public sealed record EvidenceTransactionLinkItem(
     TransactionType TransactionType,
     DateOnly? ExecutionDate,
     DateTimeOffset LinkedAtUtc);
+
+/// <summary>
+/// Adds exact observed quantities to an existing evidence record.
+/// </summary>
+public sealed record RecordEvidenceObservationsCommand(
+    Guid HouseholdId,
+    Guid EvidenceId,
+    IReadOnlyList<EvidenceObservationInput> Observations)
+{
+    public override string ToString() => nameof(RecordEvidenceObservationsCommand);
+}
+
+/// <summary>
+/// One observed quantity for one exact Portfolio/Account/Asset scope, in the
+/// asset's base unit as signed raw E8. The tolerance is a non-negative raw-E8
+/// quantity; a piece count is accepted only for physical gold.
+/// </summary>
+public sealed record EvidenceObservationInput(
+    Guid PortfolioId,
+    Guid AccountId,
+    Guid AssetId,
+    long ObservedQuantityRawE8,
+    long ToleranceRawE8 = 0,
+    int? ObservedPieceCount = null)
+{
+    // Observed quantities are household financial facts; never print them.
+    public override string ToString() => nameof(EvidenceObservationInput);
+}
+
+public sealed record RecordEvidenceObservationsResult(
+    Guid EvidenceId,
+    int AddedCount,
+    int AlreadyRecordedCount);
+
+public sealed record ListEvidenceObservationsQuery(
+    Guid HouseholdId,
+    Guid EvidenceId);
+
+/// <summary>
+/// The observations of one evidence record, with current scope labels.
+/// </summary>
+public sealed record EvidenceObservationList(
+    Guid EvidenceId,
+    Guid HouseholdId,
+    DateOnly EffectiveDate,
+    Guid? SupersededByEvidenceId,
+    IReadOnlyList<EvidenceObservationItem> Items)
+{
+    public override string ToString() => nameof(EvidenceObservationList);
+}
+
+public sealed record EvidenceObservationItem(
+    Guid ObservationId,
+    EvidenceObservationScope Scope,
+    long ObservedQuantityRawE8,
+    long ToleranceRawE8,
+    int? ObservedPieceCount,
+    DateTimeOffset RecordedAtUtc)
+{
+    public override string ToString() => nameof(EvidenceObservationItem);
+}
+
+/// <summary>
+/// One exact Portfolio/Account/Asset scope with current display labels.
+/// </summary>
+public sealed record EvidenceObservationScope(
+    Guid PortfolioId,
+    string PortfolioCode,
+    string PortfolioName,
+    Guid AccountId,
+    string AccountCode,
+    string AccountName,
+    Guid? InstitutionId,
+    string? InstitutionCode,
+    string? InstitutionName,
+    Guid AssetId,
+    string AssetCode,
+    string AssetName,
+    AssetType AssetType,
+    AssetUnit AssetBaseUnit)
+{
+    public override string ToString() => nameof(EvidenceObservationScope);
+}
 
 /// <summary>
 /// Verified attachment content for an explicit download.

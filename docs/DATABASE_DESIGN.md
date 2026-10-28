@@ -14,6 +14,7 @@ Migrations:
 - `20260913054039_007_FundTradeLifecycleGuards`
 - `20260915082550_008_PhysicalGoldLifecycle`
 - `20261028065838_009_EvidencePersistence`
+- `20261028082512_010_ReconciliationPersistence`
 
 Last distilled: 2026-09-16
 
@@ -351,7 +352,10 @@ At minimum, explicit converters/checks are required for:
 - TreatmentCode;
 - CostBasisStatusCode;
 - Evidence SourceKindCode;
-- Evidence attachment MediaTypeCode.
+- Evidence attachment MediaTypeCode;
+- Reconciliation run MethodCode;
+- Reconciliation item ComparisonStatusCode;
+- Reconciliation item ResolutionCode.
 
 Adding or renaming a code is a migration/API compatibility decision. Never depend on enum numeric values or default ToString behavior without an explicit, tested mapping.
 
@@ -559,7 +563,7 @@ Not part of 001_CoreLedger:
 - asset-family detail tables beyond the implemented physical-gold
   lot/allocation/trade details;
 - goals and allocation policies;
-- reconciliation/import staging;
+- import staging (reconciliation runs arrived in migration 010);
 - analysis and agent-decision history;
 - materialized read models;
 - UI preferences.
@@ -739,3 +743,86 @@ twelve triggers and four tables and restores the exact migration-008 schema.
 Real-SQLite tests cover byte-for-byte round trips, replay and lost-race
 retries that retain one copy, every direct-SQL guard, the query plans, backup,
 verify and stage readback, and 008 -> 009 -> 008 -> 009.
+
+## Reconciliation persistence (migration 010)
+
+`010_ReconciliationPersistence` adds M010 evidence observations and
+deterministic reconciliation as audit data beside the ledger. No observation,
+run, item or resolution write inserts, updates or deletes a ledger row, and
+reconciliation never posts a transaction.
+
+| Table | Purpose |
+|---|---|
+| `EvidenceObservation` | One observed quantity per exact `PortfolioId`/`AccountId`/`AssetId` scope of an evidence record: signed `ObservedQuantityE8`, non-negative `ToleranceE8`, optional `ObservedPieceCount` (physical gold only), `RecordedAtUtc`. |
+| `ReconciliationRun` | One comparison of an evidence record's observations: `HouseholdId`, `EvidenceId`, the evidence `EvidenceEffectiveDate`, `RunAtUtc`, `MethodCode`, `MethodVersion`, `ItemCount`, and the retry `IdempotencyKey`. |
+| `ReconciliationItem` | An immutable snapshot per observation: `Sequence`, `ObservationId`, the scope, `ObservedQuantityE8`, derived `LedgerQuantityE8`, `DeltaE8`, `ToleranceE8`, piece counts and `PieceDelta` when pieces were observed, and `ComparisonStatusCode`. |
+| `ReconciliationItemResolution` | At most one resolution per out-of-tolerance item, keyed by `ItemId`: `ResolutionCode`, then either `CorrectiveTransactionId` or `Explanation` (1-2000), and `ResolvedAtUtc`. An item without a row is Open. |
+
+Stable codes: `MethodCode` is `EXACT_SCOPE_QUANTITY_AS_OF` (version 1);
+`ComparisonStatusCode` is `MATCHED` or `OUT_OF_TOLERANCE`; `ResolutionCode` is
+`CORRECTED_BY_TRANSACTION` or `DOCUMENTED_EXCEPTION`.
+
+The ledger quantity is derived, never stored as a balance: it is the exact
+scope's effective Posted position on the evidence date, and for physical gold
+the pieces are the scope's lot custody on that date. A stored item is an audit
+snapshot of one comparison. Reading a run derives the ledger side again and
+reports the run as stale when it no longer reproduces the snapshot; the rows
+are never rewritten. Staleness is therefore a query result, not a column.
+
+Database protections:
+
+- every foreign key is restrictive, including those to masters and to the
+  corrective ledger transaction;
+- `UX_EvidenceObservation_Evidence_Scope` admits one observation per scope per
+  record, and checks keep the tolerance and piece count non-negative;
+- `TR_EvidenceObservation_ValidateInsert` keeps the portfolio and account in
+  the record's household and inside its account and institution context,
+  admits a piece count only for a `PHYSICAL_GOLD` asset, caps a record at 100
+  observations, and refuses observations on a superseded record;
+- `TR_ReconciliationRun_ValidateInsert` requires the run's household and
+  evidence date to equal its evidence record's and refuses a run on a
+  superseded record; `UX_ReconciliationRun_Household_IdempotencyKey` makes the
+  retry key unique per household;
+- `TR_ReconciliationItem_ValidateInsert` requires an item to repeat its
+  observation's scope, observed quantity, tolerance and piece count, to belong
+  to the run's evidence, and to fit the run's recorded `ItemCount`, so items
+  cannot be added to a finished run; `UX_ReconciliationItem_Run_Sequence` and
+  `UX_ReconciliationItem_Run_Observation` keep each run's items unique;
+- `CK_ReconciliationItem_Delta` requires `DeltaE8 = ObservedQuantityE8 -
+  LedgerQuantityE8` as an integer, `CK_ReconciliationItem_Pieces` keeps the
+  piece columns all present or all absent, inside the 32-bit range, with
+  `PieceDelta` exact, and
+  `CK_ReconciliationItem_ComparisonStatus` requires `MATCHED` exactly when the
+  delta lies within the tolerance and the piece delta is zero;
+- `CK_ReconciliationItemResolution_Shape` pairs `CORRECTED_BY_TRANSACTION`
+  with a transaction only and `DOCUMENTED_EXCEPTION` with an explanation only,
+  and `TR_ReconciliationItemResolution_ValidateInsert` admits a resolution only
+  for an `OUT_OF_TOLERANCE` item and a correction only when it is Posted in the
+  run's household; and
+- update and delete triggers on all four tables raise
+  `WL_M010_EVIDENCE_IMMUTABLE` for observations and
+  `WL_M010_RECONCILIATION_IMMUTABLE` for runs, items and resolutions.
+
+Trust boundaries the database cannot carry: the Application derives the ledger
+side through the inventory read model with checked arithmetic and refuses a
+quantity or difference that does not fit 64-bit fixed point. The delta check
+also requires the SQLite subtraction itself to stay an integer, because SQLite
+turns an overflowing integer result into a REAL that can compare equal.
+
+Run retry identity does not use an ADR-006 receipt table: the run row is the
+command's result, and the whole `RunReconciliationCommand` is its household and
+evidence, which a replay compares directly. A future field on that command
+would need its own fingerprint, as evidence receipts have. A same-key run retry
+that loses a race returns the winner's run.
+
+The household run list reads `IX_ReconciliationRun_Household_RunAt_Id`, and the
+per-evidence list reads `IX_ReconciliationRun_Evidence_RunAt_Id`, both in key
+order without a temporary sort; item counts use the run's item index and the
+resolution key.
+
+The migration creates no observation or reconciliation rows for existing
+history. Down drops the twelve triggers and four tables and restores the exact
+migration-009 schema with its evidence intact. Real-SQLite tests cover the
+lifecycle through the real ledger use cases, reversal-induced staleness, retry
+races, every direct-SQL guard, the query plans, backup, verify and stage
+readback, and 009 -> 010 -> 009 -> 010.
