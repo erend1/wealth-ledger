@@ -32,6 +32,16 @@ public sealed class EvidenceDirectSqlGuardTests
         VALUES ($id, $transaction, '2026-10-01T09:00:00.0000000Z');
         """;
 
+    private const string InsertReceiptSql =
+        """
+        INSERT INTO EvidenceCommandReceipt (
+            HouseholdId, OperationCode, IdempotencyKey, FingerprintAlgorithmCode,
+            FingerprintVersion, FingerprintValue, ResultEvidenceId, CreatedAtUtc)
+        VALUES (
+            $household, 'RECORD_EVIDENCE', 'synthetic-key', 'SHA256',
+            1, $fingerprint, $id, '2026-10-01T09:00:00.0000000Z');
+        """;
+
     private static readonly string ValidSha256 = new('a', 64);
 
     [Fact]
@@ -220,10 +230,15 @@ public sealed class EvidenceDirectSqlGuardTests
         await database.ExecuteNonQueryAsync(
             InsertLinkSql,
             LinkParameters(evidenceId, fixture.FirstPostedId));
+        await database.ExecuteNonQueryAsync(
+            InsertReceiptSql,
+            ReceiptParameters(evidenceId, CoreLedgerTestData.HouseholdId));
         var id = new SqliteParameter("$id", evidenceId.ToString("D"));
 
         foreach (var sql in new[]
                  {
+                     "UPDATE EvidenceCommandReceipt SET IdempotencyKey = 'changed' WHERE ResultEvidenceId = $id;",
+                     "DELETE FROM EvidenceCommandReceipt WHERE ResultEvidenceId = $id;",
                      "UPDATE EvidenceRecord SET Label = 'Changed' WHERE Id = $id;",
                      "UPDATE EvidenceRecord SET EffectiveDate = '2026-01-01' WHERE Id = $id;",
                      "DELETE FROM EvidenceRecord WHERE Id = $id;",
@@ -240,6 +255,25 @@ public sealed class EvidenceDirectSqlGuardTests
                 sql,
                 new SqliteParameter("$id", id.Value));
         }
+    }
+
+    [Fact]
+    public async Task DirectSql_ReceiptResultStaysInsideItsHousehold()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        var evidenceId = Guid.NewGuid();
+        await database.ExecuteNonQueryAsync(InsertRecordSql, RecordParameters(evidenceId));
+
+        await AssertRejectedAsync(
+            database,
+            "WL_M010_EVIDENCE_RECEIPT_INVALID",
+            InsertReceiptSql,
+            ReceiptParameters(evidenceId, CoreLedgerTestData.OtherHouseholdId));
+
+        await database.ExecuteNonQueryAsync(
+            InsertReceiptSql,
+            ReceiptParameters(evidenceId, CoreLedgerTestData.HouseholdId));
     }
 
     [Fact]
@@ -307,6 +341,14 @@ public sealed class EvidenceDirectSqlGuardTests
             new("$sha", sha ?? ValidSha256),
             new("$content", content ?? new byte[] { 0x25, 0x50, 0x44, 0x46 }),
             new("$createdAt", createdAt)
+        ];
+
+    private static SqliteParameter[] ReceiptParameters(Guid evidenceId, Guid householdId)
+        =>
+        [
+            new("$household", householdId.ToString("D")),
+            new("$fingerprint", ValidSha256),
+            new("$id", evidenceId.ToString("D"))
         ];
 
     private static SqliteParameter[] LinkParameters(Guid evidenceId, Guid transactionId)

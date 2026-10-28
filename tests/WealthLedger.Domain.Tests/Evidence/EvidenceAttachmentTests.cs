@@ -111,6 +111,8 @@ public sealed class EvidenceAttachmentTests
             { "nul.csv", EvidenceMediaType.Csv, [(byte)'a', 0x00, (byte)'b'], EvidenceAttachmentRejection.ContentNotAccepted },
             { "c1.txt", EvidenceMediaType.PlainText, [(byte)'a', 0xC2, 0x85, (byte)'b'], EvidenceAttachmentRejection.ContentNotAccepted },
             { "bom.txt", EvidenceMediaType.PlainText, [0xEF, 0xBB, 0xBF], EvidenceAttachmentRejection.ContentNotAccepted },
+            { "double-bom.txt", EvidenceMediaType.PlainText, [0xEF, 0xBB, 0xBF, 0xEF, 0xBB, 0xBF, .. "<html></html>"u8], EvidenceAttachmentRejection.ContentNotAccepted },
+            { "zero-width.csv", EvidenceMediaType.Csv, [.. " ​⁠<svg/>"u8], EvidenceAttachmentRejection.ContentNotAccepted },
             { "statement.png", EvidenceMediaType.Png, SyntheticPdf, EvidenceAttachmentRejection.ContentNotAccepted },
             { "receipt.jpg", EvidenceMediaType.Jpeg, SyntheticPng, EvidenceAttachmentRejection.ContentNotAccepted },
             { "statement.pdf", EvidenceMediaType.PlainText, Encoding.UTF8.GetBytes("text"), EvidenceAttachmentRejection.FileNameExtensionMismatch },

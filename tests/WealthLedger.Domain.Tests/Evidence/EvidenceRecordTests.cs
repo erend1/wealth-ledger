@@ -188,6 +188,23 @@ public sealed class EvidenceRecordTests
     }
 
     [Fact]
+    public void TextRules_RejectUnpairedSurrogatesAndBidiControls()
+    {
+        // Built here: xUnit theory data would serialize a lone surrogate.
+        var loneSurrogate = new string(['a', '\uD800', 'b']);
+
+        Assert.False(EvidenceText.TryNormalizeLabel(loneSurrogate, out _));
+        Assert.False(EvidenceText.TryNormalizeReference(loneSurrogate, out _));
+        Assert.False(EvidenceText.TryNormalizeNote(loneSurrogate, out _));
+        Assert.False(EvidenceText.TryNormalizeLabel("invoice‮fdp", out _));
+        Assert.False(EvidenceText.TryNormalizeReference("ref⁦x⁩", out _));
+        Assert.False(EvidenceText.TryNormalizeNote("note‏", out _));
+
+        // Paired surrogates and ordinary non-Latin text stay valid.
+        Assert.True(EvidenceText.TryNormalizeLabel("Sayım \U0001F4C4", out _));
+    }
+
+    [Fact]
     public void TransactionLink_RejectsEmptyIdentitiesAndUsesUtc()
     {
         Assert.Throws<ArgumentException>(

@@ -284,7 +284,11 @@ namespace WealthLedger.Domain.Evidence
                     return false;
                 }
 
-                if (!leading || Rune.IsWhiteSpace(rune))
+                // Invisible format characters (a second BOM, zero-width
+                // spaces) cannot hide leading markup.
+                if (!leading
+                    || Rune.IsWhiteSpace(rune)
+                    || Rune.GetUnicodeCategory(rune) == UnicodeCategory.Format)
                 {
                     continue;
                 }

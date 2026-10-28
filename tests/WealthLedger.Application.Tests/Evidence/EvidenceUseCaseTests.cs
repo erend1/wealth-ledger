@@ -331,6 +331,42 @@ public sealed class EvidenceUseCaseTests
     }
 
     [Fact]
+    public async Task Record_LoneSurrogateIsAStableInputError()
+    {
+        var exception = await RecordFailsAsync(
+            Command(label: new string(['a', '\uD800'])));
+
+        Assert.Equal(EvidenceErrorCodes.InputInvalid, exception.ErrorCode);
+    }
+
+    [Fact]
+    public void ReadModels_NeverPrintTheirText()
+    {
+        const string Marker = "SYNTHETIC-SECRET";
+        var context = new EvidenceContext(InstitutionId, Marker, Marker, AccountId, Marker, Marker);
+        var attachment = new EvidenceAttachmentMetadata(Marker + ".pdf", EvidenceMediaType.Pdf, 1, Marker, Now);
+        var summary = Summary(new DateOnly(2026, 9, 1)) with
+        {
+            Label = Marker,
+            Reference = Marker,
+            Context = context,
+            Attachment = attachment
+        };
+        var detail = Detail(ExistingEvidenceId) with
+        {
+            Label = Marker,
+            Note = Marker,
+            Context = context,
+            Attachment = attachment
+        };
+
+        foreach (var text in new object[] { context, attachment, summary, detail }.Select(x => x.ToString()!))
+        {
+            Assert.DoesNotContain(Marker, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public async Task Record_UndefinedSourceKindIsRejected()
     {
         var exception = await RecordFailsAsync(
@@ -529,11 +565,15 @@ public sealed class EvidenceUseCaseTests
         var tampered = SyntheticPdf.ToArray();
         tampered[^2] ^= 0x01;
 
+        // Markup stored as PDF with its own valid digest still fails closed.
+        var disguised = Encoding.UTF8.GetBytes("<html><script></script></html>");
+
         foreach (var stored in new[]
                  {
                      Stored(tampered, tampered.Length, digest),
                      Stored(SyntheticPdf, SyntheticPdf.Length + 1, digest),
-                     Stored(SyntheticPdf, SyntheticPdf.Length, digest.ToUpperInvariant())
+                     Stored(SyntheticPdf, SyntheticPdf.Length, digest.ToUpperInvariant()),
+                     Stored(disguised, disguised.Length, EvidenceAttachment.ComputeSha256(disguised))
                  })
         {
             var readStore = new FakeEvidenceReadStore();

@@ -92,7 +92,11 @@ public sealed record EvidenceSummary(
     Guid? SupersedesEvidenceId,
     Guid? SupersededByEvidenceId,
     EvidenceAttachmentMetadata? Attachment,
-    int TransactionLinkCount);
+    int TransactionLinkCount)
+{
+    // Read models carry labels, notes and master names; never print them.
+    public override string ToString() => nameof(EvidenceSummary);
+}
 
 /// <summary>
 /// Complete evidence metadata and its transaction links. Never carries the
@@ -111,7 +115,10 @@ public sealed record EvidenceDetail(
     Guid? SupersedesEvidenceId,
     Guid? SupersededByEvidenceId,
     EvidenceAttachmentMetadata? Attachment,
-    IReadOnlyList<EvidenceTransactionLinkItem> TransactionLinks);
+    IReadOnlyList<EvidenceTransactionLinkItem> TransactionLinks)
+{
+    public override string ToString() => nameof(EvidenceDetail);
+}
 
 /// <summary>
 /// Optional institution and account context with current display labels.
@@ -122,14 +129,20 @@ public sealed record EvidenceContext(
     string? InstitutionName,
     Guid? AccountId,
     string? AccountCode,
-    string? AccountName);
+    string? AccountName)
+{
+    public override string ToString() => nameof(EvidenceContext);
+}
 
 public sealed record EvidenceAttachmentMetadata(
     string FileName,
     EvidenceMediaType MediaType,
     int ByteLength,
     string Sha256,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc)
+{
+    public override string ToString() => nameof(EvidenceAttachmentMetadata);
+}
 
 public sealed record EvidenceTransactionLinkItem(
     Guid TransactionId,

@@ -27,7 +27,7 @@ public sealed class EvidencePersistenceMigrationTests
         }
 
         var m010Schema = await ReadSchemaAsync(database);
-        Assert.Equal(23L, await CountEvidenceObjectsAsync(database));
+        Assert.Equal(26L, await CountEvidenceObjectsAsync(database));
 
         await using (var context = database.CreateContext())
         {
@@ -94,7 +94,7 @@ public sealed class EvidencePersistenceMigrationTests
     }
 
     // Four tables, their four automatic key indexes, six named indexes and
-    // nine triggers.
+    // twelve triggers.
     private static async Task<long> CountEvidenceObjectsAsync(SqliteTestDatabase database)
         => Convert.ToInt64(await database.ExecuteScalarAsync(
             "SELECT COUNT(*) FROM sqlite_master WHERE name LIKE '%Evidence%';"));

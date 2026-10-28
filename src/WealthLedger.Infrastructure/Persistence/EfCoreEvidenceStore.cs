@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WealthLedger.Application.CoreLedger;
@@ -174,6 +175,20 @@ public sealed class EfCoreEvidenceStore : IEvidenceStore
         {
             _dbContext.ChangeTracker.Clear();
 
+            // An equivalent retry can lose earlier than the receipt insert:
+            // a superseding record collides on the supersession index first.
+            // A committed receipt for the same scope always wins.
+            var winner = await FindReceiptAsync(
+                receipt.Scope,
+                cancellationToken);
+
+            if (winner is not null)
+            {
+                return new EvidenceCommitResult(
+                    WasCommitted: false,
+                    Receipt: winner);
+            }
+
             throw TranslateWriteFailure(
                 exception,
                 "The evidence record could not be persisted atomically.");
@@ -257,7 +272,7 @@ public sealed class EfCoreEvidenceStore : IEvidenceStore
                 MediaType = attachment.MediaType,
                 ByteLength = attachment.ByteLength,
                 Sha256 = attachment.Sha256,
-                Content = attachment.Content.ToArray(),
+                Content = ToArrayWithoutCopy(attachment.Content),
                 CreatedAtUtc = createdAtUtc
             });
         }
@@ -382,6 +397,15 @@ public sealed class EfCoreEvidenceStore : IEvidenceStore
 
         return null;
     }
+
+    // The attachment already owns an immutable private copy of up to 10 MiB;
+    // the insert only reads it, so a second copy is avoided when possible.
+    private static byte[] ToArrayWithoutCopy(ReadOnlyMemory<byte> content)
+        => MemoryMarshal.TryGetArray(content, out var segment)
+           && segment.Offset == 0
+           && segment.Count == segment.Array!.Length
+            ? segment.Array
+            : content.ToArray();
 
     private static string ToText(Guid value)
         => (string)SqliteValueConverters.GuidToText.ConvertToProvider(value)!;

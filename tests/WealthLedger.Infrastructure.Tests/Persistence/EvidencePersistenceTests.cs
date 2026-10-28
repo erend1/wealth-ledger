@@ -203,6 +203,150 @@ public sealed class EvidencePersistenceTests
     }
 
     [Fact]
+    public async Task LostRace_ReturnsTheWinnerEvenWhenSupersessionCollidesFirst()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        Guid original;
+        Guid winner;
+
+        await using (var context = database.CreateContext())
+        {
+            original = (await EvidenceTestData.RecordUseCase(context).ExecuteAsync(
+                "evidence-race-original",
+                EvidenceTestData.Command())).EvidenceId;
+            winner = (await EvidenceTestData.RecordUseCase(context).ExecuteAsync(
+                "evidence-race-supersede",
+                EvidenceTestData.Command(supersedesEvidenceId: original))).EvidenceId;
+        }
+
+        // The loser validated before the winner committed, so it reaches the
+        // store with the same scope and its own superseding record.
+        await using var loserContext = database.CreateContext();
+        var loser = EvidenceRecord.Create(
+            Guid.NewGuid(),
+            CoreLedgerTestData.HouseholdId,
+            EvidenceSourceKind.Statement,
+            EvidenceTestData.EffectiveDate,
+            "Synthetic statement",
+            EvidenceTestData.Now.AddMinutes(1),
+            supersedesEvidenceId: original);
+        var result = await new EfCoreEvidenceStore(loserContext).TryCommitAsync(
+            LoserReceipt("evidence-race-supersede", loser),
+            loser);
+
+        Assert.False(result.WasCommitted);
+        Assert.Equal(winner, result.Receipt.EvidenceId);
+        Assert.Equal(2L, await CountAsync(database, "EvidenceRecord"));
+    }
+
+    [Fact]
+    public async Task LostRace_ReceiptCollisionReturnsTheWinnerAndRollsBackTheLoser()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        Guid winner;
+
+        await using (var context = database.CreateContext())
+        {
+            winner = (await EvidenceTestData.RecordUseCase(context).ExecuteAsync(
+                "evidence-race-receipt",
+                EvidenceTestData.Command(attachment: EvidenceTestData.PdfUpload()))).EvidenceId;
+        }
+
+        await using var loserContext = database.CreateContext();
+        var loser = EvidenceRecord.Create(
+            Guid.NewGuid(),
+            CoreLedgerTestData.HouseholdId,
+            EvidenceSourceKind.Statement,
+            EvidenceTestData.EffectiveDate,
+            "Synthetic statement",
+            EvidenceTestData.Now.AddMinutes(1),
+            attachment: EvidenceAttachment.Create(
+                "synthetic-statement.pdf",
+                EvidenceMediaType.Pdf,
+                EvidenceTestData.SyntheticPdf));
+        var result = await new EfCoreEvidenceStore(loserContext).TryCommitAsync(
+            LoserReceipt("evidence-race-receipt", loser),
+            loser);
+
+        Assert.False(result.WasCommitted);
+        Assert.Equal(winner, result.Receipt.EvidenceId);
+        Assert.Equal(1L, await CountAsync(database, "EvidenceRecord"));
+        Assert.Equal(1L, await CountAsync(database, "EvidenceAttachment"));
+    }
+
+    [Fact]
+    public async Task SupersessionCollisionUnderAnotherKeyIsAConflict()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        Guid original;
+
+        await using (var context = database.CreateContext())
+        {
+            original = (await EvidenceTestData.RecordUseCase(context).ExecuteAsync(
+                "evidence-conflict-original",
+                EvidenceTestData.Command())).EvidenceId;
+            await EvidenceTestData.RecordUseCase(context).ExecuteAsync(
+                "evidence-conflict-first",
+                EvidenceTestData.Command(supersedesEvidenceId: original));
+        }
+
+        await using var loserContext = database.CreateContext();
+        var loser = EvidenceRecord.Create(
+            Guid.NewGuid(),
+            CoreLedgerTestData.HouseholdId,
+            EvidenceSourceKind.Statement,
+            EvidenceTestData.EffectiveDate,
+            "Synthetic other replacement",
+            EvidenceTestData.Now.AddMinutes(1),
+            supersedesEvidenceId: original);
+
+        var exception = await Assert.ThrowsAsync<EvidenceException>(
+            () => new EfCoreEvidenceStore(loserContext).TryCommitAsync(
+                LoserReceipt("evidence-conflict-second", loser),
+                loser));
+
+        Assert.Equal(EvidenceErrorCodes.SupersessionInvalid, exception.ErrorCode);
+        Assert.Equal(EvidenceErrorCategory.Conflict, exception.Category);
+    }
+
+    [Fact]
+    public async Task AttachmentContent_FailsClosedForMarkupStoredAsPdf()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        await EvidenceTestData.SeedAsync(database.CreateContext);
+        var evidenceId = Guid.NewGuid();
+        var markup = Encoding.UTF8.GetBytes("<html><script></script></html>");
+
+        // A row written outside the Application with a self-consistent digest.
+        await database.ExecuteNonQueryAsync(
+            """
+            INSERT INTO EvidenceRecord (
+                Id, HouseholdId, SourceKindCode, EffectiveDate, Label, CreatedAtUtc)
+            VALUES ($id, $household, 'RECEIPT', '2026-09-30', 'Synthetic', '2026-10-01T09:00:00.0000000Z');
+            INSERT INTO EvidenceAttachment (
+                EvidenceId, FileName, MediaTypeCode, ByteLength, Sha256, Content, CreatedAtUtc)
+            VALUES ($id, 'disguised.pdf', 'PDF', $length, $sha, $content, '2026-10-01T09:00:00.0000000Z');
+            """,
+            new SqliteParameter("$id", evidenceId.ToString("D")),
+            new SqliteParameter("$household", CoreLedgerTestData.HouseholdId.ToString("D")),
+            new SqliteParameter("$length", markup.Length),
+            new SqliteParameter("$sha", EvidenceAttachment.ComputeSha256(markup)),
+            new SqliteParameter("$content", markup));
+
+        await using var context = database.CreateContext();
+        var exception = await Assert.ThrowsAsync<EvidenceException>(
+            () => new GetEvidenceAttachmentContentUseCase(new EfCoreEvidenceReadStore(context))
+                .ExecuteAsync(new GetEvidenceAttachmentContentQuery(
+                    CoreLedgerTestData.HouseholdId,
+                    evidenceId)));
+
+        Assert.Equal(EvidenceErrorCodes.AttachmentIntegrityFailed, exception.ErrorCode);
+    }
+
+    [Fact]
     public async Task Linking_AddsOnlyNewLinksAndLeavesLedgerRowsUntouched()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();
@@ -454,6 +598,18 @@ public sealed class EvidencePersistenceTests
         Assert.Equal(EvidenceErrorCodes.AttachmentIntegrityFailed, exception.ErrorCode);
         Assert.Equal(EvidenceErrorCategory.Integrity, exception.Category);
     }
+
+    private static EvidenceCommandReceipt LoserReceipt(
+        string idempotencyKey,
+        EvidenceRecord record)
+        => new(
+            new EvidenceCommandScope(
+                record.HouseholdId,
+                EvidenceOperationCodes.RecordEvidence,
+                idempotencyKey),
+            new CommandFingerprint("SHA256", 1, new string('0', 64)),
+            record.Id,
+            record.CreatedAtUtc);
 
     private static async Task<long> CountAsync(SqliteTestDatabase database, string table)
         => Convert.ToInt64(await database.ExecuteScalarAsync(

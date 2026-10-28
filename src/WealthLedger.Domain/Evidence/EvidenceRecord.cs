@@ -245,7 +245,8 @@ namespace WealthLedger.Domain.Evidence
             var trimmed = value.Trim();
 
             if (trimmed.Length > MaximumLabelLength
-                || trimmed.Any(char.IsControl))
+                || trimmed.Any(char.IsControl)
+                || !IsSafeText(trimmed))
             {
                 return false;
             }
@@ -268,7 +269,8 @@ namespace WealthLedger.Domain.Evidence
             var trimmed = value.Trim();
 
             if (trimmed.Length > MaximumReferenceLength
-                || trimmed.Any(char.IsControl))
+                || trimmed.Any(char.IsControl)
+                || !IsSafeText(trimmed))
             {
                 return false;
             }
@@ -293,12 +295,47 @@ namespace WealthLedger.Domain.Evidence
             if (trimmed.Length > MaximumNoteLength
                 || trimmed.Any(
                     character => char.IsControl(character)
-                        && character is not ('\n' or '\r' or '\t')))
+                        && character is not ('\n' or '\r' or '\t'))
+                || !IsSafeText(trimmed))
             {
                 return false;
             }
 
             normalized = trimmed;
+            return true;
+        }
+
+        /// <summary>
+        /// Refuses unpaired surrogates, which cannot be stored or fingerprinted
+        /// faithfully, and bidirectional embedding, override and isolate
+        /// controls, which can make displayed text read differently from what
+        /// was stored.
+        /// </summary>
+        private static bool IsSafeText(string value)
+        {
+            for (var index = 0; index < value.Length; index++)
+            {
+                var character = value[index];
+
+                if (char.IsSurrogate(character))
+                {
+                    if (!char.IsSurrogatePair(value, index))
+                    {
+                        return false;
+                    }
+
+                    index++;
+                    continue;
+                }
+
+                if (character is '؜' or '‎' or '‏'
+                    or >= '‪' and <= '‮'
+                    or >= '⁦' and <= '⁩')
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
     }

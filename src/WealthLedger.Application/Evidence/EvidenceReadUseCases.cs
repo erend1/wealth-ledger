@@ -121,8 +121,9 @@ public sealed class GetEvidenceUseCase
 /// that they still match their stored length and SHA-256.
 /// </summary>
 /// <remarks>
-/// Content that no longer matches its digest is never returned: the read
-/// fails closed with an integrity error instead.
+/// Content that no longer matches its digest, its declared type or its
+/// sanitized name is never returned: the read fails closed with an integrity
+/// error instead.
 /// </remarks>
 public sealed class GetEvidenceAttachmentContentUseCase
 {
@@ -153,11 +154,20 @@ public sealed class GetEvidenceAttachmentContentUseCase
                 "The evidence record has no retained attachment in this household.");
         }
 
+        // Bytes that bypassed the Application, for example rows written by
+        // direct SQL, must still match their digest and their declared type.
         if (stored.ByteLength != stored.Content.LongLength
             || !string.Equals(
                 EvidenceAttachment.ComputeSha256(stored.Content),
                 stored.Sha256,
-                StringComparison.Ordinal))
+                StringComparison.Ordinal)
+            || !Enum.IsDefined(stored.MediaType)
+            || EvidenceAttachmentPolicy.Inspect(
+                stored.FileName,
+                stored.MediaType,
+                stored.Content,
+                out var sanitizedFileName) is not null
+            || !string.Equals(sanitizedFileName, stored.FileName, StringComparison.Ordinal))
         {
             throw new EvidenceException(
                 EvidenceErrorCategory.Integrity,

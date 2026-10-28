@@ -6,12 +6,16 @@ namespace WealthLedger.Infrastructure.Persistence.Migrations;
 /// M010 evidence database guards.
 /// </summary>
 /// <remarks>
-/// Evidence is adjunct audit data. These triggers keep a record, its
-/// attachment and its links inside one household, admit links only to Posted
-/// transactions, refuse new links on a superseded record, accept an
-/// attachment only together with its record, and make every evidence row
-/// insert-only. They touch no ledger table, so every M001-M009 guard is
-/// unchanged. Down removes only these objects and the evidence tables.
+/// Evidence is adjunct audit data. These triggers keep a record, its links
+/// and its retry receipt inside one household, admit links only to Posted
+/// transactions, refuse new links on a superseded record, require an
+/// attachment to carry its record's creation timestamp, and make every
+/// evidence row, retry receipts included, insert-only. SQLite cannot see
+/// transaction boundaries, so direct SQL that copies the timestamp can still
+/// attach a file to an existing record; the Application writes an attachment
+/// only in its record's own commit. The triggers touch no ledger table, so
+/// every M001-M009 guard is unchanged. Down removes only these objects and the
+/// evidence tables.
 /// </remarks>
 public partial class _009_EvidencePersistence
 {
@@ -25,7 +29,10 @@ public partial class _009_EvidencePersistence
         "TR_EvidenceAttachment_PreventDelete",
         "TR_EvidenceTransactionLink_ValidateInsert",
         "TR_EvidenceTransactionLink_PreventUpdate",
-        "TR_EvidenceTransactionLink_PreventDelete"
+        "TR_EvidenceTransactionLink_PreventDelete",
+        "TR_EvidenceCommandReceipt_ValidateInsert",
+        "TR_EvidenceCommandReceipt_PreventUpdate",
+        "TR_EvidenceCommandReceipt_PreventDelete"
     ];
 
     private static void AddEvidenceGuards(MigrationBuilder migrationBuilder)
@@ -54,7 +61,10 @@ public partial class _009_EvidencePersistence
         PreventDeleteSql("EvidenceAttachment", "TR_EvidenceAttachment_PreventDelete"),
         LinkInsertSql,
         PreventUpdateSql("EvidenceTransactionLink", "TR_EvidenceTransactionLink_PreventUpdate"),
-        PreventDeleteSql("EvidenceTransactionLink", "TR_EvidenceTransactionLink_PreventDelete")
+        PreventDeleteSql("EvidenceTransactionLink", "TR_EvidenceTransactionLink_PreventDelete"),
+        ReceiptInsertSql,
+        PreventUpdateSql("EvidenceCommandReceipt", "TR_EvidenceCommandReceipt_PreventUpdate"),
+        PreventDeleteSql("EvidenceCommandReceipt", "TR_EvidenceCommandReceipt_PreventDelete")
     ];
 
     private const string RecordInsertSql =
@@ -116,6 +126,20 @@ public partial class _009_EvidencePersistence
                 FROM "EvidenceRecord" AS successor
                 WHERE successor."SupersedesEvidenceId" = NEW."EvidenceId"
             ) THEN RAISE(ABORT, 'WL_M010_EVIDENCE_SUPERSEDED') END;
+        END;
+        """;
+
+    private const string ReceiptInsertSql =
+        """
+        CREATE TRIGGER "TR_EvidenceCommandReceipt_ValidateInsert"
+        BEFORE INSERT ON "EvidenceCommandReceipt"
+        BEGIN
+            SELECT CASE WHEN NOT EXISTS (
+                SELECT 1
+                FROM "EvidenceRecord" AS evidence
+                WHERE evidence."Id" = NEW."ResultEvidenceId"
+                  AND evidence."HouseholdId" = NEW."HouseholdId"
+            ) THEN RAISE(ABORT, 'WL_M010_EVIDENCE_RECEIPT_INVALID') END;
         END;
         """;
 
