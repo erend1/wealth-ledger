@@ -304,11 +304,11 @@ public sealed class EfCoreEvidenceStore : IEvidenceStore
 
     private static bool IsKeyCollision(DbUpdateException exception)
         => exception.InnerException is SqliteException
-           {
-               SqliteErrorCode: SqliteConstraint,
-               SqliteExtendedErrorCode:
-                   SqliteConstraintPrimaryKey or SqliteConstraintUnique
-           };
+        {
+            SqliteErrorCode: SqliteConstraint,
+            SqliteExtendedErrorCode:
+                SqliteConstraintPrimaryKey or SqliteConstraintUnique
+        };
 
     /// <summary>
     /// Maps a database guard that fired after Application validation, which
