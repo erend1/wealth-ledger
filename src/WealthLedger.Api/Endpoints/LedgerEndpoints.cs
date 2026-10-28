@@ -300,7 +300,7 @@ internal static class LedgerEndpoints
         }
     }
 
-    private static bool TryGetIdempotencyKey(
+    internal static bool TryGetIdempotencyKey(
         HttpRequest request,
         out string idempotencyKey,
         out IResult? error)

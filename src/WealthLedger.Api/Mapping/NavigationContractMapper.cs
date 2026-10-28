@@ -133,7 +133,7 @@ internal static class NavigationContractMapper
                         ToCode(effect.Role)))
                 .ToArray());
 
-    private static string ToCode(InstitutionType value)
+    internal static string ToCode(InstitutionType value)
         => value switch
         {
             InstitutionType.Bank => "BANK",
@@ -145,7 +145,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(PortfolioStatus value)
+    internal static string ToCode(PortfolioStatus value)
         => value switch
         {
             PortfolioStatus.Active => "ACTIVE",
@@ -154,7 +154,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(AccountType value)
+    internal static string ToCode(AccountType value)
         => value switch
         {
             AccountType.Cash => "CASH",
@@ -166,7 +166,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(AssetType value)
+    internal static string ToCode(AssetType value)
         => value switch
         {
             AssetType.Cash => "CASH",
@@ -181,7 +181,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(AssetUnit value)
+    internal static string ToCode(AssetUnit value)
         => value switch
         {
             AssetUnit.CurrencyUnit => "CURRENCY_UNIT",
@@ -196,7 +196,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(LotTrackingMode value)
+    internal static string ToCode(LotTrackingMode value)
         => value switch
         {
             LotTrackingMode.None => "NONE",
@@ -205,7 +205,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(TransactionType value)
+    internal static string ToCode(TransactionType value)
         => value switch
         {
             TransactionType.Contribution => "CONTRIBUTION",
@@ -225,7 +225,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(TransactionStatus value)
+    internal static string ToCode(TransactionStatus value)
         => value switch
         {
             TransactionStatus.Draft => "DRAFT",
@@ -235,7 +235,7 @@ internal static class NavigationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(EntryRole value)
+    internal static string ToCode(EntryRole value)
         => value switch
         {
             EntryRole.Principal => "PRINCIPAL",
