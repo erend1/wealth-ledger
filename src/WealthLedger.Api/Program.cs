@@ -176,6 +176,7 @@ switch (startupSelection.Mode)
         app.MapLedgerSearchEndpoints();
         app.MapInventoryEndpoints();
         app.MapEvidenceEndpoints();
+        app.MapReconciliationEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:
