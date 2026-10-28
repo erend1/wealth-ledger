@@ -33,8 +33,7 @@ public abstract class FundTradePageModel : PageModel
         ListFundTradeChoicesUseCase listChoices,
         ValuePresenter values,
         UiText text,
-        TimeProvider timeProvider,
-        PresentationCulture presentationCulture)
+        TimeProvider timeProvider)
     {
         HouseholdResolver = householdResolver
             ?? throw new ArgumentNullException(nameof(householdResolver));
@@ -46,8 +45,6 @@ public abstract class FundTradePageModel : PageModel
             ?? throw new ArgumentNullException(nameof(text));
         TimeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
-        PresentationCulture = presentationCulture
-            ?? throw new ArgumentNullException(nameof(presentationCulture));
     }
 
     protected ReadyHouseholdResolver HouseholdResolver { get; }
@@ -59,8 +56,6 @@ public abstract class FundTradePageModel : PageModel
     public UiText Text { get; }
 
     protected TimeProvider TimeProvider { get; }
-
-    protected PresentationCulture PresentationCulture { get; }
 
     [BindProperty]
     public FundTradeForm Input { get; set; } = new();

@@ -62,7 +62,6 @@ public sealed class ContributionModel : PageModel
     private readonly ValuePresenter _values;
     private readonly UiText _text;
     private readonly TimeProvider _timeProvider;
-    private readonly PresentationCulture _presentationCulture;
 
     public ContributionModel(
         ReadyHouseholdResolver householdResolver,
@@ -71,8 +70,7 @@ public sealed class ContributionModel : PageModel
         RecordContributionUseCase record,
         ValuePresenter values,
         UiText text,
-        TimeProvider timeProvider,
-        PresentationCulture presentationCulture)
+        TimeProvider timeProvider)
     {
         _householdResolver = householdResolver
             ?? throw new ArgumentNullException(nameof(householdResolver));
@@ -88,8 +86,6 @@ public sealed class ContributionModel : PageModel
             ?? throw new ArgumentNullException(nameof(text));
         _timeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
-        _presentationCulture = presentationCulture
-            ?? throw new ArgumentNullException(nameof(presentationCulture));
     }
 
     [BindProperty]
