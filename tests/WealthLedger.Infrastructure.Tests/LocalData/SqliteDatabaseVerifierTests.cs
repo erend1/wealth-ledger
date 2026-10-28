@@ -27,7 +27,7 @@ public sealed class SqliteDatabaseVerifierTests
             LocalDatabaseCompatibility.Compatible,
             first.Value!.Compatibility);
         Assert.Equal(LocalDataIntegrityStatus.Passed, first.Value.IntegrityStatus);
-        Assert.Equal(8, first.Value.AppliedMigrations.Count);
+        Assert.Equal(9, first.Value.AppliedMigrations.Count);
         Assert.Empty(first.Value.PendingMigrations);
         Assert.NotEmpty(first.Value.RepresentativeFingerprint);
         Assert.Equal(
@@ -55,7 +55,8 @@ public sealed class SqliteDatabaseVerifierTests
                 "20260903075104_005_WorkspaceIdentity",
                 "20260910101810_006_OpeningBalanceCutoverGuards",
                 "20260913054039_007_FundTradeLifecycleGuards",
-                "20260915082550_008_PhysicalGoldLifecycle"
+                "20260915082550_008_PhysicalGoldLifecycle",
+                "20261028065838_009_EvidencePersistence"
             ],
             result.Value.PendingMigrations);
         Assert.Null(result.Value.WorkspaceId);

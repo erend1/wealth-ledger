@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.Evidence;
 using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.Inventory;
 using WealthLedger.Application.LedgerSearch;
@@ -146,6 +147,8 @@ public static class DependencyInjection
             ILedgerSearchReadStore,
             EfCoreLedgerSearchReadStore>();
         services.AddScoped<IInventoryReadStore, EfCoreInventoryReadStore>();
+        services.AddScoped<IEvidenceStore, EfCoreEvidenceStore>();
+        services.AddScoped<IEvidenceReadStore, EfCoreEvidenceReadStore>();
 
         services.AddScoped<EfCoreOpeningBalanceReferenceStore>();
         services.AddScoped<IOpeningBalanceReferenceReadStore>(

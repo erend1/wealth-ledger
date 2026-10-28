@@ -1,4 +1,5 @@
 using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
@@ -185,6 +186,30 @@ public sealed class StableCodeMappingsTests
             },
             StableCodeMappings.CostBasisStatusToCode,
             StableCodeMappings.CostBasisStatusFromCode);
+
+        AssertRoundTrip(
+            new Dictionary<EvidenceSourceKind, string>
+            {
+                [EvidenceSourceKind.Statement] = "STATEMENT",
+                [EvidenceSourceKind.Receipt] = "RECEIPT",
+                [EvidenceSourceKind.PhysicalCount] = "PHYSICAL_COUNT",
+                [EvidenceSourceKind.ContractOrCertificate] = "CONTRACT_OR_CERTIFICATE",
+                [EvidenceSourceKind.Other] = "OTHER"
+            },
+            StableCodeMappings.EvidenceSourceKindToCode,
+            StableCodeMappings.EvidenceSourceKindFromCode);
+
+        AssertRoundTrip(
+            new Dictionary<EvidenceMediaType, string>
+            {
+                [EvidenceMediaType.Pdf] = "PDF",
+                [EvidenceMediaType.Png] = "PNG",
+                [EvidenceMediaType.Jpeg] = "JPEG",
+                [EvidenceMediaType.PlainText] = "PLAIN_TEXT",
+                [EvidenceMediaType.Csv] = "CSV"
+            },
+            StableCodeMappings.EvidenceMediaTypeToCode,
+            StableCodeMappings.EvidenceMediaTypeFromCode);
     }
 
     private static void AssertRoundTrip<T>(

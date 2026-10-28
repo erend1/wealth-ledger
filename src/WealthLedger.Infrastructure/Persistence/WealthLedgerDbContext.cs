@@ -52,6 +52,18 @@ public sealed class WealthLedgerDbContext : DbContext
     internal DbSet<CommandReceiptRow> CommandReceipts
         => Set<CommandReceiptRow>();
 
+    internal DbSet<EvidenceRecordRow> EvidenceRecords
+        => Set<EvidenceRecordRow>();
+
+    internal DbSet<EvidenceAttachmentRow> EvidenceAttachments
+        => Set<EvidenceAttachmentRow>();
+
+    internal DbSet<EvidenceTransactionLinkRow> EvidenceTransactionLinks
+        => Set<EvidenceTransactionLinkRow>();
+
+    internal DbSet<EvidenceCommandReceiptRow> EvidenceCommandReceipts
+        => Set<EvidenceCommandReceiptRow>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(SqliteConnectionPragmaInterceptor.Instance);
@@ -78,5 +90,11 @@ public sealed class WealthLedgerDbContext : DbContext
         modelBuilder.ApplyConfiguration(
             new PhysicalGoldTradeDetailConfiguration());
         modelBuilder.ApplyConfiguration(new CommandReceiptConfiguration());
+        modelBuilder.ApplyConfiguration(new EvidenceRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new EvidenceAttachmentConfiguration());
+        modelBuilder.ApplyConfiguration(
+            new EvidenceTransactionLinkConfiguration());
+        modelBuilder.ApplyConfiguration(
+            new EvidenceCommandReceiptConfiguration());
     }
 }
