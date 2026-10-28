@@ -175,6 +175,7 @@ switch (startupSelection.Mode)
         app.MapPhysicalGoldEndpoints();
         app.MapLedgerSearchEndpoints();
         app.MapInventoryEndpoints();
+        app.MapEvidenceEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:

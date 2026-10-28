@@ -396,6 +396,54 @@ internal static class M010ApiTestData
         ];
     }
 
+    /// <summary>
+    /// Row counts of every evidence and reconciliation table, to prove a
+    /// refusal mutates nothing.
+    /// </summary>
+    internal static async Task<int[]> ReadAuditCountsAsync(WealthLedgerApiFactory factory)
+    {
+        await using var context = CreateContext(factory);
+
+        return
+        [
+            await context.EvidenceRecords.CountAsync(),
+            await context.EvidenceAttachments.CountAsync(),
+            await context.EvidenceTransactionLinks.CountAsync(),
+            await context.EvidenceCommandReceipts.CountAsync(),
+            await context.EvidenceObservations.CountAsync(),
+            await context.ReconciliationRuns.CountAsync(),
+            await context.ReconciliationItems.CountAsync(),
+            await context.ReconciliationItemResolutions.CountAsync()
+        ];
+    }
+
+    internal static RecordEvidenceRequest Statement(
+        M010ApiHistory history,
+        string label = "Synthetic January statement",
+        Guid? supersedesEvidenceId = null,
+        IReadOnlyList<Guid>? transactionIds = null)
+        => new(
+            "STATEMENT",
+            new DateOnly(2026, 1, 31),
+            label,
+            history.Setup.InstitutionId,
+            history.Setup.AccountId,
+            "SYNTH-STATEMENT-REF",
+            "Synthetic private statement note.",
+            supersedesEvidenceId,
+            transactionIds);
+
+    internal static async Task<Guid> RecordStatementAsync(
+        HttpClient client,
+        M010ApiHistory history,
+        RecordEvidenceRequest? request = null,
+        string? idempotencyKey = null)
+        => (await PostAsync<RecordEvidenceResponse>(
+            client,
+            $"{history.HouseholdRoute}/evidence",
+            request ?? Statement(history),
+            idempotencyKey)).EvidenceId;
+
     private static async Task SeedMastersAsync(
         WealthLedgerApiFactory factory,
         InitializeCoreLedgerResponse setup)
