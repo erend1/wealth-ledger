@@ -72,8 +72,10 @@ internal sealed class M010RequestLogFilter : IEndpointFilter
         string? errorCode,
         long startedAt)
     {
+        // The template, never the concrete path: a path carries identities.
+        // A group's root route ends in a slash; the log line drops it.
         var route = (httpContext.GetEndpoint() as RouteEndpoint)
-                    ?.RoutePattern.RawText
+                    ?.RoutePattern.RawText?.TrimEnd('/')
                     ?? "UNKNOWN";
         var outcome = statusCode switch
         {
