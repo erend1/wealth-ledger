@@ -31,8 +31,130 @@ internal sealed record M010ApiHistory(
     internal string HouseholdRoute => $"/api/households/{Setup.HouseholdId}";
 }
 
+/// <summary>
+/// A synthetic physical-gold lot bought into one vault, with part of it
+/// transferred to a second vault.
+/// </summary>
+internal sealed record M010GoldHistory(
+    Guid SourceVaultId,
+    Guid DestinationVaultId,
+    Guid GoldAssetId,
+    Guid PurchaseId,
+    Guid TransferId,
+    Guid LotId);
+
 internal static class M010ApiTestData
 {
+    internal static readonly DateOnly GoldDate = new(2026, 9, 14);
+
+    internal static async Task<M010GoldHistory> SeedGoldAsync(
+        WealthLedgerApiFactory factory,
+        HttpClient client)
+    {
+        var setup = factory.ReadySetup;
+        var sourceVaultId = Guid.Parse("52000000-0000-0000-0000-0000000000a1");
+        var destinationVaultId = Guid.Parse("52000000-0000-0000-0000-0000000000a2");
+        var goldAssetId = Guid.Parse("62000000-0000-0000-0000-0000000000a1");
+        var counterpartyId = Guid.Parse("32000000-0000-0000-0000-0000000000a1");
+
+        await using (var context = CreateContext(factory))
+        {
+            context.Accounts.AddRange(
+                new AccountRow
+                {
+                    Id = sourceVaultId,
+                    HouseholdId = setup.HouseholdId,
+                    Code = "SYNTH_VAULT_A",
+                    Name = "Synthetic Vault A",
+                    Type = AccountType.PhysicalVault,
+                    IsActive = true,
+                    OpenedOn = new DateOnly(2026, 1, 1)
+                },
+                new AccountRow
+                {
+                    Id = destinationVaultId,
+                    HouseholdId = setup.HouseholdId,
+                    Code = "SYNTH_VAULT_B",
+                    Name = "Synthetic Vault B",
+                    Type = AccountType.PhysicalVault,
+                    IsActive = true,
+                    OpenedOn = new DateOnly(2026, 1, 1)
+                });
+            context.Assets.Add(new AssetRow
+            {
+                Id = goldAssetId,
+                Code = "SYNTH_GOLD",
+                Name = "Synthetic Physical Gold",
+                Type = Domain.Assets.AssetType.PhysicalGold,
+                BaseUnit = Domain.Assets.AssetUnit.GrossGram,
+                BaseCurrencyCode = "TRY",
+                LotTrackingMode = Domain.Assets.LotTrackingMode.Required,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            context.Institutions.Add(new InstitutionRow
+            {
+                Id = counterpartyId,
+                Code = "SYNTH_JEWELER",
+                Name = "Synthetic Jeweler",
+                Type = InstitutionType.Jeweler,
+                IsActive = true
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var purchase = await PostAsync<RecordPhysicalGoldActivityResponse>(
+            client,
+            "/api/ledger/physical-gold-purchases",
+            new PhysicalGoldPurchaseRequest(
+                setup.HouseholdId,
+                setup.PortfolioId,
+                sourceVaultId,
+                setup.AccountId,
+                goldAssetId,
+                setup.CashAssetId,
+                20 * Unit,
+                916_000,
+                2,
+                100_000,
+                "TRY",
+                GoldDate,
+                CounterpartyInstitutionId: counterpartyId,
+                Hallmark: "916",
+                CertificateReference: "SYNTH-CERT-001",
+                ExternalReference: "SYNTH-GOLD-BUY-001"));
+        var lotId = purchase.AssetLotId
+                    ?? throw new InvalidOperationException("The gold purchase created no lot.");
+        var transferRequest = new PhysicalGoldTransferRequest(
+            setup.HouseholdId,
+            setup.PortfolioId,
+            sourceVaultId,
+            setup.PortfolioId,
+            destinationVaultId,
+            goldAssetId,
+            5 * Unit,
+            1,
+            [new PhysicalGoldSelectedLotRequest(lotId, 5 * Unit, 1)],
+            GoldDate,
+            ExternalReference: "SYNTH-GOLD-MOVE-001");
+        var preview = await PostAsync<PhysicalGoldTransferPreviewResponse>(
+            client,
+            "/api/ledger/physical-gold-transfers/preview",
+            transferRequest);
+        var transfer = await PostAsync<RecordPhysicalGoldActivityResponse>(
+            client,
+            "/api/ledger/physical-gold-transfers",
+            transferRequest with { ReviewedPlanFingerprint = preview.PlanFingerprint });
+
+        return new M010GoldHistory(
+            sourceVaultId,
+            destinationVaultId,
+            goldAssetId,
+            purchase.TransactionId,
+            transfer.TransactionId,
+            lotId);
+    }
+
     internal const long Unit = 100_000_000L;
 
     internal static readonly Guid DirectAccountId =
