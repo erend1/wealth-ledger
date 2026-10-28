@@ -277,10 +277,10 @@ cost. M007 neither asks for nor stores current value, gain/loss, or performance.
 
 After review and posting, read the persisted transaction and derived position.
 An incorrect opening is corrected with a separate reversal and a new opening;
-never edit or delete the original. An evidence record (see "Evidence records")
-can retain the source and link it to the opening. Until M010 reconciliation
-exists, neither the note/reference nor a linked evidence record proves that an
-independent reconciliation occurred.
+never edit or delete the original. Once M010's API and UI slices expose it, an
+evidence record (see "Evidence records") can retain the source and link it to
+the opening. Until M010 reconciliation exists, neither the note/reference nor a
+linked evidence record proves that an independent reconciliation occurred.
 
 ## Adjustment
 
@@ -360,7 +360,9 @@ a human submits a validated command.
 
 An evidence record is retained external support for ledger facts. It is audit
 data, not a ledger fact: recording or linking it never posts, edits or deletes
-a transaction and never changes a balance.
+a transaction and never changes a balance. The rules below are enforced by the
+Application and SQLite; the capture screens and endpoints arrive with M010's API
+and UI slices.
 
 Capture:
 
@@ -369,7 +371,8 @@ Capture:
 - the source's effective date, which cannot lie in the future;
 - a required single-line label of at most 256 characters;
 - optional single-line reference of at most 256 characters and optional note
-  of at most 2000 characters;
+  of at most 2000 characters. None of the three may contain bidirectional
+  control characters or broken Unicode;
 - optional institution and household account. When both are given, the account
   must belong to that institution;
 - zero or more links to Posted transactions of the same household; and

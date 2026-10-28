@@ -130,9 +130,11 @@ serves a download yet.
   Office macro and other binary content is rejected before persistence. Only a
   sanitized last segment of the file name is kept.
 - Trusted code computes the SHA-256 and length from the retained bytes. Reading
-  bytes for a download recomputes both and fails closed with a stable integrity
-  error when they no longer match.
-- Evidence rows are insert-only in SQLite. There is no delete workflow. A
+  bytes for a download recomputes both and re-applies the format rules, and
+  fails closed with a stable integrity error when anything no longer matches,
+  including rows written outside the Application.
+- Evidence rows, retry receipts included, are insert-only in SQLite. There is
+  no delete workflow. A
   retention or privacy deletion policy must first account for backup
   generations and audit links, and is not part of M010.
 - Evidence errors carry stable codes and messages that never echo labels,

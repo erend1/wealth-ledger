@@ -708,19 +708,26 @@ Database protections:
 - `TR_EvidenceRecord_ValidateInsert` keeps the account inside the record's
   household and, when both are named, inside the named institution; it also
   keeps the superseded record in the same household;
-- `TR_EvidenceAttachment_ValidateInsert` accepts an attachment only with its
-  record's `CreatedAtUtc`, so a file cannot be attached to an existing record
-  later;
+- `TR_EvidenceAttachment_ValidateInsert` requires an attachment to carry its
+  record's `CreatedAtUtc`. SQLite cannot see transaction boundaries, so direct
+  SQL that copies the timestamp can still attach a file to an existing record;
+  the Application writes an attachment only in its record's own commit;
 - `TR_EvidenceTransactionLink_ValidateInsert` admits only Posted transactions of
-  the record's household and refuses new links on a superseded record; and
-- update and delete triggers on all three evidence tables raise
-  `WL_M010_EVIDENCE_IMMUTABLE`, so corrections use supersession and there is no
-  delete path.
+  the record's household and refuses new links on a superseded record;
+- `TR_EvidenceCommandReceipt_ValidateInsert` requires a receipt's result record
+  to belong to the receipt's household; and
+- update and delete triggers on all four evidence tables, receipts included,
+  raise `WL_M010_EVIDENCE_IMMUTABLE`, so corrections use supersession, a retry
+  key keeps resolving to the same record, and there is no delete path.
 
 Trust boundaries the database cannot carry: the Application computes the
-SHA-256 from the retained bytes, accepts a file only when its extension and
-content signature match the declared type, and verifies length and digest again
-before returning bytes for download.
+SHA-256 from the retained bytes and accepts a file only when its extension and
+content signature match the declared type. Before returning bytes for download
+it checks length, digest, declared type and sanitized name again, so a row
+written outside the Application still fails closed.
+
+A same-key retry that loses a race returns the winner's receipt even when its
+own record collides first, for example on `UX_EvidenceRecord_Supersedes`.
 
 The household list reads through
 `IX_EvidenceRecord_Household_Effective_Created_Id` in key order without a
@@ -728,7 +735,7 @@ temporary sort. List and detail projections never select `Content`; only the
 explicit attachment read does.
 
 The migration creates no evidence rows for existing history. Down drops the
-nine triggers and four tables and restores the exact migration-008 schema.
-Real-SQLite tests cover byte-for-byte round trips, replay and concurrent
+twelve triggers and four tables and restores the exact migration-008 schema.
+Real-SQLite tests cover byte-for-byte round trips, replay and lost-race
 retries that retain one copy, every direct-SQL guard, the query plans, backup,
 verify and stage readback, and 008 -> 009 -> 008 -> 009.
