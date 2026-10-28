@@ -129,10 +129,10 @@ remains Verified while M010 is implemented.
 [`M010: Searchable Inventory, Evidence, and Reconciliation`](milestones/M010_searchable_inventory_evidence_reconciliation.md)
 was accepted on 2026-10-02 after the human owners approved all twenty-two
 Recommended decisions without amendment. M010 became the sole In Progress
-milestone on 2026-10-02, when #20 merged via PR #27. #21 merged via PR #28 and
-#22 via PR #32; parent issue #19 tracks the open children #23-#26. This adds no
-M010 Verified behavior; implementation evidence will be recorded only after it
-is proved.
+milestone on 2026-10-02, when #20 merged via PR #27. #21 merged via PR #28,
+#22 via PR #32 and #23 via PR #34; parent issue #19 tracks the open children
+#24-#26. This adds no M010 Verified behavior; implementation evidence will be
+recorded only after it is proved.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
@@ -164,8 +164,9 @@ rejection, and process/file cleanup.
 - M007 migration: `20260910101810_006_OpeningBalanceCutoverGuards`.
 - M008 migration: `20260913054039_007_FundTradeLifecycleGuards`.
 - M009 migration: `20260915082550_008_PhysicalGoldLifecycle`.
-- M010 migration (In Progress, not yet verified):
-  `20261028065838_009_EvidencePersistence`.
+- M010 migrations (In Progress, not yet verified):
+  `20261028065838_009_EvidencePersistence` and
+  `20261028082512_010_ReconciliationPersistence`.
 
 ## Next delivery candidate
 
