@@ -48,14 +48,16 @@ public sealed class EfCoreReconciliationReadStore : IReconciliationReadStore
             throw new ArgumentOutOfRangeException(nameof(take));
         }
 
-        var runs = _dbContext.ReconciliationRuns
-            .AsNoTracking()
-            .Where(run => run.HouseholdId == householdId);
-
-        if (evidenceId is Guid evidence)
-        {
-            runs = runs.Where(run => run.EvidenceId == evidence);
-        }
+        // A run carries its evidence's household (a migration 010 guard), so
+        // the evidence filter seeks its own index; the household of every row
+        // is still checked below.
+        var runs = evidenceId is Guid evidence
+            ? _dbContext.ReconciliationRuns
+                .AsNoTracking()
+                .Where(run => run.EvidenceId == evidence)
+            : _dbContext.ReconciliationRuns
+                .AsNoTracking()
+                .Where(run => run.HouseholdId == householdId);
 
         if (after is not null)
         {
@@ -87,16 +89,18 @@ public sealed class EfCoreReconciliationReadStore : IReconciliationReadStore
                 OutOfToleranceCount = _dbContext.ReconciliationItems.Count(
                     item => item.RunId == run.Id
                             && item.ComparisonStatus == ReconciliationComparisonStatus.OutOfTolerance),
-                CorrectedCount = _dbContext.ReconciliationItemResolutions.Count(
-                    resolution => resolution.Kind == ReconciliationResolutionKind.CorrectedByTransaction
-                                  && _dbContext.ReconciliationItems.Any(
-                                      item => item.Id == resolution.ItemId
-                                              && item.RunId == run.Id)),
-                DocumentedCount = _dbContext.ReconciliationItemResolutions.Count(
-                    resolution => resolution.Kind == ReconciliationResolutionKind.DocumentedException
-                                  && _dbContext.ReconciliationItems.Any(
-                                      item => item.Id == resolution.ItemId
-                                              && item.RunId == run.Id))
+                // Counted through the run's items, so each lookup stays on
+                // the run index and the resolution key.
+                CorrectedCount = _dbContext.ReconciliationItems.Count(
+                    item => item.RunId == run.Id
+                            && _dbContext.ReconciliationItemResolutions.Any(
+                                resolution => resolution.ItemId == item.Id
+                                              && resolution.Kind == ReconciliationResolutionKind.CorrectedByTransaction)),
+                DocumentedCount = _dbContext.ReconciliationItems.Count(
+                    item => item.RunId == run.Id
+                            && _dbContext.ReconciliationItemResolutions.Any(
+                                resolution => resolution.ItemId == item.Id
+                                              && resolution.Kind == ReconciliationResolutionKind.DocumentedException))
             })
             .ToListAsync(cancellationToken);
 
@@ -105,7 +109,9 @@ public sealed class EfCoreReconciliationReadStore : IReconciliationReadStore
             {
                 var openCount = row.OutOfToleranceCount - row.CorrectedCount - row.DocumentedCount;
 
-                if (row.MatchedCount + row.OutOfToleranceCount != row.ItemCount || openCount < 0)
+                if (row.HouseholdId != householdId
+                    || row.MatchedCount + row.OutOfToleranceCount != row.ItemCount
+                    || openCount < 0)
                 {
                     throw new ReconciliationPersistenceException(
                         "A persisted reconciliation run disagrees with its items.");
