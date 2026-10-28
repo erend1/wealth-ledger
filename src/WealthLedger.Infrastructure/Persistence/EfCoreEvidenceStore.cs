@@ -257,7 +257,7 @@ public sealed class EfCoreEvidenceStore : IEvidenceStore
                     throw new EvidenceException(
                         EvidenceErrorCategory.Validation,
                         EvidenceErrorCodes.TransactionLinkLimitExceeded,
-                        "One evidence record can link at most 500 transactions.");
+                        $"One evidence record can link at most {EvidenceTransactionLink.MaximumPerEvidenceRecord} transactions.");
                 }
             }
 

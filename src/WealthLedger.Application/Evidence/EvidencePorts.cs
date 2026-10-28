@@ -53,6 +53,15 @@ public interface IEvidenceStore
     /// Inserts the links that do not exist yet and returns how many were
     /// added. An existing link is left untouched.
     /// </summary>
+    /// <remarks>
+    /// The write is atomic and enforces the per-record cap of
+    /// <see cref="EvidenceTransactionLink.MaximumPerEvidenceRecord"/> links
+    /// against every committed writer: when the record would exceed it, the
+    /// store adds nothing and throws a Validation
+    /// <see cref="EvidenceException"/> with
+    /// <see cref="EvidenceErrorCodes.TransactionLinkLimitExceeded"/>. Only the
+    /// store can see concurrent links, so the Application does not pre-check.
+    /// </remarks>
     Task<int> AddTransactionLinksAsync(
         IReadOnlyCollection<EvidenceTransactionLink> links,
         CancellationToken cancellationToken = default);
