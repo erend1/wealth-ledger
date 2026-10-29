@@ -26,15 +26,13 @@ public sealed class FundPurchaseModel : FundTradePageModel
         RecordFundPurchaseUseCase record,
         ValuePresenter values,
         UiText text,
-        TimeProvider timeProvider,
-        PresentationCulture presentationCulture)
+        TimeProvider timeProvider)
         : base(
             householdResolver,
             listChoices,
             values,
             text,
-            timeProvider,
-            presentationCulture)
+            timeProvider)
     {
         _preview = preview
             ?? throw new ArgumentNullException(nameof(preview));

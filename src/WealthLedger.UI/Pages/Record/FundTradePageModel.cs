@@ -33,8 +33,7 @@ public abstract class FundTradePageModel : PageModel
         ListFundTradeChoicesUseCase listChoices,
         ValuePresenter values,
         UiText text,
-        TimeProvider timeProvider,
-        PresentationCulture presentationCulture)
+        TimeProvider timeProvider)
     {
         HouseholdResolver = householdResolver
             ?? throw new ArgumentNullException(nameof(householdResolver));
@@ -46,8 +45,6 @@ public abstract class FundTradePageModel : PageModel
             ?? throw new ArgumentNullException(nameof(text));
         TimeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
-        PresentationCulture = presentationCulture
-            ?? throw new ArgumentNullException(nameof(presentationCulture));
     }
 
     protected ReadyHouseholdResolver HouseholdResolver { get; }
@@ -59,8 +56,6 @@ public abstract class FundTradePageModel : PageModel
     public UiText Text { get; }
 
     protected TimeProvider TimeProvider { get; }
-
-    protected PresentationCulture PresentationCulture { get; }
 
     [BindProperty]
     public FundTradeForm Input { get; set; } = new();
@@ -270,7 +265,7 @@ public abstract class FundTradePageModel : PageModel
         Input.CashAssetId ??= SingleOrNull(
             Choices.CashAssets.Items.Select(x => x.AssetId));
 
-        Input.ExecutionDate ??= CurrentLocalDate().ToString("yyyy-MM-dd");
+        Input.ExecutionDate ??= OperatingDate.Today(TimeProvider).ToString("yyyy-MM-dd");
 
         /*
          * The idempotency key identifies this attempt, not the trade. It is
@@ -284,13 +279,6 @@ public abstract class FundTradePageModel : PageModel
             Input.Costs.Add(new FundTradeCostForm());
         }
     }
-
-    protected DateOnly CurrentLocalDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    TimeProvider.GetUtcNow(),
-                    PresentationCulture.DisplayTimeZone)
-                .DateTime);
 
     /// <summary>
     /// Anchors an application failure to the field the user can act on.
