@@ -44,8 +44,7 @@ public sealed record PositionInventoryItem(
     bool AssetIsActive,
     long QuantityRawE8,
     int SourceEntryCount,
-    IReadOnlyList<Guid> SourceEntryIds,
-    IReadOnlyList<Guid> SourceTransactionIds);
+    int SourceTransactionCount);
 
 public sealed record ListLotInventoryQuery(
     Guid HouseholdId,
@@ -54,12 +53,20 @@ public sealed record ListLotInventoryQuery(
     Guid? InstitutionId = null,
     Guid? AssetId = null,
     DateOnly? AsOf = null,
-    bool IncludeExhausted = false);
+    bool IncludeExhausted = false,
+    int PageSize = 50,
+    string? Cursor = null);
 
 public sealed record LotInventory(
     Guid HouseholdId,
     DateOnly? AsOf,
-    IReadOnlyList<LotInventoryItem> Items);
+    IReadOnlyList<LotInventoryItem> Items,
+    string? NextCursor);
+
+public sealed record LotInventoryCursorKey(
+    string AssetCode,
+    DateOnly? AcquiredOn,
+    Guid AssetLotId);
 
 public sealed record LotInventoryItem(
     Guid AssetLotId,

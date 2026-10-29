@@ -2,13 +2,17 @@
 using WealthLedger.Api.ErrorHandling;
 using WealthLedger.Api.Startup;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.Evidence;
 using WealthLedger.Application.FundTrades;
+using WealthLedger.Application.Inventory;
+using WealthLedger.Application.LedgerSearch;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.Positions;
 using WealthLedger.Application.PhysicalGold;
+using WealthLedger.Application.Reconciliation;
 using WealthLedger.Application.Setup;
 using WealthLedger.Infrastructure;
 using WealthLedger.Infrastructure.LocalData;
@@ -76,6 +80,22 @@ builder.Services.AddScoped<PreviewPhysicalGoldTransferUseCase>();
 builder.Services.AddScoped<RecordPhysicalGoldTransferUseCase>();
 builder.Services.AddScoped<GetPhysicalGoldActivityVerificationUseCase>();
 builder.Services.AddScoped<GetPhysicalGoldCustodyInventoryUseCase>();
+
+// M010 search, inventory, evidence and reconciliation.
+builder.Services.AddScoped<SearchLedgerTransactionsUseCase>();
+builder.Services.AddScoped<ListPositionInventoryUseCase>();
+builder.Services.AddScoped<ListLotInventoryUseCase>();
+builder.Services.AddScoped<RecordEvidenceUseCase>();
+builder.Services.AddScoped<LinkEvidenceTransactionsUseCase>();
+builder.Services.AddScoped<RecordEvidenceObservationsUseCase>();
+builder.Services.AddScoped<ListEvidenceUseCase>();
+builder.Services.AddScoped<GetEvidenceUseCase>();
+builder.Services.AddScoped<ListEvidenceObservationsUseCase>();
+builder.Services.AddScoped<GetEvidenceAttachmentContentUseCase>();
+builder.Services.AddScoped<RunReconciliationUseCase>();
+builder.Services.AddScoped<ResolveReconciliationItemUseCase>();
+builder.Services.AddScoped<ListReconciliationRunsUseCase>();
+builder.Services.AddScoped<GetReconciliationRunUseCase>();
 
 var app = builder.Build();
 
@@ -153,6 +173,10 @@ switch (startupSelection.Mode)
         app.MapOpeningBalanceEndpoints();
         app.MapFundTradeEndpoints();
         app.MapPhysicalGoldEndpoints();
+        app.MapLedgerSearchEndpoints();
+        app.MapInventoryEndpoints();
+        app.MapEvidenceEndpoints();
+        app.MapReconciliationEndpoints();
         break;
 
     case LocalStartupMode.WorkspaceUninitialized:

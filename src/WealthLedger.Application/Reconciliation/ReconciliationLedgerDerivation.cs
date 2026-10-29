@@ -50,7 +50,7 @@ internal sealed class ReconciliationLedgerDerivation
 
         // A statement usually covers one portfolio, account or asset, so a
         // shared dimension narrows the derivation to the scopes it can touch.
-        var positions = await _positions.ExecuteAsync(
+        var positions = await _positions.DeriveAsync(
             new ListPositionInventoryQuery(
                 householdId,
                 PortfolioId: SharedOrNull(scopes, scope => scope.PortfolioId),
@@ -78,7 +78,8 @@ internal sealed class ReconciliationLedgerDerivation
                 .Select(scope => scope.AssetId)
                 .Distinct()
                 .ToArray();
-            var lots = await _lots.ExecuteAsync(
+            // Unpaged: every piece in custody counts, however many lots.
+            var lots = await _lots.DeriveAllAsync(
                 new ListLotInventoryQuery(
                     householdId,
                     AssetId: pieceAssetIds.Length == 1 ? pieceAssetIds[0] : null,

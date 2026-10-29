@@ -98,6 +98,27 @@ public sealed class ReconciliationUseCaseTests
     }
 
     [Fact]
+    public async Task Run_CountsPiecesAcrossMoreLotsThanOneInventoryPage()
+    {
+        // The public lot inventory pages at 50 by default; the ledger side
+        // must still see every lot in custody.
+        var fixture = new Fixture();
+
+        for (var index = 0; index < 60; index++)
+        {
+            fixture.GoldLot(AccountId, 10, pieces: 1, new DateOnly(2026, 9, 1));
+        }
+
+        fixture.Observe(EvidenceId, AccountId, GoldAssetId, 600, pieces: 60);
+
+        await fixture.RunAsync("run-many-lots", EvidenceId);
+
+        var item = Assert.Single(Assert.Single(fixture.Store.Runs).Run.Items);
+        Assert.Equal((600L, 60), (item.LedgerQuantityRawE8, item.LedgerPieceCount));
+        Assert.Equal(ReconciliationComparisonStatus.Matched, item.ComparisonStatus);
+    }
+
+    [Fact]
     public async Task Run_SignedAsOfSliceFromBackdatedHistoryIsAVisibleDifference()
     {
         var fixture = new Fixture();

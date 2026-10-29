@@ -179,10 +179,14 @@ namespace WealthLedger.Domain.Evidence
     /// </summary>
     /// <remarks>
     /// A link is added, never edited or removed. It changes neither the
-    /// evidence record nor the linked transaction's posted facts.
+    /// evidence record nor the linked transaction's posted facts. One record
+    /// holds at most <see cref="MaximumPerEvidenceRecord"/> links, so its
+    /// complete link list stays a bounded read.
     /// </remarks>
     public sealed class EvidenceTransactionLink
     {
+        public const int MaximumPerEvidenceRecord = 500;
+
         private EvidenceTransactionLink(
             Guid evidenceId,
             Guid transactionId,

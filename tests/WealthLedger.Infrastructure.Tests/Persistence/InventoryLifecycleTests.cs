@@ -90,14 +90,8 @@ public sealed class InventoryLifecycleTests
 
         var fund = Single(current, FundScope);
         Assert.Equal(3, fund.SourceEntryCount);
-        Assert.Equal(
-            new[]
-            {
-                history.FundOpeningTransactionId,
-                history.FundPurchaseTransactionId,
-                history.FundSaleTransactionId
-            },
-            fund.SourceTransactionIds);
+        // Opening, purchase and sale.
+        Assert.Equal(3, fund.SourceTransactionCount);
         Assert.Equal(CoreLedgerTestData.InstitutionId, fund.InstitutionId);
         Assert.Equal("Test Institution", fund.InstitutionName);
         Assert.Equal(AssetType.Fund, fund.AssetType);

@@ -1,11 +1,15 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using WealthLedger.Application.Common;
 using WealthLedger.Application.CoreLedger;
+using WealthLedger.Application.Evidence;
+using WealthLedger.Application.Inventory;
+using WealthLedger.Application.LedgerSearch;
 using WealthLedger.Application.LocalData;
 using WealthLedger.Application.Navigation;
 using WealthLedger.Application.FundTrades;
 using WealthLedger.Application.OpeningBalances;
 using WealthLedger.Application.PhysicalGold;
+using WealthLedger.Application.Reconciliation;
 using WealthLedger.Application.Setup;
 using WealthLedger.Domain.Common;
 
@@ -70,8 +74,18 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
         return true;
     }
 
+    /// <summary>
+    /// The status and stable code this handler answers an exception with, for
+    /// operational logging; an unmapped exception is a 500 without a code.
+    /// </summary>
+    internal static (int StatusCode, string? ErrorCode) Describe(
+        Exception exception)
+        => Map(exception) is { } failure
+            ? (failure.StatusCode, failure.ErrorCode)
+            : (StatusCodes.Status500InternalServerError, null);
+
     private static ApiFailure? Map(Exception exception)
-        => exception switch
+        => MapM010(exception) ?? exception switch
         {
             CoreLedgerAlreadyInitializedException => new ApiFailure(
                 StatusCodes.Status409Conflict,
@@ -214,6 +228,129 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
                 "Invalid request",
                 exception.Message,
                 ErrorCode: null),
+            _ => null
+        };
+
+    // M010 search, inventory, evidence and reconciliation failures. Their
+    // messages name the rule only, so they are safe as problem details.
+    private static ApiFailure? MapM010(Exception exception)
+        => exception switch
+        {
+            LedgerSearchRequestException searchRequest => new ApiFailure(
+                StatusCodes.Status400BadRequest,
+                "Invalid ledger search request",
+                searchRequest.Message,
+                searchRequest.ErrorCode),
+            LedgerSearchHouseholdNotFoundException => new ApiFailure(
+                StatusCodes.Status404NotFound,
+                "Household not found",
+                exception.Message,
+                LedgerSearchHouseholdNotFoundException.ErrorCode),
+            LedgerSearchFilterScopeNotFoundException => new ApiFailure(
+                StatusCodes.Status404NotFound,
+                "Ledger search scope not found",
+                exception.Message,
+                LedgerSearchFilterScopeNotFoundException.ErrorCode),
+            LedgerSearchPersistenceException => new ApiFailure(
+                StatusCodes.Status409Conflict,
+                "Ledger search data unavailable",
+                "The requested ledger history could not be read safely.",
+                "LEDGER_SEARCH_DATA_UNAVAILABLE"),
+            InventoryRequestException inventoryRequest => new ApiFailure(
+                StatusCodes.Status400BadRequest,
+                "Invalid inventory request",
+                inventoryRequest.Message,
+                inventoryRequest.ErrorCode),
+            InventoryScopeNotFoundException => new ApiFailure(
+                StatusCodes.Status404NotFound,
+                "Inventory scope not found",
+                exception.Message,
+                InventoryScopeNotFoundException.ErrorCode),
+            InventoryArithmeticOverflowException => new ApiFailure(
+                StatusCodes.Status422UnprocessableEntity,
+                "Inventory arithmetic overflow",
+                exception.Message,
+                InventoryArithmeticOverflowException.ErrorCode),
+            InventoryPersistenceException => new ApiFailure(
+                StatusCodes.Status409Conflict,
+                "Inventory data unavailable",
+                "The requested inventory could not be derived safely.",
+                "INVENTORY_DATA_UNAVAILABLE"),
+            EvidenceException evidence => new ApiFailure(
+                evidence.ErrorCode is EvidenceErrorCodes.PageSizeInvalid
+                    or EvidenceErrorCodes.CursorInvalid
+                    or EvidenceErrorCodes.CursorScopeMismatch
+                    ? StatusCodes.Status400BadRequest
+                    : evidence.Category switch
+                    {
+                        EvidenceErrorCategory.NotFound =>
+                            StatusCodes.Status404NotFound,
+                        EvidenceErrorCategory.Conflict =>
+                            StatusCodes.Status409Conflict,
+                        EvidenceErrorCategory.Validation =>
+                            StatusCodes.Status422UnprocessableEntity,
+                        EvidenceErrorCategory.Integrity =>
+                            StatusCodes.Status409Conflict,
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(evidence.Category))
+                    },
+                evidence.Category switch
+                {
+                    EvidenceErrorCategory.NotFound => "Evidence not found",
+                    EvidenceErrorCategory.Conflict => "Evidence conflict",
+                    EvidenceErrorCategory.Validation =>
+                        "Evidence validation failed",
+                    EvidenceErrorCategory.Integrity =>
+                        "Evidence integrity failure",
+                    _ => throw new ArgumentOutOfRangeException(
+                        nameof(evidence.Category))
+                },
+                evidence.Message,
+                evidence.ErrorCode),
+            EvidencePersistenceException => new ApiFailure(
+                StatusCodes.Status409Conflict,
+                "Evidence data unavailable",
+                "The evidence write conflicted with persisted history.",
+                "EVIDENCE_DATA_UNAVAILABLE"),
+            ReconciliationException reconciliation => new ApiFailure(
+                reconciliation.ErrorCode is ReconciliationErrorCodes.PageSizeInvalid
+                    or ReconciliationErrorCodes.CursorInvalid
+                    or ReconciliationErrorCodes.CursorScopeMismatch
+                    ? StatusCodes.Status400BadRequest
+                    : reconciliation.Category switch
+                    {
+                        ReconciliationErrorCategory.NotFound =>
+                            StatusCodes.Status404NotFound,
+                        ReconciliationErrorCategory.Conflict =>
+                            StatusCodes.Status409Conflict,
+                        ReconciliationErrorCategory.Validation =>
+                            StatusCodes.Status422UnprocessableEntity,
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(reconciliation.Category))
+                    },
+                reconciliation.Category switch
+                {
+                    ReconciliationErrorCategory.NotFound =>
+                        "Reconciliation not found",
+                    ReconciliationErrorCategory.Conflict =>
+                        "Reconciliation conflict",
+                    ReconciliationErrorCategory.Validation =>
+                        "Reconciliation validation failed",
+                    _ => throw new ArgumentOutOfRangeException(
+                        nameof(reconciliation.Category))
+                },
+                reconciliation.Message,
+                reconciliation.ErrorCode),
+            ReconciliationPersistenceException => new ApiFailure(
+                StatusCodes.Status409Conflict,
+                "Reconciliation data unavailable",
+                "The reconciliation could not be read or written safely.",
+                "RECONCILIATION_DATA_UNAVAILABLE"),
+            IdempotencyConflictException => new ApiFailure(
+                StatusCodes.Status409Conflict,
+                "Idempotency key conflict",
+                exception.Message,
+                IdempotencyConflictException.ErrorCode),
             _ => null
         };
 

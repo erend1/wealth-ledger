@@ -94,9 +94,17 @@ public sealed class InventoryReadStoreTests
             current.Items.Single(
                 item => item.AccountId == CoreLedgerTestData.DestinationAccountId)
                 .QuantityRawE8);
-        Assert.DoesNotContain(
-            current.Items.SelectMany(item => item.SourceTransactionIds),
-            transactionId => transactionId == DraftTransactionId);
+        // Opening, adjustment, its reversal and the movement source. The two
+        // Draft entries in the source account count as neither entry nor
+        // transaction.
+        var source = current.Items.Single(
+            item => item.AccountId == CoreLedgerTestData.AccountId);
+        Assert.Equal(4, source.SourceEntryCount);
+        Assert.Equal(4, source.SourceTransactionCount);
+        var destination = current.Items.Single(
+            item => item.AccountId == CoreLedgerTestData.DestinationAccountId);
+        Assert.Equal(1, destination.SourceEntryCount);
+        Assert.Equal(1, destination.SourceTransactionCount);
     }
 
     [Fact]

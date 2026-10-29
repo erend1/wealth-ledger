@@ -143,9 +143,47 @@ public sealed class InventoryUseCaseTests
             ]
         };
 
-        await Assert.ThrowsAsync<OverflowException>(
+        // Persisted history, not the caller's input, overflowed: a stable
+        // inventory code rather than a numeric-input error.
+        var exception = await Assert.ThrowsAsync<InventoryArithmeticOverflowException>(
             () => new ListPositionInventoryUseCase(store)
                 .ExecuteAsync(new ListPositionInventoryQuery(HouseholdId)));
+        Assert.IsType<OverflowException>(exception.InnerException);
+        Assert.Equal(
+            "INVENTORY_ARITHMETIC_OVERFLOW",
+            InventoryArithmeticOverflowException.ErrorCode);
+    }
+
+    [Fact]
+    public async Task PositionInventory_ReportsSourceCountsInsteadOfIdentities()
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var first = Entry(scope, 1, new DateOnly(2026, 1, 1), 500);
+
+        // A second entry of the same transaction in the same scope counts as
+        // one more entry but no further transaction.
+        var sameTransaction = Entry(scope, 2, new DateOnly(2026, 1, 1), 100) with
+        {
+            TransactionId = first.TransactionId,
+            EntrySequence = 1
+        };
+        var store = new FakeInventoryReadStore
+        {
+            PositionFacts =
+            [
+                first,
+                sameTransaction,
+                Entry(scope, 3, new DateOnly(2026, 2, 1), -50)
+            ]
+        };
+
+        var result = await new ListPositionInventoryUseCase(store)
+            .ExecuteAsync(new ListPositionInventoryQuery(HouseholdId));
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal(550, item.QuantityRawE8);
+        Assert.Equal(3, item.SourceEntryCount);
+        Assert.Equal(2, item.SourceTransactionCount);
     }
 
     [Fact]
@@ -298,9 +336,156 @@ public sealed class InventoryUseCaseTests
                 ])
         };
 
-        await Assert.ThrowsAsync<OverflowException>(
+        var exception = await Assert.ThrowsAsync<InventoryArithmeticOverflowException>(
             () => new ListLotInventoryUseCase(store)
                 .ExecuteAsync(new ListLotInventoryQuery(HouseholdId)));
+        Assert.IsType<OverflowException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task LotInventory_PagesInDerivationOrderWithoutDuplicatesOrGaps()
+    {
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = FundLots(
+                (1, new DateOnly(2026, 3, 1)),
+                (2, new DateOnly(2026, 1, 1)),
+                (3, null),
+                (4, new DateOnly(2026, 1, 1)),
+                (5, new DateOnly(2026, 2, 1)))
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var unpaged = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, PageSize: 100));
+        var paged = new List<Guid>();
+        string? cursor = null;
+        var pageCount = 0;
+
+        do
+        {
+            var page = await useCase.ExecuteAsync(
+                new ListLotInventoryQuery(HouseholdId, PageSize: 2, Cursor: cursor));
+            Assert.InRange(page.Items.Count, 1, 2);
+            paged.AddRange(page.Items.Select(item => item.AssetLotId));
+            cursor = page.NextCursor;
+            pageCount++;
+        }
+        while (cursor is not null);
+
+        Assert.Null(unpaged.NextCursor);
+        Assert.Equal(3, pageCount);
+        Assert.Equal(unpaged.Items.Select(item => item.AssetLotId), paged);
+
+        // Unknown acquisition dates first, then by date, then lot identity.
+        Assert.Equal(
+            new[] { LotIdOf(3), LotIdOf(2), LotIdOf(4), LotIdOf(5), LotIdOf(1) },
+            paged);
+    }
+
+    [Fact]
+    public async Task LotInventory_PagesAPersistedAssetCodeOutsideTheDomainAlphabet()
+    {
+        // The database does not constrain asset codes, so a row written
+        // outside the Domain may carry lowercase or other characters.
+        var lots = FundLots(
+            (1, new DateOnly(2026, 1, 1)),
+            (2, new DateOnly(2026, 2, 1)));
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = lots with
+            {
+                Lots = lots.Lots
+                    .Select(lot => lot with { AssetCode = "legacy.fund-ü" })
+                    .ToArray()
+            }
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+
+        var first = await useCase.ExecuteAsync(new ListLotInventoryQuery(HouseholdId, PageSize: 1));
+        var second = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, PageSize: 1, Cursor: first.NextCursor));
+
+        Assert.Equal(LotIdOf(1), Assert.Single(first.Items).AssetLotId);
+        Assert.Equal(LotIdOf(2), Assert.Single(second.Items).AssetLotId);
+        Assert.Null(second.NextCursor);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task LotInventory_RejectsPageSizeOutsideBounds(int pageSize)
+    {
+        var exception = await Assert.ThrowsAsync<InventoryRequestException>(
+            () => new ListLotInventoryUseCase(new FakeInventoryReadStore())
+                .ExecuteAsync(new ListLotInventoryQuery(HouseholdId, PageSize: pageSize)));
+
+        Assert.Equal(InventoryRequestException.PageSizeInvalidCode, exception.ErrorCode);
+    }
+
+    [Fact]
+    public async Task LotInventory_CursorIsBoundToHouseholdAndFilters()
+    {
+        var store = new FakeInventoryReadStore
+        {
+            LotFacts = FundLots(
+                (1, new DateOnly(2026, 1, 1)),
+                (2, new DateOnly(2026, 2, 1)))
+        };
+        var useCase = new ListLotInventoryUseCase(store);
+        var first = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, PageSize: 1));
+        var cursor = Assert.IsType<string>(first.NextCursor);
+
+        var changedFilter = await Assert.ThrowsAsync<InventoryRequestException>(
+            () => useCase.ExecuteAsync(
+                new ListLotInventoryQuery(
+                    HouseholdId,
+                    IncludeExhausted: true,
+                    PageSize: 1,
+                    Cursor: cursor)));
+        var changedAsOf = await Assert.ThrowsAsync<InventoryRequestException>(
+            () => useCase.ExecuteAsync(
+                new ListLotInventoryQuery(
+                    HouseholdId,
+                    AsOf: new DateOnly(2026, 12, 31),
+                    PageSize: 1,
+                    Cursor: cursor)));
+        var otherHousehold = await Assert.ThrowsAsync<InventoryRequestException>(
+            () => useCase.ExecuteAsync(
+                new ListLotInventoryQuery(
+                    Guid.Parse("10000000-0000-0000-0000-000000000002"),
+                    PageSize: 1,
+                    Cursor: cursor)));
+        var malformed = await Assert.ThrowsAsync<InventoryRequestException>(
+            () => useCase.ExecuteAsync(
+                new ListLotInventoryQuery(HouseholdId, Cursor: "not+a/cursor")));
+
+        foreach (var changedScope in new[]
+                 {
+                     new ListLotInventoryQuery(HouseholdId, PortfolioId: PortfolioId, PageSize: 1, Cursor: cursor),
+                     new ListLotInventoryQuery(HouseholdId, AccountId: AccountId, PageSize: 1, Cursor: cursor),
+                     new ListLotInventoryQuery(HouseholdId, InstitutionId: InstitutionId, PageSize: 1, Cursor: cursor),
+                     new ListLotInventoryQuery(HouseholdId, AssetId: AssetId, PageSize: 1, Cursor: cursor)
+                 })
+        {
+            var mismatch = await Assert.ThrowsAsync<InventoryRequestException>(
+                () => useCase.ExecuteAsync(changedScope));
+            Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, mismatch.ErrorCode);
+        }
+
+        Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, changedFilter.ErrorCode);
+        Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, changedAsOf.ErrorCode);
+        Assert.Equal(InventoryRequestException.CursorScopeMismatchCode, otherHousehold.ErrorCode);
+        Assert.Equal(InventoryRequestException.CursorInvalidCode, malformed.ErrorCode);
+
+        // Exceptions never echo the cursor payload.
+        Assert.DoesNotContain(cursor, changedFilter.Message, StringComparison.Ordinal);
+
+        var second = await useCase.ExecuteAsync(
+            new ListLotInventoryQuery(HouseholdId, PageSize: 1, Cursor: cursor));
+        Assert.Equal(LotIdOf(2), Assert.Single(second.Items).AssetLotId);
+        Assert.Null(second.NextCursor);
     }
 
     [Fact]
@@ -922,6 +1107,41 @@ public sealed class InventoryUseCaseTests
             "TEST",
             "CERT",
             null);
+
+    private static Guid LotIdOf(int ordinal)
+        => Guid.Parse($"80000000-0000-0000-0000-{ordinal:D12}");
+
+    // One open fund lot per ordinal, each still fully held.
+    private static InventoryLotFactSet FundLots(
+        params (int Ordinal, DateOnly? AcquiredOn)[] lots)
+    {
+        var scope = Scope(AssetId, "FUND_A", AssetType.Fund, AssetUnit.FundUnit);
+        var descriptors = new List<InventoryLotDescriptor>();
+        var allocations = new List<InventoryLotAllocationFact>();
+
+        foreach (var (ordinal, acquiredOn) in lots)
+        {
+            var openingEntryId = Guid.Parse($"81000000-0000-0000-0001-{ordinal:D12}");
+            var lot = FundLot(
+                LotIdOf(ordinal),
+                openingEntryId,
+                new DateOnly(2026, 1, 1),
+                10 * Unit);
+            descriptors.Add(lot with { AcquiredOn = acquiredOn });
+            allocations.Add(
+                Allocation(
+                    scope,
+                    LotIdOf(ordinal),
+                    openingEntryId,
+                    1_000 + ordinal,
+                    new DateOnly(2026, 1, 1),
+                    10 * Unit,
+                    null,
+                    TransactionType.Buy));
+        }
+
+        return new InventoryLotFactSet(descriptors, allocations);
+    }
 
     private static InventoryEntryFact Entry(
         InventoryScopeContext scope,

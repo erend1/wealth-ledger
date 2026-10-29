@@ -235,6 +235,32 @@ public sealed class EfCoreEvidenceStore : IEvidenceStore
                     cancellationToken);
             }
 
+            // The inserts above hold the SQLite write lock, so this count also
+            // sees every concurrent writer that committed first.
+            foreach (var evidenceId in links
+                         .Select(link => ToText(link.EvidenceId))
+                         .Distinct(StringComparer.Ordinal))
+            {
+                var linkCount = await _dbContext.Database
+                    .SqlQuery<int>(
+                        $"""
+                         SELECT COUNT(*) AS "Value"
+                         FROM "EvidenceTransactionLink"
+                         WHERE "EvidenceId" = {evidenceId}
+                         """)
+                    .SingleAsync(cancellationToken);
+
+                if (linkCount > EvidenceTransactionLink.MaximumPerEvidenceRecord)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+
+                    throw new EvidenceException(
+                        EvidenceErrorCategory.Validation,
+                        EvidenceErrorCodes.TransactionLinkLimitExceeded,
+                        $"One evidence record can link at most {EvidenceTransactionLink.MaximumPerEvidenceRecord} transactions.");
+                }
+            }
+
             await transaction.CommitAsync(cancellationToken);
 
             return added;

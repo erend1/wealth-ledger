@@ -550,6 +550,16 @@ history by `ExecutionDate`: a disposal or transfer may be dated before the
 acquisition or custody it consumed. An as-of reconstruction can therefore be
 negative, and inventory reports it signed rather than hiding or rejecting it.
 
+Results stay bounded without stored balances. Position inventory returns one
+item per exact scope with its source entry and transaction counts, not their
+identities; ledger search over the same scope with an upper execution date
+lists them. Lot inventory returns pages of 1-100 lots, ordered by asset code,
+evidenced acquisition date (unknown first) and lot identity, with an opaque
+cursor bound to the household and every filter. Each page is derived from
+complete history, and reconciliation uses the unpaged derivation. A checked-
+arithmetic overflow over persisted history is reported as
+`INVENTORY_ARITHMETIC_OVERFLOW`, not as a numeric-input error.
+
 Inventory adds no table, column, index or migration. Real-SQLite query-plan
 tests show that its position, lot and allocation queries, with and without an
 as-of date and with account and asset filters, use only indexed searches on
@@ -726,7 +736,12 @@ Database protections:
 
 Trust boundaries the database cannot carry: the Application computes the
 SHA-256 from the retained bytes and accepts a file only when its extension and
-content signature match the declared type. Before returning bytes for download
+content signature match the declared type. One record holds at most 500
+transaction links. The link write counts them inside its own SQLite write
+transaction after inserting, and rolls back with
+`EVIDENCE_TRANSACTION_LINK_LIMIT_EXCEEDED` when the record would exceed the
+cap, so concurrent writers cannot pass it; relinking existing pairs stays a
+no-op. Before returning bytes for download
 it checks length, digest, declared type and sanitized name again, so a row
 written outside the Application still fails closed.
 

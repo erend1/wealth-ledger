@@ -395,6 +395,103 @@ public sealed class EvidencePersistenceTests
     }
 
     [Fact]
+    public async Task Linking_StopsAtTheRecordCapEvenUnderConcurrentWriters()
+    {
+        await using var database = await SqliteTestDatabase.CreateAsync();
+        var fixture = await EvidenceTestData.SeedAsync(database.CreateContext);
+        var postedIds = new List<Guid> { fixture.FirstPostedId, fixture.SecondPostedId };
+
+        for (var index = 0; index < 500; index++)
+        {
+            postedIds.Add(await EvidenceTestData.PostContributionAsync(
+                database.CreateContext,
+                $"evidence-cap-{index}",
+                CoreLedgerTestData.HouseholdId,
+                CoreLedgerTestData.PortfolioId,
+                CoreLedgerTestData.AccountId,
+                100 + index));
+        }
+
+        Guid evidenceId;
+
+        await using (var context = database.CreateContext())
+        {
+            evidenceId = (await EvidenceTestData.RecordUseCase(context).ExecuteAsync(
+                "evidence-cap",
+                EvidenceTestData.Command(transactionIds: postedIds.Take(100).ToArray()))).EvidenceId;
+        }
+
+        // 100 recorded, then 399 more: one short of the cap.
+        foreach (var batch in postedIds.Skip(100).Take(399).Chunk(100))
+        {
+            await using var context = database.CreateContext();
+            await EvidenceTestData.LinkUseCase(context).ExecuteAsync(
+                new LinkEvidenceTransactionsCommand(
+                    CoreLedgerTestData.HouseholdId,
+                    evidenceId,
+                    batch));
+        }
+
+        Assert.Equal(499L, await CountAsync(database, "EvidenceTransactionLink"));
+
+        // Two writers race for the last slot with different transactions.
+        await using var firstContext = database.CreateContext();
+        await using var secondContext = database.CreateContext();
+        using var start = new SemaphoreSlim(0, 2);
+
+        async Task<Exception?> LinkAsync(WealthLedgerDbContext context, Guid transactionId)
+        {
+            await start.WaitAsync();
+
+            try
+            {
+                await EvidenceTestData.LinkUseCase(context).ExecuteAsync(
+                    new LinkEvidenceTransactionsCommand(
+                        CoreLedgerTestData.HouseholdId,
+                        evidenceId,
+                        [transactionId]));
+                return null;
+            }
+            catch (EvidenceException exception)
+            {
+                return exception;
+            }
+        }
+
+        var first = Task.Run(() => LinkAsync(firstContext, postedIds[499]));
+        var second = Task.Run(() => LinkAsync(secondContext, postedIds[500]));
+        start.Release(2);
+        var outcomes = await Task.WhenAll(first, second);
+
+        var refused = Assert.IsType<EvidenceException>(Assert.Single(outcomes, outcome => outcome is not null));
+        Assert.Equal(EvidenceErrorCodes.TransactionLinkLimitExceeded, refused.ErrorCode);
+        Assert.Equal(EvidenceErrorCategory.Validation, refused.Category);
+        Assert.Equal(500L, await CountAsync(database, "EvidenceTransactionLink"));
+
+        await using (var context = database.CreateContext())
+        {
+            // A new transaction is refused and rolled back...
+            var overCap = await Assert.ThrowsAsync<EvidenceException>(
+                () => EvidenceTestData.LinkUseCase(context).ExecuteAsync(
+                    new LinkEvidenceTransactionsCommand(
+                        CoreLedgerTestData.HouseholdId,
+                        evidenceId,
+                        [postedIds[0], postedIds[501]])));
+            Assert.Equal(EvidenceErrorCodes.TransactionLinkLimitExceeded, overCap.ErrorCode);
+
+            // ...while relinking existing transactions stays a no-op.
+            var relinked = await EvidenceTestData.LinkUseCase(context).ExecuteAsync(
+                new LinkEvidenceTransactionsCommand(
+                    CoreLedgerTestData.HouseholdId,
+                    evidenceId,
+                    postedIds.Take(100).ToArray()));
+            Assert.Equal((0, 100), (relinked.AddedCount, relinked.AlreadyLinkedCount));
+        }
+
+        Assert.Equal(500L, await CountAsync(database, "EvidenceTransactionLink"));
+    }
+
+    [Fact]
     public async Task Supersession_PreservesTheOriginalAndFormsOneChain()
     {
         await using var database = await SqliteTestDatabase.CreateAsync();
