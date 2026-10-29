@@ -432,6 +432,34 @@ public sealed class ValuePresenter
     public DisplayValue BackupEncryptionMode(string code)
         => StableCode(StableCodeFamily.BackupEncryptionMode, code);
 
+    public DisplayValue StableCode(Domain.Evidence.EvidenceSourceKind value)
+        => StableCode(
+            StableCodeFamily.EvidenceSourceKind,
+            StableCodes.ToCode(value));
+
+    public DisplayValue StableCode(Domain.Evidence.EvidenceMediaType value)
+        => StableCode(
+            StableCodeFamily.EvidenceMediaType,
+            StableCodes.ToCode(value));
+
+    public DisplayValue StableCode(
+        Domain.Reconciliation.ReconciliationMethod value)
+        => StableCode(
+            StableCodeFamily.ReconciliationMethod,
+            StableCodes.ToCode(value));
+
+    public DisplayValue StableCode(
+        Domain.Reconciliation.ReconciliationComparisonStatus value)
+        => StableCode(
+            StableCodeFamily.ReconciliationComparisonStatus,
+            StableCodes.ToCode(value));
+
+    public DisplayValue StableCode(
+        Application.Reconciliation.ReconciliationResolutionState value)
+        => StableCode(
+            StableCodeFamily.ReconciliationResolutionState,
+            StableCodes.ToCode(value));
+
     private string FormatAge(string resourceKey, long value)
         => string.Format(
             Culture,

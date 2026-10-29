@@ -2,7 +2,7 @@
 
 Status: Proposed product interaction model
 
-Last reviewed: 2026-09-16
+Last reviewed: 2026-10-29
 
 ## Scope and constraint
 
@@ -90,10 +90,11 @@ posted transaction.
 
 ### Assets
 
-Assets is not implemented by M006. A later accepted workflow may show positions
-grouped by portfolio, account, institution, and asset family. Fund positions may
-show units and lots; physical-gold inventory may show pieces, gross and fine
-weight, fineness, acquisition lineage, and custody.
+Assets was not implemented by M006. M010 adds it as a derived inventory
+surface, in progress and not yet verified; see "Implemented M010 workflows (in
+progress)" below. It shows positions grouped by portfolio and account, and
+lot-tracked positions open their acquisition lots. Physical-gold lots show
+pieces, gross and fine weight, fineness, acquisition lineage, and custody.
 
 ### Ledger
 
@@ -108,9 +109,17 @@ fineness, piece count, optional identifiers/notes, and exact derived fine weight
 Opening receipts are a focused verification view over the same persisted
 history, not client-side success state.
 
-Broad filters for date, type, asset, institution, account, portfolio, external
-reference, status, and reversal relationship remain part of M010 rather than
-M007.
+M010 (in progress, not yet verified) replaces the unfiltered recent feed on the
+Ledger page with bounded search over effective Posted history: date, type,
+asset, institution, account, portfolio, external reference, and reversal
+relationship filters, ordered by financial date. Status is fixed to Posted.
+Today keeps the M005 recent-Posted preview.
+
+### Reconcile
+
+M010 (in progress, not yet verified) adds Reconcile for retained evidence and
+dated reconciliation. It is described in "Implemented M010 workflows (in
+progress)" below.
 
 ### Plan
 
@@ -139,8 +148,9 @@ directly through Application use cases:
 
 - Today may consume the bounded recent Posted feed for its recent-activity
   region without treating execution date as posting recency;
-- Ledger may use that same default feed and follow a transaction identity to
-  the complete detail route; the broad filters described above remain M010;
+- Ledger used that same default feed through M009 and follows a transaction
+  identity to the complete detail route; M010 replaces the feed on the Ledger
+  page with the broad search described above;
 - Settings and guided setup may populate household, member, institution,
   portfolio, account, currency, and asset choices from the bounded current-
   display routes, including inactive/history choices when explicitly requested;
@@ -493,3 +503,92 @@ allocations, and piece movements exactly and never copies original cost or
 counterparty rows. After reversal, the UI offers a new normal workflow for a
 separately reviewed corrected replacement; it does not claim a mutable or
 durable replacement link.
+
+## Implemented M010 workflows (in progress)
+
+M010 is In Progress. The pages below are implemented with focused host and
+presentation tests. Their real-browser journey, recovery drill and
+verification are still outstanding, so nothing here is Verified yet. The
+primary navigation now reads Today, Ledger, Assets, Reconcile, Record and
+Settings:
+
+```text
+/ledger
+/assets
+/assets/lots
+/reconcile
+/reconcile/evidence/new
+/reconcile/evidence/{evidenceId}
+/reconcile/evidence/{evidenceId}/observe
+/reconcile/runs/{runId}
+```
+
+All of them are Ready-only Razor Pages that call Application use cases
+directly. They use the Turkish-first presentation of exact values, work
+without JavaScript, require antiforgery on every POST, and show no market
+value, price, return or performance. Stable identifiers, raw E8 values and
+digests appear only under technical details. Failures show sanitized messages
+keyed by stable error codes and never echo input, cursors, SQL or paths.
+
+**Ledger** is a GET search form. Results order by financial date, then
+posting time and identity, and each opens the existing transaction
+explanation. Both reversal directions are marked and linked. The next-page
+link carries the same filters, so the opaque cursor stays bound to them; a
+cursor reused with other filters is refused. A malformed filter is a field
+message. An identity that does not exist in the household is a sanitized
+"scope not found", never an empty result.
+
+**Assets** shows the current position, or the position as of a financial
+date. Every quantity is summed by the inventory use case from effective
+Posted entries; none is stored. Exact zero is hidden unless "show zero" is
+chosen. A valid zero is then labelled as such, and an unknown scope is never
+shown as zero.
+- Each position links to the Ledger search over its exact scope, with the
+  as-of date as the upper bound.
+- A lot-tracked position also links to its lots.
+- The lot page pages through acquisition lots. Each shows its original and
+  current quantity, its Known, Unknown or not-applicable cost, and its
+  custody by scope. A gold lot adds immutable fineness, whole pieces and
+  derived fine weight.
+- Allocations link to their transactions. Exhausted lots appear only when
+  asked.
+
+**Reconcile** lists evidence records and reconciliation runs. A run in the
+list shows its stored counts; only its own page re-derives staleness.
+
+- *Evidence capture* is one explicit multipart step. It takes a source kind,
+  an effective date (not in the future), a label, optional institution or
+  account context, a reference and a note. Retaining one file is optional:
+  at most 10 MiB, as PDF, PNG, JPEG, UTF-8 text or UTF-8 CSV. A page-issued
+  retry key makes a double submit return the first record. After a
+  validation error the file must be chosen again.
+- *The evidence page* shows the record's metadata. A retained file is
+  offered only as a download: the response forces an attachment and sends
+  `nosniff`, `no-store` and a sandbox content-security policy. It is never
+  previewed.
+- *Links.* The reviewer selects Posted transactions to link, from the
+  evidence's account (or else its institution) dated on or before the
+  effective date. Linking changes no ledger fact.
+- *Corrections.* A record is immutable. A mistake is corrected by recording
+  a superseding record. The old record stays readable and accepts no new
+  links, observations or runs.
+- *Observation entry* takes one exact portfolio, account and asset scope. The
+  quantity is entered in the asset's unit with at most eight decimal places
+  and no thousands separator; it is never rounded. The tolerance is entered
+  the same way and defaults to zero. A piece count is accepted for physical
+  gold only. A review step shows the exact parsed value before anything is
+  recorded. A scope the evidence does not mention is "not observed", not
+  zero.
+- *A run* compares every observation with the ledger as of the evidence
+  date, using a page-issued retry key. Its page shows observed, ledger,
+  delta and tolerance for each item. Matched, OutOfTolerance, Open,
+  CorrectedByTransaction, DocumentedException and Stale each have their own
+  text and badge style, so none relies on colour.
+- *Staleness.* When later history changes the ledger as of the evidence
+  date, the run is marked stale. It shows the freshly derived quantity and
+  offers a rerun, which creates a new run instead of rewriting the old one.
+- *Resolution.* An open out-of-tolerance item is resolved in one of two
+  ways. The first is a documented exception with a required explanation; it
+  stays visibly out of tolerance. The second links a Posted corrective
+  transaction recorded through the existing Record workflows. Reconcile
+  itself never posts or edits a transaction.

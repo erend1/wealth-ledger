@@ -119,7 +119,7 @@ internal static class EvidenceContractMapper
                 "The value has no stable API code.")
         };
 
-    private static string ToCode(EvidenceSourceKind value)
+    internal static string ToCode(EvidenceSourceKind value)
         => value switch
         {
             EvidenceSourceKind.Statement => "STATEMENT",

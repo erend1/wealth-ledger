@@ -1,3 +1,4 @@
+using WealthLedger.Application.LedgerSearch;
 using WealthLedger.Application.Navigation;
 using WealthLedger.UI.Presentation;
 
@@ -69,6 +70,61 @@ public sealed class RecentLedgerPresenter
                 .Select(PresentEffect)
                 .ToArray());
     }
+
+    /// <summary>
+    /// Presents one M010 search result in the same shape as the recent feed,
+    /// so both lists open the same complete transaction explanation.
+    /// </summary>
+    internal RecentLedgerTransactionDisplay Present(
+        LedgerSearchTransactionItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        return new RecentLedgerTransactionDisplay(
+            item.TransactionId,
+            _values.StableCode(item.Type),
+            _values.StableCode(item.Status),
+            OptionalDate(item.OrderDate),
+            _values.BusinessDate(item.ExecutionDate),
+            OptionalDate(item.SettlementDate),
+            item.ExternalReference,
+            item.ReversalOfTransactionId,
+            item.ReversedByTransactionId,
+            _values.UtcTimestamp(item.CreatedAtUtc),
+            _values.UtcTimestamp(item.PostedAtUtc),
+            item.EntryEffects
+                .OrderBy(effect => effect.EntrySequence)
+                .Select(PresentEffect)
+                .ToArray());
+    }
+
+    private RecentLedgerEntryEffectDisplay PresentEffect(
+        LedgerSearchEntryEffect effect)
+        => new(
+            effect.EntrySequence,
+            effect.PortfolioCode,
+            effect.PortfolioName,
+            _values.StableCode(effect.PortfolioStatus),
+            effect.AccountCode,
+            effect.AccountName,
+            _values.StableCode(effect.AccountType),
+            effect.AccountIsActive,
+            effect.InstitutionCode,
+            effect.InstitutionName,
+            effect.InstitutionType is null
+                ? null
+                : _values.StableCode(effect.InstitutionType.Value),
+            effect.InstitutionIsActive,
+            effect.AssetCode,
+            effect.AssetName,
+            _values.StableCode(effect.AssetType),
+            _values.StableCode(effect.AssetBaseUnit),
+            effect.AssetIsActive,
+            _values.Quantity(
+                effect.QuantityDeltaRawE8,
+                effect.AssetBaseUnit,
+                QuantitySign.SignedDelta),
+            _values.StableCode(effect.Role));
 
     private RecentLedgerEntryEffectDisplay PresentEffect(
         RecentLedgerEntryEffectNavigationItem effect)

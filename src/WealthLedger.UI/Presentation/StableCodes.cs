@@ -1,8 +1,11 @@
 using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.Reconciliation;
 using WealthLedger.Application.LocalData;
+using WealthLedger.Application.Reconciliation;
 
 namespace WealthLedger.UI.Presentation;
 
@@ -32,7 +35,12 @@ public enum StableCodeFamily
     LocalDatabaseCompatibility,
     LocalDataIntegrityStatus,
     LocalBackupWorkspaceBinding,
-    BackupEncryptionMode
+    BackupEncryptionMode,
+    EvidenceSourceKind,
+    EvidenceMediaType,
+    ReconciliationMethod,
+    ReconciliationComparisonStatus,
+    ReconciliationResolutionState
 }
 
 /// <summary>
@@ -242,6 +250,56 @@ public static class StableCodes
             LocalBackupWorkspaceBinding.Unknown => "UNKNOWN",
             LocalBackupWorkspaceBinding.Matched => "MATCHED",
             LocalBackupWorkspaceBinding.Unrelated => "UNRELATED",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(EvidenceSourceKind value)
+        => value switch
+        {
+            EvidenceSourceKind.Statement => "STATEMENT",
+            EvidenceSourceKind.Receipt => "RECEIPT",
+            EvidenceSourceKind.PhysicalCount => "PHYSICAL_COUNT",
+            EvidenceSourceKind.ContractOrCertificate =>
+                "CONTRACT_OR_CERTIFICATE",
+            EvidenceSourceKind.Other => "OTHER",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(EvidenceMediaType value)
+        => value switch
+        {
+            EvidenceMediaType.Pdf => "PDF",
+            EvidenceMediaType.Png => "PNG",
+            EvidenceMediaType.Jpeg => "JPEG",
+            EvidenceMediaType.PlainText => "PLAIN_TEXT",
+            EvidenceMediaType.Csv => "CSV",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(ReconciliationMethod value)
+        => value switch
+        {
+            ReconciliationMethod.ExactScopeQuantityAsOf =>
+                "EXACT_SCOPE_QUANTITY_AS_OF",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(ReconciliationComparisonStatus value)
+        => value switch
+        {
+            ReconciliationComparisonStatus.Matched => "MATCHED",
+            ReconciliationComparisonStatus.OutOfTolerance => "OUT_OF_TOLERANCE",
+            _ => throw Unsupported(value)
+        };
+
+    public static string ToCode(ReconciliationResolutionState value)
+        => value switch
+        {
+            ReconciliationResolutionState.Open => "OPEN",
+            ReconciliationResolutionState.CorrectedByTransaction =>
+                "CORRECTED_BY_TRANSACTION",
+            ReconciliationResolutionState.DocumentedException =>
+                "DOCUMENTED_EXCEPTION",
             _ => throw Unsupported(value)
         };
 

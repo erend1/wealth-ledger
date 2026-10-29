@@ -1,0 +1,347 @@
+@page "/reconcile/evidence/{evidenceId:guid}"
+@model WealthLedger.UI.Pages.Reconcile.EvidenceModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Evidence_Title"];
+    ViewData["ActiveNavigation"] = "Reconcile";
+    var detail = Model.Detail;
+}
+
+<article class="flow" aria-labelledby="evidence-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Evidence_Title"]</p>
+        <h1 id="evidence-heading">@(detail?.Label ?? Text["Evidence_Title"])</h1>
+        <p><a class="card-link" asp-page="/Reconcile/Index">@Text["Reconcile_BackLink"]</a></p>
+    </header>
+
+    @if (Model.HasPageState || detail is null)
+    {
+        <partial name="_ReconcileState" model="Model" />
+    }
+    else
+    {
+        <partial name="_ValidationSummary" />
+
+        @if (Model.LinkedCount is not null)
+        {
+            <p class="summary-card" role="status">
+                @string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    Text["Evidence_LinkResult"],
+                    Model.LinkedCount,
+                    Model.AlreadyLinkedCount ?? 0)
+            </p>
+        }
+
+        @if (Model.ObservedCount is not null)
+        {
+            <p class="summary-card" role="status">
+                @string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    Text["Evidence_ObservationResult"],
+                    Model.ObservedCount,
+                    Model.AlreadyObservedCount ?? 0)
+            </p>
+        }
+
+        @if (detail.IsSuperseded)
+        {
+            <section class="summary-card summary-card--warning flow" role="note">
+                <h2>@Text["Evidence_SupersededTitle"]</h2>
+                <p>@Text["Evidence_SupersededExplanation"]</p>
+                <a class="card-link"
+                   asp-page="/Reconcile/Evidence"
+                   asp-route-evidenceId="@detail.SupersededByEvidenceId">
+                    @Text["Evidence_OpenReplacementLink"]
+                </a>
+            </section>
+        }
+
+        <section class="fact-card flow" aria-labelledby="evidence-facts-heading">
+            <h2 id="evidence-facts-heading">@Text["Evidence_FactsHeading"]</h2>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Evidence_SourceKindLegend"]</dt>
+                    <dd>@detail.SourceKind.Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Evidence_EffectiveDateLabel"]</dt>
+                    <dd>@detail.EffectiveDate.Text</dd>
+                </div>
+                <div>
+                    <dt>@Text["Evidence_ContextLabel"]</dt>
+                    <dd>@(detail.Context ?? Text["Evidence_NoContext"])</dd>
+                </div>
+                @if (detail.Reference is not null)
+                {
+                    <div>
+                        <dt>@Text["Evidence_ReferenceLabel"]</dt>
+                        <dd>@detail.Reference</dd>
+                    </div>
+                }
+                <div>
+                    <dt>@Text["Evidence_CreatedAtLabel"]</dt>
+                    <dd aria-label="@detail.CreatedAt.AssistiveText">@detail.CreatedAt.Text</dd>
+                </div>
+            </dl>
+            @if (detail.Note is not null)
+            {
+                <p><strong>@Text["Evidence_NoteLabel"]:</strong> @detail.Note</p>
+            }
+            @if (detail.SupersedesEvidenceId is not null)
+            {
+                <p>
+                    <a asp-page="/Reconcile/Evidence"
+                       asp-route-evidenceId="@detail.SupersedesEvidenceId">
+                        @Text["Evidence_OpenSupersededLink"]
+                    </a>
+                </p>
+            }
+            <p class="muted">@Text["Evidence_ImmutableNotice"]</p>
+        </section>
+
+        <section class="fact-card flow" aria-labelledby="evidence-file-heading">
+            <h2 id="evidence-file-heading">@Text["Evidence_AttachmentLabel"]</h2>
+            @if (detail.Attachment is null)
+            {
+                <p>@Text["Evidence_MetadataOnly"]</p>
+            }
+            else
+            {
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["Evidence_FileNameLabel"]</dt>
+                        <dd>@detail.Attachment.FileName</dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Evidence_MediaTypeLabel"]</dt>
+                        <dd>@detail.Attachment.MediaType.Text</dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Evidence_SizeLabel"]</dt>
+                        <dd>@detail.Attachment.Size</dd>
+                    </div>
+                </dl>
+                <p>
+                    <a class="button button--secondary"
+                       asp-page="/Reconcile/Evidence"
+                       asp-page-handler="Attachment"
+                       asp-route-evidenceId="@detail.EvidenceId">
+                        @Text["Evidence_DownloadLink"]
+                    </a>
+                </p>
+                <p class="muted">@Text["Evidence_DownloadNotice"]</p>
+                <details class="technical-details">
+                    <summary>@Text["Common_TechnicalDetails"]</summary>
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Evidence_Sha256Label"]</dt>
+                            <dd><code class="technical-id">@detail.Attachment.Sha256</code></dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Evidence_MediaTypeCodeLabel"]</dt>
+                            <dd><code>@detail.Attachment.MediaType.TechnicalDetail</code></dd>
+                        </div>
+                    </dl>
+                </details>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="evidence-observations-heading">
+            <h2 id="evidence-observations-heading">@Text["Evidence_ObservationsHeading"]</h2>
+            <p class="help">@Text["Evidence_ObservationsHelp"]</p>
+            @if (Model.Observations.Count == 0)
+            {
+                <p class="muted">@Text["Evidence_NoObservations"]</p>
+            }
+            else
+            {
+                <ul class="entry-list">
+                    @foreach (var observation in Model.Observations)
+                    {
+                        <li class="entry-card flow">
+                            <p class="context-line">
+                                <strong>@observation.AssetName</strong> · @observation.Scope
+                            </p>
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Observe_QuantityLabel"]</dt>
+                                    <dd>@observation.Observed.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Observe_ToleranceLabel"]</dt>
+                                    <dd>@observation.Tolerance.Text</dd>
+                                </div>
+                                @if (observation.Pieces is not null)
+                                {
+                                    <div>
+                                        <dt>@Text["Observe_PiecesLabel"]</dt>
+                                        <dd>@observation.Pieces</dd>
+                                    </div>
+                                }
+                            </dl>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (!detail.IsSuperseded)
+            {
+                <p>
+                    <a class="card-link"
+                       asp-page="/Reconcile/Observe"
+                       asp-route-evidenceId="@detail.EvidenceId">
+                        @Text["Evidence_AddObservationLink"]
+                    </a>
+                </p>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="evidence-runs-heading">
+            <h2 id="evidence-runs-heading">@Text["Evidence_RunsHeading"]</h2>
+            @if (!detail.IsSuperseded && Model.Observations.Count > 0)
+            {
+                <form method="post"
+                      asp-page-handler="Run"
+                      asp-route-evidenceId="@detail.EvidenceId">
+                    <input type="hidden" name="runKey" value="@Model.RunKey" />
+                    <p class="help">
+                        @Text["Evidence_RunHelp"] @detail.EffectiveDate.Text
+                    </p>
+                    <button class="button" type="submit">@Text["Evidence_RunSubmit"]</button>
+                </form>
+            }
+            @if (Model.Runs.Count == 0)
+            {
+                <p class="muted">@Text["Evidence_NoRuns"]</p>
+            }
+            else
+            {
+                <partial name="_RunSummaries" model="Model.Runs" />
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="evidence-links-heading">
+            <h2 id="evidence-links-heading">@Text["Evidence_LinksHeading"]</h2>
+            @if (detail.Links.Count == 0)
+            {
+                <p class="muted">@Text["Evidence_NoLinks"]</p>
+            }
+            else
+            {
+                <ul class="plain-list">
+                    @foreach (var link in detail.Links)
+                    {
+                        <li>
+                            <a asp-page="/Ledger/Details"
+                               asp-route-transactionId="@link.TransactionId">
+                                @link.TransactionType.Text
+                            </a>
+                            · @link.ExecutionDate.Text
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        @if (!detail.IsSuperseded)
+        {
+            <form class="panel flow"
+                  method="post"
+                  asp-page-handler="Link"
+                  asp-route-evidenceId="@detail.EvidenceId"
+                  aria-labelledby="evidence-link-heading">
+                <h2 id="evidence-link-heading">@Text["Evidence_LinkHeading"]</h2>
+                <p class="help">@Text["Evidence_LinkHelp"]</p>
+
+                @if (Model.CandidatesUnavailable)
+                {
+                    <p class="state-text state-text--unavailable" role="status">
+                        @Text["Evidence_CandidatesUnavailable"]
+                    </p>
+                }
+                else if (Model.Candidates.Count == 0)
+                {
+                    <p class="muted" role="status">@Text["Evidence_NoCandidates"]</p>
+                }
+                else
+                {
+                    <fieldset class="flow">
+                        <legend>@Text["Evidence_CandidateLegend"]</legend>
+                        <ul class="plain-list">
+                            @foreach (var candidate in Model.Candidates)
+                            {
+                                var candidateId = "candidate-" + candidate.TransactionId.ToString("N");
+                                <li class="entry-card flow">
+                                    @if (Model.IsLinked(candidate.TransactionId))
+                                    {
+                                        <p>
+                                            <strong>@candidate.Type.Text</strong>
+                                            · @candidate.ExecutionDate.Text
+                                            · @Text["Evidence_AlreadyLinked"]
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <div class="check-field">
+                                            <input id="@candidateId"
+                                                   name="transactionIds"
+                                                   type="checkbox"
+                                                   value="@candidate.TransactionId" />
+                                            <label for="@candidateId">
+                                                @candidate.Type.Text · @candidate.ExecutionDate.Text
+                                                @if (candidate.ExternalReference is not null)
+                                                {
+                                                    <text> · @candidate.ExternalReference</text>
+                                                }
+                                            </label>
+                                        </div>
+                                    }
+                                    <ul class="plain-list muted">
+                                        @foreach (var effect in candidate.EntryEffects)
+                                        {
+                                            <li>@effect.AssetName: @effect.Quantity.Text (@effect.AccountName)</li>
+                                        }
+                                    </ul>
+                                    <a asp-page="/Ledger/Details"
+                                       asp-route-transactionId="@candidate.TransactionId">
+                                        @Text["Evidence_OpenTransactionLink"]
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </fieldset>
+                    <button class="button" type="submit">@Text["Evidence_LinkSubmit"]</button>
+                }
+
+                @if (Model.NextCandidateCursor is not null)
+                {
+                    <a class="card-link"
+                       asp-page="/Reconcile/Evidence"
+                       asp-route-evidenceId="@detail.EvidenceId"
+                       asp-route-candidateCursor="@Model.NextCandidateCursor">
+                        @Text["Evidence_MoreCandidates"]
+                    </a>
+                }
+            </form>
+
+            <p>
+                <a class="card-link"
+                   asp-page="/Reconcile/NewEvidence"
+                   asp-route-supersedes="@detail.EvidenceId">
+                    @Text["Evidence_SupersedeLink"]
+                </a>
+            </p>
+        }
+
+        <details class="technical-details">
+            <summary>@Text["Common_TechnicalDetails"]</summary>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Evidence_IdLabel"]</dt>
+                    <dd><code class="technical-id">@detail.EvidenceId</code></dd>
+                </div>
+            </dl>
+        </details>
+    }
+</article>

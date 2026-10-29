@@ -1,0 +1,35 @@
+@model WealthLedger.UI.Pages.Reconcile.ReconcilePageModel
+@{
+    var Text = Model.Text;
+}
+@if (!Model.HasHousehold)
+{
+    <section class="summary-card summary-card--warning flow" role="status">
+        <h2>@Text["Ready_Household_StateTitle"]</h2>
+        <p>@Text[Model.HouseholdStateResourceKey]</p>
+    </section>
+}
+else if (Model.NavigationError)
+{
+    <section class="summary-card summary-card--warning flow" role="alert">
+        <h2>@Text["Reconcile_NavigationErrorTitle"]</h2>
+        <p>@Text["Reconcile_NavigationErrorExplanation"]</p>
+        <a class="card-link" asp-page="/Reconcile/Index">@Text["Reconcile_BackLink"]</a>
+    </section>
+}
+else if (Model.LoadUnavailable)
+{
+    <section class="summary-card summary-card--warning flow" role="alert">
+        <h2>@Text["Reconcile_UnavailableTitle"]</h2>
+        <p>@Text["Reconcile_UnavailableExplanation"]</p>
+        <a class="card-link" asp-page="/Reconcile/Index">@Text["Reconcile_BackLink"]</a>
+    </section>
+}
+else if (Model.NotFoundResourceKey is not null)
+{
+    <section class="summary-card summary-card--warning flow" role="alert">
+        <h2>@Text["Reconcile_NotFoundTitle"]</h2>
+        <p>@Text[Model.NotFoundResourceKey]</p>
+        <a class="card-link" asp-page="/Reconcile/Index">@Text["Reconcile_BackLink"]</a>
+    </section>
+}

@@ -1,0 +1,27 @@
+@model WealthLedger.UI.Pages.Assets.InventoryPageModel
+@{
+    var Text = Model.Text;
+}
+@if (Model.NavigationError)
+{
+    <section class="summary-card summary-card--warning flow" role="alert">
+        <h2>@Text["Assets_NavigationErrorTitle"]</h2>
+        <p>@Text["Assets_NavigationErrorExplanation"]</p>
+        <a class="card-link" asp-page="/Assets/Index">@Text["Assets_StartOverLink"]</a>
+    </section>
+}
+else if (Model.LoadUnavailable)
+{
+    <section class="summary-card summary-card--warning flow" role="alert">
+        <h2>@Text["Assets_UnavailableTitle"]</h2>
+        <p>@Text["Assets_UnavailableExplanation"]</p>
+        <a class="card-link" asp-page="/Assets/Index">@Text["Assets_StartOverLink"]</a>
+    </section>
+}
+else if (!Model.HasHousehold)
+{
+    <section class="summary-card summary-card--warning flow" role="status">
+        <h2>@Text["Ready_Household_StateTitle"]</h2>
+        <p>@Text[Model.HouseholdStateResourceKey]</p>
+    </section>
+}

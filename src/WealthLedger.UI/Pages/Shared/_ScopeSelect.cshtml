@@ -1,0 +1,42 @@
+@model WealthLedger.UI.Pages.ScopeSelect
+@inject UiText Text
+@{
+    var id = Model.Id ?? Model.Name;
+    var helpId = Model.Help is null ? null : id + "-help";
+    var selected = Model.Selected?.Trim();
+
+    // A scope chosen through a link may lie beyond the bounded choice list.
+    // It stays selected, so submitting the form never silently drops it.
+    var unlisted = !string.IsNullOrEmpty(selected)
+                   && !Model.Options.Any(option => string.Equals(
+                       option.Value,
+                       selected,
+                       StringComparison.OrdinalIgnoreCase));
+}
+<div class="field">
+    <label for="@id">@Model.Label</label>
+    <select id="@id"
+            name="@Model.Name"
+            aria-describedby="@helpId">
+        <option value="">@Model.EmptyOptionLabel</option>
+        @if (unlisted)
+        {
+            <option value="@selected" selected="selected">@Text["Scope_UnlistedSelection"]</option>
+        }
+        @foreach (var option in Model.Options)
+        {
+            var label = option.IsActive
+                ? option.Label
+                : option.Label + " — " + Model.InactiveMarker;
+
+            <option value="@option.Value"
+                    selected="@(string.Equals(option.Value, selected, StringComparison.OrdinalIgnoreCase))">
+                @label
+            </option>
+        }
+    </select>
+    @if (Model.Help is not null)
+    {
+        <p class="help" id="@helpId">@Model.Help</p>
+    }
+</div>

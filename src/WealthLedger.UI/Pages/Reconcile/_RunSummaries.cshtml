@@ -1,0 +1,24 @@
+@model IReadOnlyList<WealthLedger.UI.Pages.Reconcile.RunSummaryDisplay>
+@inject UiText Text
+
+<ol class="plain-list">
+    @foreach (var run in Model)
+    {
+        <li class="entry-card flow">
+            <p>
+                <a asp-page="/Reconcile/Run" asp-route-runId="@run.RunId">
+                    @Text["Run_SummaryLink"] @run.EvidenceDate.Text
+                </a>
+                <span class="muted"> · @run.RunAt.Text</span>
+            </p>
+            <ul class="badge-row" aria-label="@Text["Run_CountsLabel"]">
+                <li><span class="status-badge status-badge--matched">@Text["Code_ReconciliationComparisonStatus_MATCHED"]: @run.MatchedCount</span></li>
+                <li><span class="status-badge status-badge--out-of-tolerance">@Text["Code_ReconciliationComparisonStatus_OUT_OF_TOLERANCE"]: @run.OutOfToleranceCount</span></li>
+                <li><span class="status-badge status-badge--open">@Text["Code_ReconciliationResolutionState_OPEN"]: @run.OpenCount</span></li>
+                <li><span class="status-badge status-badge--corrected">@Text["Code_ReconciliationResolutionState_CORRECTED_BY_TRANSACTION"]: @run.CorrectedCount</span></li>
+                <li><span class="status-badge status-badge--exception">@Text["Code_ReconciliationResolutionState_DOCUMENTED_EXCEPTION"]: @run.ExceptionCount</span></li>
+            </ul>
+            <p class="muted">@Text["Run_StalenessOnDetail"]</p>
+        </li>
+    }
+</ol>

@@ -47,31 +47,133 @@
             @Text["Ready_CurrentHouseholdLabel"]
             <strong>@Model.HouseholdName</strong>
         </p>
+
+        <partial name="_ValidationSummary" />
+        <partial name="_ScopeChoicesNotice" model="Model.Choices" />
+
+        <form class="filter-panel flow"
+              method="get"
+              action="@Url.Page("/Ledger/Index")"
+              role="search"
+              aria-labelledby="ledger-search-heading">
+            <h2 id="ledger-search-heading">@Text["LedgerSearch_Heading"]</h2>
+            <p class="muted">@Text["LedgerSearch_PostedOnlyNotice"]</p>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label for="executedFrom">@Text["LedgerSearch_ExecutedFromLabel"]</label>
+                    <input id="executedFrom"
+                           name="executedFrom"
+                           type="date"
+                           value="@Model.Filters.ExecutedFrom" />
+                </div>
+                <div class="field">
+                    <label for="executedTo">@Text["LedgerSearch_ExecutedToLabel"]</label>
+                    <input id="executedTo"
+                           name="executedTo"
+                           type="date"
+                           value="@Model.Filters.ExecutedTo" />
+                </div>
+                <partial name="_ScopeSelect" model="@Model.Select("portfolioId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("accountId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("institutionId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("assetId")" />
+                <div class="field">
+                    <label for="reference">@Text["LedgerSearch_ReferenceLabel"]</label>
+                    <input id="reference"
+                           name="reference"
+                           type="search"
+                           maxlength="256"
+                           aria-describedby="reference-help"
+                           value="@Model.Filters.Reference" />
+                    <p class="help" id="reference-help">@Text["LedgerSearch_ReferenceHelp"]</p>
+                </div>
+            </div>
+
+            <details class="flow" open="@Model.HasMoreFilters">
+                <summary>@Text["LedgerSearch_MoreFilters"]</summary>
+
+                <fieldset class="choice-grid">
+                    <legend id="type-legend">@Text["LedgerSearch_TypeLegend"]</legend>
+                    @foreach (var type in Model.TypeChoices)
+                    {
+                        var typeId = "type-" + type.Code;
+                        <div class="check-field">
+                            <input id="@typeId"
+                                   name="type"
+                                   type="checkbox"
+                                   value="@type.Code"
+                                   checked="@Model.IsTypeSelected(type.Code)" />
+                            <label for="@typeId">@type.Label.Text</label>
+                        </div>
+                    }
+                </fieldset>
+
+                <fieldset class="choice-grid">
+                    <legend id="reversal-legend">@Text["LedgerSearch_ReversalLegend"]</legend>
+                    @foreach (var reversal in Model.ReversalChoices)
+                    {
+                        var reversalId = "reversal-" + reversal.Code;
+                        <div class="check-field">
+                            <input id="@reversalId"
+                                   name="reversal"
+                                   type="radio"
+                                   value="@reversal.Code"
+                                   checked="@(reversal.Code == Model.SelectedReversal)" />
+                            <label for="@reversalId">@reversal.Label</label>
+                        </div>
+                    }
+                </fieldset>
+            </details>
+
+            <div class="action-row">
+                <button class="button" type="submit">@Text["LedgerSearch_Submit"]</button>
+                @if (Model.HasFilters)
+                {
+                    <a class="card-link" asp-page="/Ledger/Index">@Text["LedgerSearch_Clear"]</a>
+                }
+            </div>
+        </form>
+
         <p class="muted">@Text["Ledger_CurrentContextNotice"]</p>
 
-        @if (Model.Transactions.Count == 0)
+        @if (Model.FilterScopeNotFound)
         {
-            <section class="summary-card flow" role="status">
-                <h2>@Text["Ledger_EmptyTitle"]</h2>
-                <p>@Text["Ledger_EmptyExplanation"]</p>
+            <section class="summary-card summary-card--warning flow" role="alert">
+                <h2>@Text["LedgerSearch_ScopeNotFoundTitle"]</h2>
+                <p>@Text["LedgerSearch_ScopeNotFoundExplanation"]</p>
             </section>
         }
-        else
+        else if (ViewData.ModelState.IsValid)
         {
-            <partial name="_RecentLedgerTransactions"
-                     model="Model.Transactions" />
-        }
+            <section class="flow" aria-labelledby="ledger-results-heading">
+                <h2 id="ledger-results-heading">@Text["LedgerSearch_ResultsHeading"]</h2>
 
-        <nav class="pagination" aria-label="@Text["Ledger_PaginationLabel"]">
-            @if (Model.NextCursor is not null)
-            {
-                <a asp-page="/Ledger/Index"
-                   asp-route-pageSize="@Model.PageSize"
-                   asp-route-cursor="@Model.NextCursor">
-                    @Text["Ledger_NextPageLink"]
-                </a>
-            }
-            <a asp-page="/Ledger/Index">@Text["Ledger_FirstPageLink"]</a>
-        </nav>
+                @if (Model.Transactions.Count == 0)
+                {
+                    <div class="summary-card flow" role="status">
+                        <p><strong>@Text["Ledger_EmptyTitle"]</strong></p>
+                        <p>
+                            @(Model.HasFilters
+                                ? Text["LedgerSearch_EmptyFiltered"]
+                                : Text["Ledger_EmptyExplanation"])
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <partial name="_RecentLedgerTransactions"
+                             model="Model.Transactions" />
+                }
+
+                <nav class="pagination" aria-label="@Text["Ledger_PaginationLabel"]">
+                    @if (Model.NextPageUrl is not null)
+                    {
+                        <a href="@Model.NextPageUrl">@Text["Ledger_NextPageLink"]</a>
+                    }
+                    <a href="@Model.FirstPageUrl">@Text["Ledger_FirstPageLink"]</a>
+                </nav>
+            </section>
+        }
     }
 </article>
