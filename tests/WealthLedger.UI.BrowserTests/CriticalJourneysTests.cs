@@ -1853,7 +1853,11 @@ public sealed class CriticalJourneysTests
                     AmountMinorUnits: 12_345,
                     CurrencyCode: "TRY",
                     CashFlowCategoryCode: "ACADEMIC_INCOME",
-                    ExecutionDate: new DateOnly(2026, 9, 8),
+                    // M010 orders the Ledger by financial date, then by
+                    // posting time. Dated on the host's operating date and
+                    // posted last, this contribution is the newest result
+                    // whatever date earlier journey steps defaulted to.
+                    ExecutionDate: DateOnly.FromDateTime(DateTime.Now),
                     ExternalReference: "BROWSER-JOURNEY-REFERENCE",
                     Note: "Synthetic browser journey note."))
         };
