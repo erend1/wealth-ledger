@@ -153,8 +153,19 @@ public static class ObservationFormMapper
             return false;
         }
 
+        normalized = normalized.Replace(',', '.');
+
+        // decimal parsing rounds past about 28 significant digits, so the
+        // eight-place limit is checked on the text before any parsing.
+        var separator = normalized.IndexOf('.', StringComparison.Ordinal);
+
+        if (separator >= 0 && normalized.Length - separator - 1 > 8)
+        {
+            return false;
+        }
+
         if (!decimal.TryParse(
-                normalized.Replace(',', '.'),
+                normalized,
                 NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
                 CultureInfo.InvariantCulture,
                 out var parsed)

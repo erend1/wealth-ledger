@@ -95,6 +95,10 @@ public sealed class ReconciliationPresentationTests
     [InlineData("1e3", true, null)]
     [InlineData("1 000", true, null)]
     [InlineData("100000000000", true, null)]
+    [InlineData("12345678901.000000000000000001", true, null)]
+    [InlineData("92233720368,54775807", true, long.MaxValue)]
+    [InlineData("92233720368,54775808", true, null)]
+    [InlineData("-92233720368,54775808", true, long.MinValue)]
     [InlineData("-1", false, null)]
     [InlineData("", false, null)]
     public void TryParseRawE8_IsExactCheckedAndNeverRounds(
