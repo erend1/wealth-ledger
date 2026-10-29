@@ -96,5 +96,26 @@
                 }
             </nav>
         </section>
+
+        <section class="flow" aria-labelledby="run-list-heading">
+            <h2 id="run-list-heading">@Text["Reconcile_RunsHeading"]</h2>
+            @if (Model.Runs.Count == 0)
+            {
+                <p class="muted" role="status">@Text["Reconcile_RunsEmpty"]</p>
+            }
+            else
+            {
+                <partial name="_RunSummaries" model="Model.Runs" />
+            }
+            <nav class="pagination" aria-label="@Text["Reconcile_RunPaginationLabel"]">
+                @if (Model.NextRunCursor is not null)
+                {
+                    <a asp-page="/Reconcile/Index"
+                       asp-route-runCursor="@Model.NextRunCursor">
+                        @Text["Reconcile_RunNextPage"]
+                    </a>
+                }
+            </nav>
+        </section>
     }
 </article>

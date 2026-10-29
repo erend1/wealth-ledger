@@ -2,15 +2,17 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WealthLedger.Application.Evidence;
 using WealthLedger.Application.LedgerSearch;
+using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
+using WealthLedger.Application.Reconciliation;
 using WealthLedger.UI.Hosting;
 using WealthLedger.UI.Presentation;
 
 namespace WealthLedger.UI.Pages.Reconcile;
 
 /// <summary>
-/// One evidence record: metadata, its retained file, and its links to
-/// Posted transactions.
+/// One evidence record: metadata, its retained file, its links to Posted
+/// transactions, its observations and the runs that compared them.
 /// </summary>
 /// <remarks>
 /// The record itself is immutable. Links are separate insert-only
@@ -25,12 +27,17 @@ namespace WealthLedger.UI.Pages.Reconcile;
 public sealed class EvidenceModel : ReconcilePageModel
 {
     private const int CandidatePageSize = 20;
+    private const int RunPageSize = 20;
 
     private readonly GetEvidenceUseCase _getEvidence;
     private readonly GetEvidenceAttachmentContentUseCase _getAttachment;
     private readonly LinkEvidenceTransactionsUseCase _link;
     private readonly SearchLedgerTransactionsUseCase _search;
+    private readonly ListEvidenceObservationsUseCase _listObservations;
+    private readonly ListReconciliationRunsUseCase _listRuns;
+    private readonly RunReconciliationUseCase _run;
     private readonly EvidencePresenter _presenter;
+    private readonly ReconciliationPresenter _reconciliationPresenter;
     private readonly RecentLedgerPresenter _ledgerPresenter;
 
     public EvidenceModel(
@@ -39,7 +46,11 @@ public sealed class EvidenceModel : ReconcilePageModel
         GetEvidenceAttachmentContentUseCase getAttachment,
         LinkEvidenceTransactionsUseCase link,
         SearchLedgerTransactionsUseCase search,
+        ListEvidenceObservationsUseCase listObservations,
+        ListReconciliationRunsUseCase listRuns,
+        RunReconciliationUseCase run,
         EvidencePresenter presenter,
+        ReconciliationPresenter reconciliationPresenter,
         RecentLedgerPresenter ledgerPresenter,
         UiText text)
         : base(householdResolver, text)
@@ -50,8 +61,15 @@ public sealed class EvidenceModel : ReconcilePageModel
             ?? throw new ArgumentNullException(nameof(getAttachment));
         _link = link ?? throw new ArgumentNullException(nameof(link));
         _search = search ?? throw new ArgumentNullException(nameof(search));
+        _listObservations = listObservations
+            ?? throw new ArgumentNullException(nameof(listObservations));
+        _listRuns = listRuns
+            ?? throw new ArgumentNullException(nameof(listRuns));
+        _run = run ?? throw new ArgumentNullException(nameof(run));
         _presenter = presenter
             ?? throw new ArgumentNullException(nameof(presenter));
+        _reconciliationPresenter = reconciliationPresenter
+            ?? throw new ArgumentNullException(nameof(reconciliationPresenter));
         _ledgerPresenter = ledgerPresenter
             ?? throw new ArgumentNullException(nameof(ledgerPresenter));
     }
@@ -68,6 +86,20 @@ public sealed class EvidenceModel : ReconcilePageModel
 
     public int? AlreadyLinkedCount { get; private set; }
 
+    public int? ObservedCount { get; private set; }
+
+    public int? AlreadyObservedCount { get; private set; }
+
+    public IReadOnlyList<ObservationDisplay> Observations { get; private set; } = [];
+
+    public IReadOnlyList<RunSummaryDisplay> Runs { get; private set; } = [];
+
+    /// <summary>
+    /// The retry identity of the next comparison, issued with the page so a
+    /// double submit returns the same run.
+    /// </summary>
+    public string RunKey { get; } = Guid.NewGuid().ToString("D");
+
     public bool IsLinked(Guid transactionId)
         => Detail?.Links.Any(link => link.TransactionId == transactionId) ?? false;
 
@@ -76,10 +108,14 @@ public sealed class EvidenceModel : ReconcilePageModel
         string? candidateCursor,
         int? linked,
         int? alreadyLinked,
+        int? observed,
+        int? alreadyObserved,
         CancellationToken cancellationToken)
     {
         LinkedCount = linked is >= 0 ? linked : null;
         AlreadyLinkedCount = alreadyLinked is >= 0 ? alreadyLinked : null;
+        ObservedCount = observed is >= 0 ? observed : null;
+        AlreadyObservedCount = alreadyObserved is >= 0 ? alreadyObserved : null;
         await LoadAsync(evidenceId, candidateCursor, cancellationToken);
         return Page();
     }
@@ -187,6 +223,58 @@ public sealed class EvidenceModel : ReconcilePageModel
         return Page();
     }
 
+    /// <summary>
+    /// Compares every observation of this record with the ledger as of its
+    /// effective date, and stores the run as audit history. It never posts.
+    /// </summary>
+    public async Task<IActionResult> OnPostRunAsync(
+        Guid evidenceId,
+        string? runKey,
+        CancellationToken cancellationToken)
+    {
+        if (!await ResolveHouseholdAsync(cancellationToken))
+        {
+            return Page();
+        }
+
+        if (!EvidenceFormMapper.TryParseIdempotencyKey(runKey, out var key))
+        {
+            await LoadAsync(evidenceId, candidateCursor: null, cancellationToken);
+            AddFormError("Evidence_Error_FormExpired", StatusCodes.Status422UnprocessableEntity);
+            return Page();
+        }
+
+        try
+        {
+            var result = await _run.ExecuteAsync(
+                key,
+                new RunReconciliationCommand(HouseholdId, evidenceId),
+                cancellationToken);
+
+            return RedirectToPage(
+                "/Reconcile/Run",
+                new { runId = result.ReconciliationRunId.ToString("D") });
+        }
+        catch (ReconciliationException exception)
+        {
+            await LoadAsync(evidenceId, candidateCursor: null, cancellationToken);
+            AddFormError(exception);
+        }
+        catch (IdempotencyConflictException)
+        {
+            await LoadAsync(evidenceId, candidateCursor: null, cancellationToken);
+            AddFormError("Evidence_Error_IdempotencyConflict", StatusCodes.Status409Conflict);
+        }
+        catch (Exception exception)
+            when (exception is ArgumentException or ReconciliationPersistenceException)
+        {
+            await LoadAsync(evidenceId, candidateCursor: null, cancellationToken);
+            AddFormError("Reconciliation_Error_Persistence", StatusCodes.Status409Conflict);
+        }
+
+        return Page();
+    }
+
     private async Task LoadAsync(
         Guid evidenceId,
         string? candidateCursor,
@@ -215,6 +303,30 @@ public sealed class EvidenceModel : ReconcilePageModel
         }
         catch (Exception exception)
             when (exception is EvidenceException or EvidencePersistenceException)
+        {
+            Unavailable();
+            return;
+        }
+
+        try
+        {
+            var observations = await _listObservations.ExecuteAsync(
+                new ListEvidenceObservationsQuery(HouseholdId, evidenceId),
+                cancellationToken);
+            Observations = observations.Items
+                .Select(_reconciliationPresenter.PresentObservation)
+                .ToArray();
+
+            var runs = await _listRuns.ExecuteAsync(
+                new ListReconciliationRunsQuery(HouseholdId, evidenceId, RunPageSize),
+                cancellationToken);
+            Runs = runs.Items.Select(_reconciliationPresenter.PresentSummary).ToArray();
+        }
+        catch (Exception exception)
+            when (exception is EvidenceException
+                  or EvidencePersistenceException
+                  or ReconciliationException
+                  or ReconciliationPersistenceException)
         {
             Unavailable();
             return;

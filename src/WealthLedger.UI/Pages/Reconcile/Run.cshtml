@@ -1,0 +1,301 @@
+@page "/reconcile/runs/{runId:guid}"
+@model WealthLedger.UI.Pages.Reconcile.RunModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Run_Title"];
+    ViewData["ActiveNavigation"] = "Reconcile";
+    var run = Model.Run;
+    var evidence = Model.Evidence;
+}
+
+<article class="flow" aria-labelledby="run-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Reconcile_Eyebrow"]</p>
+        <h1 id="run-heading">@Text["Run_Title"]</h1>
+        <p class="lede">@Text["Run_Introduction"]</p>
+    </header>
+
+    @if (Model.HasPageState || run is null || evidence is null)
+    {
+        <partial name="_ReconcileState" model="Model" />
+    }
+    else
+    {
+        <partial name="_ValidationSummary" />
+
+        <dl class="fact-grid">
+            <div>
+                <dt>@Text["Evidence_Title"]</dt>
+                <dd>
+                    <a asp-page="/Reconcile/Evidence" asp-route-evidenceId="@evidence.EvidenceId">
+                        @evidence.Label
+                    </a>
+                </dd>
+            </div>
+            <div>
+                <dt>@Text["Run_AsOfLabel"]</dt>
+                <dd>@run.EvidenceDate.Text</dd>
+            </div>
+            <div>
+                <dt>@Text["Run_RunAtLabel"]</dt>
+                <dd aria-label="@run.RunAt.AssistiveText">@run.RunAt.Text</dd>
+            </div>
+        </dl>
+
+        @if (Model.Resolved)
+        {
+            <p class="summary-card" role="status">@Text["Run_ResolvedNotice"]</p>
+        }
+
+        @if (run.IsStale)
+        {
+            <section class="summary-card summary-card--warning flow" role="alert" aria-labelledby="run-stale-heading">
+                <h2 id="run-stale-heading">
+                    <span class="status-badge status-badge--stale">@Model.StaleBadge.Text</span>
+                    @Text["Run_StaleTitle"]
+                </h2>
+                <p>@Text["Run_StaleExplanation"]</p>
+            </section>
+        }
+
+        @if (evidence.IsSuperseded)
+        {
+            <section class="summary-card summary-card--warning flow" role="note">
+                <p>@Text["Run_EvidenceSuperseded"]</p>
+                <a class="card-link"
+                   asp-page="/Reconcile/Evidence"
+                   asp-route-evidenceId="@evidence.SupersededByEvidenceId">
+                    @Text["Evidence_OpenReplacementLink"]
+                </a>
+            </section>
+        }
+
+        <section class="flow" aria-labelledby="run-items-heading">
+            <h2 id="run-items-heading">@Text["Run_ItemsHeading"]</h2>
+            <ol class="transaction-list">
+                @foreach (var item in run.Items)
+                {
+                    var itemHeadingId = "item-" + item.ItemId.ToString("N");
+                    <li class="transaction-card flow" aria-labelledby="@itemHeadingId">
+                        <header class="flow">
+                            <h3 id="@itemHeadingId">@item.AssetName · @item.Scope</h3>
+                            <ul class="badge-row" aria-label="@Text["Run_StatusLabel"]">
+                                <li>
+                                    <span class="status-badge status-badge--@item.Comparison.Modifier"
+                                          data-state="@item.Comparison.Code">@item.Comparison.Text</span>
+                                </li>
+                                @if (item.Resolution is not null)
+                                {
+                                    <li>
+                                        <span class="status-badge status-badge--@item.Resolution.Modifier"
+                                              data-state="@item.Resolution.Code">@item.Resolution.Text</span>
+                                    </li>
+                                }
+                                @if (item.Staleness is not null)
+                                {
+                                    <li>
+                                        <span class="status-badge status-badge--@item.Staleness.Modifier"
+                                              data-state="@item.Staleness.Code">@item.Staleness.Text</span>
+                                    </li>
+                                }
+                            </ul>
+                        </header>
+
+                        <dl class="fact-grid">
+                            <div>
+                                <dt>@Text["Run_ObservedLabel"]</dt>
+                                <dd>@item.Observed.Text</dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Run_LedgerLabel"]</dt>
+                                <dd>@item.Ledger.Text</dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Run_DeltaLabel"]</dt>
+                                <dd aria-label="@item.Delta.AssistiveText">@item.Delta.Text</dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Run_ToleranceLabel"]</dt>
+                                <dd>@item.Tolerance.Text</dd>
+                            </div>
+                            @if (item.ObservedPieces is not null || item.LedgerPieces is not null)
+                            {
+                                <div>
+                                    <dt>@Text["Run_ObservedPiecesLabel"]</dt>
+                                    <dd>@(item.ObservedPieces ?? Text["Run_PiecesNotObserved"])</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Run_LedgerPiecesLabel"]</dt>
+                                    <dd>@item.LedgerPieces</dd>
+                                </div>
+                                @if (item.PieceDelta is not null)
+                                {
+                                    <div>
+                                        <dt>@Text["Run_PieceDeltaLabel"]</dt>
+                                        <dd>@item.PieceDelta</dd>
+                                    </div>
+                                }
+                            }
+                            @if (item.CurrentLedger is not null)
+                            {
+                                <div>
+                                    <dt>@Text["Run_CurrentLedgerLabel"]</dt>
+                                    <dd>
+                                        @item.CurrentLedger.Text
+                                        @if (item.CurrentLedgerPieces is not null)
+                                        {
+                                            <text> · @item.CurrentLedgerPieces</text>
+                                        }
+                                    </dd>
+                                </div>
+                            }
+                        </dl>
+
+                        @if (item.Explanation is not null)
+                        {
+                            <p><strong>@Text["Run_ExplanationLabel"]:</strong> @item.Explanation</p>
+                        }
+                        @if (item.CorrectiveTransactionId is not null)
+                        {
+                            <p>
+                                <a asp-page="/Ledger/Details"
+                                   asp-route-transactionId="@item.CorrectiveTransactionId">
+                                    @Text["Run_OpenCorrectionLink"]
+                                </a>
+                            </p>
+                        }
+                        @if (item.ResolvedAt is not null)
+                        {
+                            <p class="muted">@Text["Run_ResolvedAtLabel"]: @item.ResolvedAt.Text</p>
+                        }
+
+                        @if (item.CanResolve)
+                        {
+                            var explanationId = WealthLedger.UI.Pages.Reconcile.RunModel.ExplanationId(item.ItemId);
+                            var correctionId = WealthLedger.UI.Pages.Reconcile.RunModel.CorrectionLegendId(item.ItemId);
+
+                            <form class="panel flow"
+                                  method="post"
+                                  asp-page-handler="Exception"
+                                  asp-route-runId="@run.RunId">
+                                <input type="hidden" name="itemId" value="@item.ItemId" />
+                                <div class="field">
+                                    <label for="@explanationId">@Text["Run_ExplanationInputLabel"]</label>
+                                    <textarea id="@explanationId"
+                                              name="explanation"
+                                              rows="3"
+                                              maxlength="2000"
+                                              aria-describedby="@(explanationId)-help">@Model.ExplanationDraft(item.ItemId)</textarea>
+                                    <p class="help" id="@(explanationId)-help">@Text["Run_ExplanationHelp"]</p>
+                                </div>
+                                <button class="button button--secondary" type="submit">@Text["Run_ExceptionSubmit"]</button>
+                            </form>
+
+                            @if (Model.CorrectItemId == item.ItemId)
+                            {
+                                <form class="panel flow"
+                                      method="post"
+                                      asp-page-handler="Correct"
+                                      asp-route-runId="@run.RunId">
+                                    <input type="hidden" name="itemId" value="@item.ItemId" />
+                                    <fieldset class="flow">
+                                        <legend id="@correctionId">@Text["Run_CorrectionLegend"]</legend>
+                                        <p class="help">@Text["Run_CorrectionHelp"]</p>
+                                        @if (Model.CorrectionCandidatesUnavailable)
+                                        {
+                                            <p class="state-text state-text--unavailable">@Text["Evidence_CandidatesUnavailable"]</p>
+                                        }
+                                        else if (Model.CorrectionCandidates.Count == 0)
+                                        {
+                                            <p class="muted">@Text["Run_NoCorrectionCandidates"]</p>
+                                        }
+                                        @foreach (var candidate in Model.CorrectionCandidates)
+                                        {
+                                            var candidateId = "correct-" + item.ItemId.ToString("N") + "-" + candidate.TransactionId.ToString("N");
+                                            <div class="check-field">
+                                                <input id="@candidateId"
+                                                       name="correctiveTransactionId"
+                                                       type="radio"
+                                                       value="@candidate.TransactionId" />
+                                                <label for="@candidateId">
+                                                    @candidate.Type.Text · @candidate.ExecutionDate.Text
+                                                    @if (candidate.ExternalReference is not null)
+                                                    {
+                                                        <text> · @candidate.ExternalReference</text>
+                                                    }
+                                                </label>
+                                            </div>
+                                        }
+                                    </fieldset>
+                                    @if (Model.CorrectionCandidates.Count > 0)
+                                    {
+                                        <button class="button button--secondary" type="submit">@Text["Run_CorrectionSubmit"]</button>
+                                    }
+                                </form>
+                            }
+                            else
+                            {
+                                <p>
+                                    <a class="card-link"
+                                       asp-page="/Reconcile/Run"
+                                       asp-route-runId="@run.RunId"
+                                       asp-route-correct="@item.ItemId">
+                                        @Text["Run_ChooseCorrectionLink"]
+                                    </a>
+                                </p>
+                            }
+                        }
+
+                        <details class="technical-details">
+                            <summary>@Text["Common_TechnicalDetails"]</summary>
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Run_RawValuesLabel"]</dt>
+                                    <dd>
+                                        <code>@item.ObservedRawE8</code> /
+                                        <code>@item.LedgerRawE8</code> /
+                                        <code>@item.DeltaRawE8</code> /
+                                        <code>@item.ToleranceRawE8</code>
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Run_ItemIdLabel"]</dt>
+                                    <dd><code class="technical-id">@item.ItemId</code></dd>
+                                </div>
+                            </dl>
+                        </details>
+                    </li>
+                }
+            </ol>
+        </section>
+
+        @if (Model.CanRerun)
+        {
+            <form class="panel flow"
+                  method="post"
+                  asp-page-handler="Rerun"
+                  asp-route-runId="@run.RunId"
+                  aria-labelledby="run-rerun-heading">
+                <h2 id="run-rerun-heading">@Text["Run_RerunHeading"]</h2>
+                <p class="help">@Text["Run_RerunHelp"]</p>
+                <input type="hidden" name="rerunKey" value="@Model.RerunKey" />
+                <button class="button" type="submit">@Text["Run_RerunSubmit"]</button>
+            </form>
+        }
+
+        <details class="technical-details">
+            <summary>@Text["Common_TechnicalDetails"]</summary>
+            <dl class="fact-grid">
+                <div>
+                    <dt>@Text["Run_MethodLabel"]</dt>
+                    <dd>@run.Method.Text <code>@run.Method.TechnicalDetail</code> @($"v{run.MethodVersion}")</dd>
+                </div>
+                <div>
+                    <dt>@Text["Run_IdLabel"]</dt>
+                    <dd><code class="technical-id">@run.RunId</code></dd>
+                </div>
+            </dl>
+        </details>
+    }
+</article>

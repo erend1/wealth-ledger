@@ -220,12 +220,21 @@ public sealed partial class AccessibilityUiTests
         using var client = CreateClient(factory);
         var history = await M010UiTestData.SeedAsync(factory, client);
         var evidence = await ReconcileEvidenceUiTests.RecordStatementAsync(client, history);
+        await ReconcileRunUiTests.ObserveAsync(
+            client,
+            history,
+            evidence,
+            history.Setup.FundAssetId,
+            "1,25");
+        var (run, _) = await ReconcileRunUiTests.RunTwiceAsync(client, evidence);
 
         foreach (var path in new[]
                  {
                      "/reconcile",
                      "/reconcile/evidence/new",
                      evidence,
+                     evidence + "/observe",
+                     run,
                      "/ledger",
                      $"/ledger?accountId={history.Setup.AccountId:D}&type=BUY",
                      "/assets",

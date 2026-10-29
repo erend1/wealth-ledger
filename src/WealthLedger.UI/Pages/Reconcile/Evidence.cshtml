@@ -34,6 +34,17 @@
             </p>
         }
 
+        @if (Model.ObservedCount is not null)
+        {
+            <p class="summary-card" role="status">
+                @string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    Text["Evidence_ObservationResult"],
+                    Model.ObservedCount,
+                    Model.AlreadyObservedCount ?? 0)
+            </p>
+        }
+
         @if (detail.IsSuperseded)
         {
             <section class="summary-card summary-card--warning flow" role="note">
@@ -134,6 +145,79 @@
                         </div>
                     </dl>
                 </details>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="evidence-observations-heading">
+            <h2 id="evidence-observations-heading">@Text["Evidence_ObservationsHeading"]</h2>
+            <p class="help">@Text["Evidence_ObservationsHelp"]</p>
+            @if (Model.Observations.Count == 0)
+            {
+                <p class="muted">@Text["Evidence_NoObservations"]</p>
+            }
+            else
+            {
+                <ul class="entry-list">
+                    @foreach (var observation in Model.Observations)
+                    {
+                        <li class="entry-card flow">
+                            <p class="context-line">
+                                <strong>@observation.AssetName</strong> · @observation.Scope
+                            </p>
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Observe_QuantityLabel"]</dt>
+                                    <dd>@observation.Observed.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Observe_ToleranceLabel"]</dt>
+                                    <dd>@observation.Tolerance.Text</dd>
+                                </div>
+                                @if (observation.Pieces is not null)
+                                {
+                                    <div>
+                                        <dt>@Text["Observe_PiecesLabel"]</dt>
+                                        <dd>@observation.Pieces</dd>
+                                    </div>
+                                }
+                            </dl>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (!detail.IsSuperseded)
+            {
+                <p>
+                    <a class="card-link"
+                       asp-page="/Reconcile/Observe"
+                       asp-route-evidenceId="@detail.EvidenceId">
+                        @Text["Evidence_AddObservationLink"]
+                    </a>
+                </p>
+            }
+        </section>
+
+        <section class="flow" aria-labelledby="evidence-runs-heading">
+            <h2 id="evidence-runs-heading">@Text["Evidence_RunsHeading"]</h2>
+            @if (!detail.IsSuperseded && Model.Observations.Count > 0)
+            {
+                <form method="post"
+                      asp-page-handler="Run"
+                      asp-route-evidenceId="@detail.EvidenceId">
+                    <input type="hidden" name="runKey" value="@Model.RunKey" />
+                    <p class="help">
+                        @Text["Evidence_RunHelp"] @detail.EffectiveDate.Text
+                    </p>
+                    <button class="button" type="submit">@Text["Evidence_RunSubmit"]</button>
+                </form>
+            }
+            @if (Model.Runs.Count == 0)
+            {
+                <p class="muted">@Text["Evidence_NoRuns"]</p>
+            }
+            else
+            {
+                <partial name="_RunSummaries" model="Model.Runs" />
             }
         </section>
 

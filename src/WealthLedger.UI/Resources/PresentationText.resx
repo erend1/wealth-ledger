@@ -2246,4 +2246,83 @@
   <data name="M010Error_RECONCILIATION_PAGE_SIZE_INVALID" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz.</value></data>
   <data name="M010Error_RECONCILIATION_CURSOR_INVALID" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz veya eski.</value></data>
   <data name="M010Error_RECONCILIATION_CURSOR_SCOPE_MISMATCH" xml:space="preserve"><value>Sayfalama bağlantısı bu kapsamla ilişkili değil.</value></data>
+  <data name="Reconcile_RunsHeading" xml:space="preserve"><value>Karşılaştırmalar</value></data>
+  <data name="Reconcile_RunsEmpty" xml:space="preserve"><value>Henüz karşılaştırma çalıştırılmadı.</value></data>
+  <data name="Reconcile_RunPaginationLabel" xml:space="preserve"><value>Karşılaştırma sayfaları</value></data>
+  <data name="Reconcile_RunNextPage" xml:space="preserve"><value>Daha eski karşılaştırmalar</value></data>
+  <data name="Reconciliation_StaleBadge" xml:space="preserve"><value>Güncel değil</value></data>
+  <data name="Reconciliation_Error_Persistence" xml:space="preserve"><value>Karşılaştırma güvenle kaydedilemedi veya okunamadı. Hiçbir özel tanı ayrıntısı gösterilmedi.</value></data>
+  <data name="Run_SummaryLink" xml:space="preserve"><value>Kanıt tarihi itibarıyla karşılaştırma:</value></data>
+  <data name="Run_CountsLabel" xml:space="preserve"><value>Kalem durumları</value></data>
+  <data name="Run_StalenessOnDetail" xml:space="preserve"><value>Güncellik, karşılaştırmanın kendi sayfasında defter yeniden türetilerek denetlenir.</value></data>
+  <data name="Evidence_ObservationResult" xml:space="preserve"><value>{0} gözlem kaydedildi; {1} gözlem zaten kayıtlıydı.</value></data>
+  <data name="Evidence_ObservationsHeading" xml:space="preserve"><value>Gözlemler</value></data>
+  <data name="Evidence_ObservationsHelp" xml:space="preserve"><value>Kanıttaki her kesin kapsam için gözlenen miktar. Kanıtta geçmeyen bir kapsam sıfır sayılmaz; yalnızca gözlenmemiştir.</value></data>
+  <data name="Evidence_NoObservations" xml:space="preserve"><value>Bu kanıtta henüz gözlem yok.</value></data>
+  <data name="Evidence_AddObservationLink" xml:space="preserve"><value>Gözlem ekle</value></data>
+  <data name="Evidence_RunsHeading" xml:space="preserve"><value>Defterle karşılaştırmalar</value></data>
+  <data name="Evidence_RunHelp" xml:space="preserve"><value>Tüm gözlemler, defterin şu tarih itibarıyla türetilen miktarlarıyla karşılaştırılır:</value></data>
+  <data name="Evidence_RunSubmit" xml:space="preserve"><value>Defterle karşılaştır</value></data>
+  <data name="Evidence_NoRuns" xml:space="preserve"><value>Bu kanıt için henüz karşılaştırma yok.</value></data>
+  <data name="Observe_Title" xml:space="preserve"><value>Gözlem ekle</value></data>
+  <data name="Observe_Introduction" xml:space="preserve"><value>Ekstrede veya sayımda görülen kesin miktarı tek bir portföy, hesap ve varlık kapsamı için girin.</value></data>
+  <data name="Observe_BackToEvidence" xml:space="preserve"><value>Kanıt kaydına dön</value></data>
+  <data name="Observe_FormHeading" xml:space="preserve"><value>Gözlenen miktar</value></data>
+  <data name="Observe_QuantityLabel" xml:space="preserve"><value>Gözlenen miktar</value></data>
+  <data name="Observe_QuantityHelp" xml:space="preserve"><value>Varlığın kendi biriminde, en fazla 8 ondalık basamak. Ondalık ayırıcı olarak virgül veya nokta kullanın; binlik ayırıcı kullanmayın.</value></data>
+  <data name="Observe_ToleranceLabel" xml:space="preserve"><value>Tolerans</value></data>
+  <data name="Observe_ToleranceHelp" xml:space="preserve"><value>Kabul edilen en büyük mutlak fark, aynı birimde. Varsayılan sıfırdır; yüzde veya piyasa değeri toleransı yoktur.</value></data>
+  <data name="Observe_PiecesLabel" xml:space="preserve"><value>Gözlenen parça sayısı</value></data>
+  <data name="Observe_PiecesHelp" xml:space="preserve"><value>Yalnızca fiziki altın için ve kaynak parça sayısını gösteriyorsa girin. Parça toleransı her zaman sıfırdır.</value></data>
+  <data name="Observe_ReviewSubmit" xml:space="preserve"><value>Gözlemi incele</value></data>
+  <data name="Observe_ReviewHeading" xml:space="preserve"><value>Kaydetmeden önce inceleyin</value></data>
+  <data name="Observe_ScopeLabel" xml:space="preserve"><value>Kapsam</value></data>
+  <data name="Observe_ImmutableNotice" xml:space="preserve"><value>Gözlem kaydedildikten sonra değiştirilemez. Bir hata, kanıtı yenisiyle değiştirerek düzeltilir.</value></data>
+  <data name="Observe_RawQuantityLabel" xml:space="preserve"><value>Ham gözlenen miktar (E8)</value></data>
+  <data name="Observe_RawToleranceLabel" xml:space="preserve"><value>Ham tolerans (E8)</value></data>
+  <data name="Observe_RecordSubmit" xml:space="preserve"><value>Gözlemi kaydet</value></data>
+  <data name="Observation_Validation_Selection" xml:space="preserve"><value>Listeden bir değer seçin.</value></data>
+  <data name="Observation_Validation_Quantity" xml:space="preserve"><value>Miktar en fazla 8 ondalık basamaklı geçerli bir sayı olmalı.</value></data>
+  <data name="Observation_Validation_Tolerance" xml:space="preserve"><value>Tolerans sıfır veya pozitif, en fazla 8 ondalık basamaklı bir sayı olmalı.</value></data>
+  <data name="Observation_Validation_Pieces" xml:space="preserve"><value>Parça sayısı sıfır veya pozitif bir tam sayı olmalı.</value></data>
+  <data name="Observation_Validation_PiecesGoldOnly" xml:space="preserve"><value>Parça sayısı yalnızca fiziki altın için girilebilir.</value></data>
+  <data name="Run_Title" xml:space="preserve"><value>Defterle karşılaştırma</value></data>
+  <data name="Run_Introduction" xml:space="preserve"><value>Her gözlem, defterin kanıt tarihi itibarıyla türetilen miktarıyla karşılaştırılır. Fark, gözlenen eksi defter miktarıdır; mutlak fark toleransı aşmıyorsa kalem eşleşir.</value></data>
+  <data name="Run_AsOfLabel" xml:space="preserve"><value>Kanıt tarihi</value></data>
+  <data name="Run_RunAtLabel" xml:space="preserve"><value>Karşılaştırma zamanı</value></data>
+  <data name="Run_ResolvedNotice" xml:space="preserve"><value>Çözüm kaydedildi. Kalemin karşılaştırma sonucu değişmedi; bir düzeltmenin etkisini görmek için yeniden karşılaştırın.</value></data>
+  <data name="Run_StaleTitle" xml:space="preserve"><value>Bu karşılaştırma artık güncel değil</value></data>
+  <data name="Run_StaleExplanation" xml:space="preserve"><value>Kanıt tarihindeki etkin defter geçmişi bu karşılaştırmadan sonra değişti. Saklanan sonuç yeniden yazılmadı; yeni bir karşılaştırma çalıştırın.</value></data>
+  <data name="Run_EvidenceSuperseded" xml:space="preserve"><value>Bu karşılaştırmanın kanıtı yenisiyle değiştirildi. Yeni karşılaştırmayı yeni kayıt üzerinden çalıştırın.</value></data>
+  <data name="Run_ItemsHeading" xml:space="preserve"><value>Kalemler</value></data>
+  <data name="Run_StatusLabel" xml:space="preserve"><value>Durum</value></data>
+  <data name="Run_ObservedLabel" xml:space="preserve"><value>Gözlenen</value></data>
+  <data name="Run_LedgerLabel" xml:space="preserve"><value>Defter, karşılaştırma anında</value></data>
+  <data name="Run_DeltaLabel" xml:space="preserve"><value>Fark</value></data>
+  <data name="Run_ToleranceLabel" xml:space="preserve"><value>Tolerans</value></data>
+  <data name="Run_ObservedPiecesLabel" xml:space="preserve"><value>Gözlenen parça</value></data>
+  <data name="Run_PiecesNotObserved" xml:space="preserve"><value>Gözlenmedi</value></data>
+  <data name="Run_LedgerPiecesLabel" xml:space="preserve"><value>Defterdeki parça</value></data>
+  <data name="Run_PieceDeltaLabel" xml:space="preserve"><value>Parça farkı</value></data>
+  <data name="Run_CurrentLedgerLabel" xml:space="preserve"><value>Bugün yeniden türetilen defter miktarı</value></data>
+  <data name="Run_ExplanationLabel" xml:space="preserve"><value>Açıklama</value></data>
+  <data name="Run_OpenCorrectionLink" xml:space="preserve"><value>Düzeltici işlemi aç</value></data>
+  <data name="Run_ResolvedAtLabel" xml:space="preserve"><value>Çözüm zamanı</value></data>
+  <data name="Run_ExplanationInputLabel" xml:space="preserve"><value>Belgelenmiş istisna açıklaması</value></data>
+  <data name="Run_ExplanationHelp" xml:space="preserve"><value>Farkın neden kabul edildiğini açıklayın, en fazla 2000 karakter. Kalem tolerans dışı olarak görünmeye devam eder; eşleşmiş sayılmaz.</value></data>
+  <data name="Run_ExceptionSubmit" xml:space="preserve"><value>İstisna olarak belgele</value></data>
+  <data name="Run_CorrectionLegend" xml:space="preserve"><value>Düzeltici işlem</value></data>
+  <data name="Run_CorrectionHelp" xml:space="preserve"><value>Düzeltmeyi önce Kaydet bölümündeki mevcut iş akışlarıyla kaydedin. Burada bu kapsamdaki son kalıcı işlemler listelenir; bağlamak hiçbir işlem kaydetmez.</value></data>
+  <data name="Run_NoCorrectionCandidates" xml:space="preserve"><value>Bu kapsamda kalıcı olarak kaydedilmiş işlem yok.</value></data>
+  <data name="Run_CorrectionSubmit" xml:space="preserve"><value>Düzeltici işlemi bağla</value></data>
+  <data name="Run_ChooseCorrectionLink" xml:space="preserve"><value>Düzeltici işlem seç</value></data>
+  <data name="Run_RawValuesLabel" xml:space="preserve"><value>Ham değerler (E8): gözlenen / defter / fark / tolerans</value></data>
+  <data name="Run_ItemIdLabel" xml:space="preserve"><value>Kalem kimliği</value></data>
+  <data name="Run_RerunHeading" xml:space="preserve"><value>Yeniden karşılaştır</value></data>
+  <data name="Run_RerunHelp" xml:space="preserve"><value>Aynı kanıtın tüm gözlemlerini defterin bugünkü etkin geçmişiyle yeniden karşılaştırır ve yeni bir karşılaştırma kaydı oluşturur. Bu kayıt değişmez.</value></data>
+  <data name="Run_RerunSubmit" xml:space="preserve"><value>Yeniden karşılaştır</value></data>
+  <data name="Run_MethodLabel" xml:space="preserve"><value>Yöntem</value></data>
+  <data name="Run_IdLabel" xml:space="preserve"><value>Karşılaştırma kimliği</value></data>
+  <data name="Run_Validation_ExplanationRequired" xml:space="preserve"><value>Belgelenmiş istisna için açıklama zorunludur.</value></data>
+  <data name="Run_Validation_CorrectionRequired" xml:space="preserve"><value>Bağlamak için bir düzeltici işlem seçin.</value></data>
 </root>

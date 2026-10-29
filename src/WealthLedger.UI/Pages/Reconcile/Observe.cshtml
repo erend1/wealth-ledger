@@ -1,0 +1,154 @@
+@page "/reconcile/evidence/{evidenceId:guid}/observe"
+@model WealthLedger.UI.Pages.Reconcile.ObserveModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Observe_Title"];
+    ViewData["ActiveNavigation"] = "Reconcile";
+    var evidence = Model.Evidence;
+}
+
+<article class="flow" aria-labelledby="observe-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Reconcile_Eyebrow"]</p>
+        <h1 id="observe-heading">@Text["Observe_Title"]</h1>
+        <p class="lede">@Text["Observe_Introduction"]</p>
+        @if (evidence is not null)
+        {
+            <p>
+                <a class="card-link"
+                   asp-page="/Reconcile/Evidence"
+                   asp-route-evidenceId="@evidence.EvidenceId">
+                    @Text["Observe_BackToEvidence"]
+                </a>
+            </p>
+        }
+    </header>
+
+    @if (Model.HasPageState || evidence is null)
+    {
+        <partial name="_ReconcileState" model="Model" />
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Evidence_Title"]:
+            <strong>@evidence.Label</strong>
+            · @evidence.SourceKind.Text · @evidence.EffectiveDate.Text
+        </p>
+
+        <partial name="_ValidationSummary" />
+
+        @if (!evidence.IsSuperseded)
+        {
+            <form class="panel flow"
+                  method="post"
+                  asp-page-handler="Review"
+                  asp-route-evidenceId="@evidence.EvidenceId"
+                  aria-labelledby="observe-form-heading">
+                <h2 id="observe-form-heading">@Text["Observe_FormHeading"]</h2>
+                <div class="form-grid">
+                    <partial name="_ScopeSelect" model="@Model.Select("PortfolioId")" />
+                    <partial name="_ScopeSelect" model="@Model.Select("AccountId")" />
+                    <partial name="_ScopeSelect" model="@Model.Select("AssetId")" />
+                    <div class="field">
+                        <label for="Input_ObservedQuantity">@Text["Observe_QuantityLabel"]</label>
+                        <input id="Input_ObservedQuantity"
+                               name="Input.ObservedQuantity"
+                               type="text"
+                               inputmode="decimal"
+                               required
+                               aria-describedby="Input_ObservedQuantity-help"
+                               value="@Model.Input.ObservedQuantity" />
+                        <p class="help" id="Input_ObservedQuantity-help">@Text["Observe_QuantityHelp"]</p>
+                    </div>
+                    <div class="field">
+                        <label for="Input_Tolerance">@Text["Observe_ToleranceLabel"]</label>
+                        <input id="Input_Tolerance"
+                               name="Input.Tolerance"
+                               type="text"
+                               inputmode="decimal"
+                               aria-describedby="Input_Tolerance-help"
+                               value="@Model.Input.Tolerance" />
+                        <p class="help" id="Input_Tolerance-help">@Text["Observe_ToleranceHelp"]</p>
+                    </div>
+                    <div class="field">
+                        <label for="Input_ObservedPieceCount">@Text["Observe_PiecesLabel"]</label>
+                        <input id="Input_ObservedPieceCount"
+                               name="Input.ObservedPieceCount"
+                               type="text"
+                               inputmode="numeric"
+                               aria-describedby="Input_ObservedPieceCount-help"
+                               value="@Model.Input.ObservedPieceCount" />
+                        <p class="help" id="Input_ObservedPieceCount-help">@Text["Observe_PiecesHelp"]</p>
+                    </div>
+                </div>
+                <button class="button button--secondary" type="submit">@Text["Observe_ReviewSubmit"]</button>
+            </form>
+        }
+
+        @if (Model.IsReview && Model.Review is not null)
+        {
+            var review = Model.Review;
+            <section class="panel review-panel flow" aria-labelledby="observe-review-heading">
+                <h2 id="observe-review-heading">@Text["Observe_ReviewHeading"]</h2>
+                <dl class="fact-grid">
+                    <div>
+                        <dt>@Text["Observe_ScopeLabel"]</dt>
+                        <dd>
+                            @review.PortfolioName · @review.AccountName
+                            @if (review.InstitutionName is not null)
+                            {
+                                <text> · @review.InstitutionName</text>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>@Text["LedgerSearch_AssetLabel"]</dt>
+                        <dd>@review.AssetName <code>@review.AssetCode</code></dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Observe_QuantityLabel"]</dt>
+                        <dd class="quantity-figure">@review.Observed.Text</dd>
+                    </div>
+                    <div>
+                        <dt>@Text["Observe_ToleranceLabel"]</dt>
+                        <dd>@review.Tolerance.Text</dd>
+                    </div>
+                    @if (review.Pieces is not null)
+                    {
+                        <div>
+                            <dt>@Text["Observe_PiecesLabel"]</dt>
+                            <dd>@review.Pieces</dd>
+                        </div>
+                    }
+                </dl>
+                <p class="muted">@Text["Observe_ImmutableNotice"]</p>
+                <details class="technical-details">
+                    <summary>@Text["Common_TechnicalDetails"]</summary>
+                    <dl class="fact-grid">
+                        <div>
+                            <dt>@Text["Observe_RawQuantityLabel"]</dt>
+                            <dd><code>@review.ObservedRawE8</code></dd>
+                        </div>
+                        <div>
+                            <dt>@Text["Observe_RawToleranceLabel"]</dt>
+                            <dd><code>@review.ToleranceRawE8</code></dd>
+                        </div>
+                    </dl>
+                </details>
+                <form method="post"
+                      asp-page-handler="Record"
+                      asp-route-evidenceId="@evidence.EvidenceId">
+                    <input type="hidden" name="Input.PortfolioId" value="@Model.Input.PortfolioId" />
+                    <input type="hidden" name="Input.AccountId" value="@Model.Input.AccountId" />
+                    <input type="hidden" name="Input.AssetId" value="@Model.Input.AssetId" />
+                    <input type="hidden" name="Input.ObservedQuantity" value="@Model.Input.ObservedQuantity" />
+                    <input type="hidden" name="Input.Tolerance" value="@Model.Input.Tolerance" />
+                    <input type="hidden" name="Input.ObservedPieceCount" value="@Model.Input.ObservedPieceCount" />
+                    <button class="button" type="submit">@Text["Observe_RecordSubmit"]</button>
+                </form>
+            </section>
+        }
+    }
+</article>
