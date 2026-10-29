@@ -1,0 +1,9 @@
+@model WealthLedger.UI.Pages.ScopeChoices?
+@inject UiText Text
+@if (Model?.IsTruncated == true)
+{
+    <section class="summary-card summary-card--warning flow" role="status">
+        <h2>@Text["Scope_ChoicesTruncatedTitle"]</h2>
+        <p>@Text["Scope_ChoicesTruncatedExplanation"]</p>
+    </section>
+}

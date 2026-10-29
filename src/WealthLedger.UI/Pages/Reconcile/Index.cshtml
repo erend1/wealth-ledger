@@ -90,7 +90,8 @@
                 @if (Model.NextEvidenceCursor is not null)
                 {
                     <a asp-page="/Reconcile/Index"
-                       asp-route-evidenceCursor="@Model.NextEvidenceCursor">
+                       asp-route-evidenceCursor="@Model.NextEvidenceCursor"
+                       asp-route-runCursor="@Model.RunCursor">
                         @Text["Reconcile_EvidenceNextPage"]
                     </a>
                 }
@@ -111,6 +112,7 @@
                 @if (Model.NextRunCursor is not null)
                 {
                     <a asp-page="/Reconcile/Index"
+                       asp-route-evidenceCursor="@Model.EvidenceCursor"
                        asp-route-runCursor="@Model.NextRunCursor">
                         @Text["Reconcile_RunNextPage"]
                     </a>

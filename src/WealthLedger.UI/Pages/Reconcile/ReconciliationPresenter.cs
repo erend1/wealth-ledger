@@ -76,8 +76,12 @@ public sealed record RunItemDisplay(
     /// Only an out-of-tolerance item that is still open takes a resolution.
     /// </summary>
     public bool CanResolve
-        => Comparison.Code == "OUT_OF_TOLERANCE"
-           && Resolution?.Code == "OPEN";
+        => ComparisonStatus == ReconciliationComparisonStatus.OutOfTolerance
+           && ResolutionState == ReconciliationResolutionState.Open;
+
+    public ReconciliationComparisonStatus ComparisonStatus { get; init; }
+
+    public ReconciliationResolutionState? ResolutionState { get; init; }
 }
 
 /// <summary>
@@ -247,7 +251,11 @@ public sealed class ReconciliationPresenter
             item.ObservedQuantityRawE8,
             item.LedgerQuantityRawE8,
             item.DeltaRawE8,
-            item.ToleranceRawE8);
+            item.ToleranceRawE8)
+        {
+            ComparisonStatus = item.ComparisonStatus,
+            ResolutionState = item.ResolutionState
+        };
     }
 
     /// <summary>

@@ -225,6 +225,20 @@ public sealed partial class ReconcileEvidenceUiTests
         Assert.Equal(HttpStatusCode.UnprocessableEntity, empty.StatusCode);
         Assert.Contains("Bağlamak için en az bir işlem seçin.", emptyHtml);
 
+        using var malformed = await M010UiTestData.PostFormAsync(
+            client,
+            location + "?handler=Link",
+            [
+                new("__RequestVerificationToken", M010UiTestData.TokenFrom(linked)),
+                new("transactionIds", history.FundPurchaseId.ToString("D")),
+                new("transactionIds", "PRIVATE-NOT-A-GUID")
+            ]);
+        var malformedHtml = WebUtility.HtmlDecode(await malformed.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, malformed.StatusCode);
+        Assert.Contains("Form geçersiz veya süresi dolmuş", malformedHtml);
+        Assert.DoesNotContain("PRIVATE-NOT-A-GUID", malformedHtml);
+
         using var foreign = await M010UiTestData.PostFormAsync(
             client,
             location + "?handler=Link",

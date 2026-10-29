@@ -188,7 +188,7 @@ public sealed class InventoryPresenter
                     allocation.TransactionId,
                     _values.StableCode(allocation.TransactionType),
                     _values.BusinessDate(allocation.ExecutionDate),
-                    ScopeLabel(allocation.PortfolioId, allocation.AccountId, choices),
+                    ScopeLabel(allocation.PortfolioId, allocation.AccountId, choices, lot.Custody),
                     _values.Quantity(
                         allocation.QuantityDeltaRawE8,
                         lot.AssetBaseUnit,
@@ -263,18 +263,28 @@ public sealed class InventoryPresenter
                 PresentationDiagnostics.IncompleteRecordedValue)
         };
 
-    private static string ScopeLabel(
+    /// <summary>
+    /// Names an allocation's scope from the loaded choices, then from the
+    /// lot's own custody rows. An identity is never the visible label; a
+    /// scope found in neither is shown as unavailable.
+    /// </summary>
+    private string ScopeLabel(
         Guid portfolioId,
         Guid accountId,
-        ScopeChoices? choices)
+        ScopeChoices? choices,
+        IReadOnlyList<LotCustodyInventoryItem> custody)
     {
+        var custodyRow = custody.FirstOrDefault(
+            item => item.PortfolioId == portfolioId && item.AccountId == accountId);
         var portfolio = choices?.Portfolios
-            .SingleOrDefault(item => item.PortfolioId == portfolioId);
+                            .SingleOrDefault(item => item.PortfolioId == portfolioId)?.Name
+                        ?? custodyRow?.PortfolioName;
         var account = choices?.Accounts
-            .SingleOrDefault(item => item.AccountId == accountId);
+                          .SingleOrDefault(item => item.AccountId == accountId)?.Name
+                      ?? custodyRow?.AccountName;
+        var unavailable = _values.Unavailable(
+            PresentationDiagnostics.IncompleteRecordedValue).Text;
 
-        return (portfolio?.Name ?? portfolioId.ToString("D"))
-               + " · "
-               + (account?.Name ?? accountId.ToString("D"));
+        return (portfolio ?? unavailable) + " · " + (account ?? unavailable);
     }
 }

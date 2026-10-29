@@ -53,11 +53,19 @@ public sealed class IndexModel : ReconcilePageModel
 
     public string? NextRunCursor { get; private set; }
 
+    /// <summary>The cursors this page was opened with, so paging one list keeps the other.</summary>
+    public string? EvidenceCursor { get; private set; }
+
+    public string? RunCursor { get; private set; }
+
     public async Task<IActionResult> OnGetAsync(
         string? evidenceCursor,
         string? runCursor,
         CancellationToken cancellationToken)
     {
+        EvidenceCursor = evidenceCursor;
+        RunCursor = runCursor;
+
         if (!await ResolveHouseholdAsync(cancellationToken))
         {
             return Page();

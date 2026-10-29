@@ -2024,6 +2024,9 @@
   <data name="RecordHub_GoldTransferAction" xml:space="preserve"><value>Saklama transferi kaydet</value></data>
   <data name="GoldReceipt_TechnicalIds" xml:space="preserve"><value>Teknik kapsam kimlikleri</value></data>
   <data name="Scope_InactiveMarker" xml:space="preserve"><value>etkin değil</value></data>
+  <data name="Scope_UnlistedSelection" xml:space="preserve"><value>Seçili kapsam (listede gösterilmiyor)</value></data>
+  <data name="Scope_ChoicesTruncatedTitle" xml:space="preserve"><value>Seçim listesi kısaltıldı</value></data>
+  <data name="Scope_ChoicesTruncatedExplanation" xml:space="preserve"><value>Her ana veri türünden en fazla 100 kayıt listelenir. Bağlantıyla seçilmiş bir kapsam listede görünmese de korunur; aradığınız kayıt görünmüyorsa ana veri sayfalarından doğrulayın.</value></data>
   <data name="Ledger_IsReversalBadge" xml:space="preserve"><value>Ters kayıt · asıl işlemi aç</value></data>
   <data name="Ledger_IsReversedBadge" xml:space="preserve"><value>Ters çevrildi · ters kaydı aç</value></data>
   <data name="LedgerSearch_Heading" xml:space="preserve"><value>İşlem ara</value></data>

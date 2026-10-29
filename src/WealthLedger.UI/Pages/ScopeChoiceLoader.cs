@@ -10,11 +10,17 @@ namespace WealthLedger.UI.Pages;
 /// and evidence describe history, and history may name a master that is no
 /// longer in use. Labels are current display context, not historical names.
 /// </remarks>
+/// <remarks>
+/// Each list holds at most one bounded page. <see cref="IsTruncated"/> says
+/// that at least one master type has more rows than were loaded, so a page
+/// can say so instead of implying the list is complete.
+/// </remarks>
 public sealed record ScopeChoices(
     IReadOnlyList<PortfolioNavigationItem> Portfolios,
     IReadOnlyList<AccountNavigationItem> Accounts,
     IReadOnlyList<InstitutionNavigationItem> Institutions,
-    IReadOnlyList<AssetNavigationItem> Assets)
+    IReadOnlyList<AssetNavigationItem> Assets,
+    bool IsTruncated = false)
 {
     public AssetNavigationItem? FindAsset(Guid assetId)
         => Assets.SingleOrDefault(asset => asset.AssetId == assetId);
@@ -98,7 +104,11 @@ public sealed class ScopeChoiceLoader
             portfolios.Items,
             accounts.Items,
             institutions.Items,
-            assets.Items);
+            assets.Items,
+            portfolios.NextCursor is not null
+            || accounts.NextCursor is not null
+            || institutions.NextCursor is not null
+            || assets.NextCursor is not null);
     }
 
     internal static IReadOnlyList<ScopeOption> PortfolioOptions(

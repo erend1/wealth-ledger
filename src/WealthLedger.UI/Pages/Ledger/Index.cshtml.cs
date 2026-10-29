@@ -83,7 +83,10 @@ public sealed class IndexModel : PageModel
     public string FirstPageUrl
         => Url.Page("/Ledger/Index")
            + new Microsoft.AspNetCore.Http.Extensions.QueryBuilder(
-                   LedgerSearchFormMapper.FilterPairs(Filters))
+                   PageSize == LedgerSearchFormMapper.DefaultPageSize
+                       ? LedgerSearchFormMapper.FilterPairs(Filters)
+                       : LedgerSearchFormMapper.FilterPairs(Filters).Prepend(
+                           new("pageSize", PageSize.ToString(System.Globalization.CultureInfo.InvariantCulture))))
                .ToQueryString();
 
     public IReadOnlyList<RecentLedgerTransactionDisplay> Transactions

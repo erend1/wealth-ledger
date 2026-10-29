@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using WealthLedger.Domain.Assets;
+using WealthLedger.Infrastructure.Persistence.Rows;
 
 namespace WealthLedger.Api.Tests;
 
@@ -135,6 +137,15 @@ public sealed partial class LedgerSearchUiTests
                 break;
             }
 
+            if (firstNext is not null)
+            {
+                // Later pages return to the first page of the same search,
+                // at the same page size.
+                Assert.Contains(
+                    "href=\"/ledger?pageSize=1&executedFrom=2026-01-01&executedTo=2026-02-28\"",
+                    html);
+            }
+
             path = next.Groups[1].Value;
             firstNext ??= path;
             Assert.Contains("executedFrom=2026-01-01", path);
@@ -223,6 +234,51 @@ public sealed partial class LedgerSearchUiTests
         Assert.DoesNotContain(privateReference, logs);
         Assert.DoesNotContain("SYNTH-JAN-001", logs);
         Assert.DoesNotContain("Synthetic Direct Account", logs);
+    }
+
+    [Fact]
+    public async Task Ledger_SaysWhenScopeChoicesAreTruncatedAndKeepsAnUnlistedSelection()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = M010UiTestData.CreateClient(factory);
+        await M010UiTestData.SeedAsync(factory, client);
+        var assetIds = Enumerable.Range(0, 101)
+            .Select(index => Guid.Parse($"63000000-0000-0000-0000-{index:D12}"))
+            .ToArray();
+
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Assets.AddRange(assetIds.Select((id, index) => new AssetRow
+            {
+                Id = id,
+                Code = $"SYNTH_EXTRA_{index:D3}",
+                Name = $"Synthetic extra asset {index:D3}",
+                Type = AssetType.Other,
+                BaseUnit = AssetUnit.Other,
+                BaseCurrencyCode = "TRY",
+                LotTrackingMode = LotTrackingMode.None,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            }));
+            await context.SaveChangesAsync();
+        }
+
+        var (status, html) = await M010UiTestData.GetPageAsync(client, "/ledger");
+        var unlisted = assetIds.First(
+            id => !html.Contains(id.ToString("D"), StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Contains("Seçim listesi kısaltıldı", html);
+
+        var (selectedStatus, selectedHtml) = await M010UiTestData.GetPageAsync(
+            client,
+            $"/ledger?assetId={unlisted:D}");
+
+        Assert.Equal(HttpStatusCode.OK, selectedStatus);
+        Assert.Contains(
+            $"<option value=\"{unlisted:D}\" selected=\"selected\">Seçili kapsam (listede gösterilmiyor)</option>",
+            selectedHtml);
+        Assert.Contains("Bu filtrelerle eşleşen kaydedilmiş işlem yok", selectedHtml);
     }
 
     private static async Task AssertResultsAsync(

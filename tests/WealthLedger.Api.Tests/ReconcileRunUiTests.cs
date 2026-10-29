@@ -322,6 +322,45 @@ public sealed partial class ReconcileRunUiTests
         Assert.DoesNotContain("PRIVATE-RUN-CURSOR", cursorHtml);
     }
 
+    [Fact]
+    public async Task EveryReconcilePostHandler_RefusesAMissingAntiforgeryTokenWithoutMutation()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = M010UiTestData.CreateClient(factory);
+        var history = await M010UiTestData.SeedAsync(factory, client);
+        var evidence = await ReconcileEvidenceUiTests.RecordStatementAsync(client, history);
+        await ObserveAsync(client, history, evidence, history.Setup.FundAssetId, "1,25");
+        var (run, _) = await RunTwiceAsync(client, evidence);
+        var (_, runHtml) = await M010UiTestData.GetPageAsync(client, run);
+        var item = Items(runHtml).Single();
+        var auditBefore = await M010ApiTestData.ReadAuditCountsAsync(factory);
+        var ledgerBefore = await M010ApiTestData.ReadLedgerCountsAsync(factory);
+        var observation = ObservationFields(history, history.Setup.CashAssetId, "1500", runHtml)
+            .Where(pair => pair.Key != "__RequestVerificationToken")
+            .ToList();
+
+        foreach (var (path, fields) in new (string Path, List<KeyValuePair<string, string>> Fields)[]
+                 {
+                     (evidence + "/observe?handler=Review", observation),
+                     (evidence + "/observe?handler=Record", observation),
+                     (evidence + "?handler=Run", [new("runKey", Guid.NewGuid().ToString("D"))]),
+                     (evidence + "?handler=Link", [new("transactionIds", history.FirstJanuaryId.ToString("D"))]),
+                     (run + "?handler=Rerun", [new("rerunKey", Guid.NewGuid().ToString("D"))]),
+                     (run + "?handler=Exception", [new("itemId", item.Id.ToString("D")), new("explanation", ExplanationText)]),
+                     (run + "?handler=Correct", [new("itemId", item.Id.ToString("D")), new("correctiveTransactionId", history.FundPurchaseId.ToString("D"))])
+                 })
+        {
+            using var response = await M010UiTestData.PostFormAsync(client, path, fields);
+
+            Assert.True(
+                response.StatusCode == HttpStatusCode.BadRequest,
+                $"{path} answered {(int)response.StatusCode} without an antiforgery token.");
+        }
+
+        Assert.Equal(auditBefore, await M010ApiTestData.ReadAuditCountsAsync(factory));
+        Assert.Equal(ledgerBefore, await M010ApiTestData.ReadLedgerCountsAsync(factory));
+    }
+
     private static List<KeyValuePair<string, string>> ObservationFields(
         M010UiHistory history,
         Guid assetId,

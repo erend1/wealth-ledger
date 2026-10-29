@@ -169,12 +169,13 @@ public sealed class EvidenceModel : ReconcilePageModel
         CancellationToken cancellationToken)
     {
         var selected = new List<Guid>();
+        var malformed = false;
 
         foreach (var value in transactionIds ?? [])
         {
             if (!Guid.TryParseExact(value, "D", out var parsed) || parsed == Guid.Empty)
             {
-                selected.Clear();
+                malformed = true;
                 break;
             }
 
@@ -183,6 +184,14 @@ public sealed class EvidenceModel : ReconcilePageModel
 
         if (!await ResolveHouseholdAsync(cancellationToken))
         {
+            return Page();
+        }
+
+        if (malformed)
+        {
+            // Only a tampered or stale form can carry a malformed identity.
+            await LoadAsync(evidenceId, candidateCursor: null, cancellationToken);
+            AddFormError("Evidence_Error_FormExpired", StatusCodes.Status422UnprocessableEntity);
             return Page();
         }
 

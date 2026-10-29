@@ -17,6 +17,9 @@ public sealed partial class ReadyShellUiTests
                  {
                      "/",
                      "/ledger",
+                     "/assets",
+                     "/assets/lots",
+                     "/reconcile",
                      "/settings",
                      "/settings/master-data",
                      "/settings/data-safety"
