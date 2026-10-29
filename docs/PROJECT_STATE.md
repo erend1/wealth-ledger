@@ -130,9 +130,9 @@ remains Verified while M010 is implemented.
 was accepted on 2026-10-02 after the human owners approved all twenty-two
 Recommended decisions without amendment. M010 became the sole In Progress
 milestone on 2026-10-02, when #20 merged via PR #27. #21 merged via PR #28,
-#22 via PR #32 and #23 via PR #34; parent issue #19 tracks the open children
-#24-#26. This adds no M010 Verified behavior; implementation evidence will be
-recorded only after it is proved.
+#22 via PR #32, #23 via PR #34 and #24 via PR #36; parent issue #19 tracks the
+open children #25-#26. This adds no M010 Verified behavior; implementation
+evidence will be recorded only after it is proved.
 
 The verified M006 delivery includes workspace-bound protection readiness, the
 `WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
