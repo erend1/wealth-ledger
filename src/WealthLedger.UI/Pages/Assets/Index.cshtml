@@ -1,0 +1,192 @@
+@page "/assets"
+@model WealthLedger.UI.Pages.Assets.IndexModel
+@inject UiText Text
+@inject ValuePresenter Values
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Assets_Title"];
+    ViewData["ActiveNavigation"] = "Assets";
+}
+
+<article class="flow" aria-labelledby="assets-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Assets_Eyebrow"]</p>
+        <h1 id="assets-heading">@Text["Assets_Title"]</h1>
+        <p class="lede">@Text["Assets_Introduction"]</p>
+    </header>
+
+    @if (Model.NavigationError || Model.LoadUnavailable || !Model.HasHousehold)
+    {
+        <partial name="_InventoryState" model="Model" />
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Ready_CurrentHouseholdLabel"]
+            <strong>@Model.HouseholdName</strong>
+        </p>
+
+        <partial name="_ValidationSummary" />
+
+        <form class="filter-panel flow"
+              method="get"
+              action="@Url.Page("/Assets/Index")"
+              aria-labelledby="assets-filter-heading">
+            <h2 id="assets-filter-heading">@Text["Assets_FilterHeading"]</h2>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="asOf">@Text["Assets_AsOfLabel"]</label>
+                    <input id="asOf"
+                           name="asOf"
+                           type="date"
+                           aria-describedby="asOf-help"
+                           value="@Model.Filters.AsOf" />
+                    <p class="help" id="asOf-help">@Text["Assets_AsOfHelp"]</p>
+                </div>
+                <partial name="_ScopeSelect" model="@Model.Select("portfolioId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("accountId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("institutionId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("assetId")" />
+            </div>
+            <div class="check-field">
+                <input id="includeZero"
+                       name="includeZero"
+                       type="checkbox"
+                       value="true"
+                       aria-describedby="includeZero-help"
+                       checked="@Model.IncludeZero" />
+                <label for="includeZero">@Text["Assets_IncludeZeroLabel"]</label>
+            </div>
+            <p class="help" id="includeZero-help">@Text["Assets_IncludeZeroHelp"]</p>
+            <div class="action-row">
+                <button class="button" type="submit">@Text["Assets_Submit"]</button>
+                @if (Model.HasFilters)
+                {
+                    <a class="card-link" asp-page="/Assets/Index">@Text["LedgerSearch_Clear"]</a>
+                }
+                <a class="card-link" asp-page="/Assets/Lots">@Text["Assets_AllLotsLink"]</a>
+            </div>
+        </form>
+
+        <p class="muted">@Text["Assets_NoValuationNotice"]</p>
+
+        @if (Model.ScopeNotFound)
+        {
+            <section class="summary-card summary-card--warning flow" role="alert">
+                <h2>@Text["Assets_ScopeNotFoundTitle"]</h2>
+                <p>@Text["Assets_ScopeNotFoundExplanation"]</p>
+            </section>
+        }
+        else if (ViewData.ModelState.IsValid)
+        {
+            <section class="flow" aria-labelledby="positions-heading">
+                <h2 id="positions-heading">
+                    @if (Model.AsOfDate is DateOnly asOf)
+                    {
+                        <text>@Text["Assets_PositionsAsOfHeading"] @Values.BusinessDate(asOf).Text</text>
+                    }
+                    else
+                    {
+                        @Text["Assets_PositionsCurrentHeading"]
+                    }
+                </h2>
+
+                @if (Model.Groups.Count == 0)
+                {
+                    <div class="summary-card flow" role="status">
+                        <p><strong>@Text["Assets_EmptyTitle"]</strong></p>
+                        <p>@Text["Assets_EmptyExplanation"]</p>
+                    </div>
+                }
+
+                @foreach (var group in Model.Groups)
+                {
+                    var groupHeadingId = "group-" + group.PortfolioId.ToString("N") + "-" + group.AccountId.ToString("N");
+                    <section class="transaction-card flow" aria-labelledby="@groupHeadingId">
+                        <header class="flow">
+                            <h3 id="@groupHeadingId">
+                                @group.PortfolioName · @group.AccountName
+                                @if (group.InstitutionName is not null)
+                                {
+                                    <text> · @group.InstitutionName</text>
+                                }
+                            </h3>
+                            <p class="muted">
+                                @group.AccountType.Text · @group.PortfolioStatus.Text
+                            </p>
+                            @if (!group.AccountIsActive || group.InstitutionIsActive == false)
+                            {
+                                <p class="state-text state-text--inactive">
+                                    @Text["Ledger_InactiveCurrentContext"]
+                                </p>
+                            }
+                        </header>
+
+                        <ul class="entry-list">
+                            @foreach (var position in group.Positions)
+                            {
+                                <li class="entry-card flow">
+                                    <p class="context-line">
+                                        <strong>@position.AssetName</strong>
+                                        <code>@position.AssetCode</code>
+                                        · @position.AssetType.Text
+                                    </p>
+                                    <p class="quantity-figure"
+                                       aria-label="@position.Quantity.AssistiveText">
+                                        @position.Quantity.Text
+                                    </p>
+                                    @if (position.Quantity.State == WealthLedger.UI.Presentation.DisplayState.Zero)
+                                    {
+                                        <p class="muted">@Text["Assets_ValidZeroNotice"]</p>
+                                    }
+                                    @if (!position.AssetIsActive)
+                                    {
+                                        <p class="state-text state-text--inactive">
+                                            @Text["Ledger_InactiveCurrentContext"]
+                                        </p>
+                                    }
+                                    <div class="action-row">
+                                        <a class="card-link" href="@Model.TransactionsUrl(group, position)">
+                                            @Text["Assets_TransactionsLink"]
+                                        </a>
+                                        @if (position.IsLotTracked)
+                                        {
+                                            <a class="card-link" href="@Model.LotsUrl(group, position)">
+                                                @Text["Assets_LotsLink"]
+                                            </a>
+                                        }
+                                    </div>
+                                    <details class="technical-details">
+                                        <summary>@Text["Common_TechnicalDetails"]</summary>
+                                        <dl class="fact-grid">
+                                            <div>
+                                                <dt>@Text["Assets_SourceEntryCountLabel"]</dt>
+                                                <dd>@position.SourceEntryCount</dd>
+                                            </div>
+                                            <div>
+                                                <dt>@Text["Assets_SourceTransactionCountLabel"]</dt>
+                                                <dd>@position.SourceTransactionCount</dd>
+                                            </div>
+                                            <div>
+                                                <dt>@Text["Assets_RawQuantityLabel"]</dt>
+                                                <dd><code>@position.QuantityRawE8</code></dd>
+                                            </div>
+                                            <div>
+                                                <dt>@Text["Assets_ScopeIdsLabel"]</dt>
+                                                <dd>
+                                                    <code class="technical-id">@group.PortfolioId</code>
+                                                    <code class="technical-id">@group.AccountId</code>
+                                                    <code class="technical-id">@position.AssetId</code>
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </details>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </section>
+        }
+    }
+</article>

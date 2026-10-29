@@ -64,6 +64,7 @@ public sealed partial class ReadyShellUiTests
 
         Assert.Contains("href=\"/\"", shell, StringComparison.Ordinal);
         Assert.Contains("href=\"/ledger\"", shell, StringComparison.Ordinal);
+        Assert.Contains("href=\"/assets\"", shell, StringComparison.Ordinal);
         /*
          * The shell now links to the record hub rather than straight to one
          * workflow, because M008 adds three more. The hub itself is asserted

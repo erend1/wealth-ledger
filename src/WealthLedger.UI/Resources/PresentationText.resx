@@ -2057,4 +2057,67 @@
   <data name="LedgerSearch_Validation_Selection" xml:space="preserve"><value>Seçim geçersiz. Listeden bir değer seçin.</value></data>
   <data name="LedgerSearch_Validation_Reference" xml:space="preserve"><value>Referans araması en fazla 256 karakter olabilir.</value></data>
   <data name="LedgerSearch_Validation_Reversal" xml:space="preserve"><value>Ters kayıt ilişkisi seçimi geçersiz.</value></data>
+  <data name="Shell_Navigation_Assets" xml:space="preserve"><value>Varlıklar</value></data>
+  <data name="Assets_Title" xml:space="preserve"><value>Varlıklar</value></data>
+  <data name="Assets_Eyebrow" xml:space="preserve"><value>Türetilmiş envanter</value></data>
+  <data name="Assets_Introduction" xml:space="preserve"><value>Pozisyonlar yalnızca kaydedilmiş etkin işlem geçmişinden, her okumada yeniden türetilir; saklanan bir bakiye değildir.</value></data>
+  <data name="Assets_FilterHeading" xml:space="preserve"><value>Kapsam ve tarih</value></data>
+  <data name="Assets_AsOfLabel" xml:space="preserve"><value>İtibarıyla tarihi</value></data>
+  <data name="Assets_AsOfHelp" xml:space="preserve"><value>Boş bırakılırsa tüm etkin geçmiş kullanılır. Bir tarih seçilirse yalnızca o tarihte veya öncesinde gerçekleşen işlemler dahil edilir.</value></data>
+  <data name="Assets_IncludeZeroLabel" xml:space="preserve"><value>Sıfır pozisyonları da göster</value></data>
+  <data name="Assets_IncludeZeroHelp" xml:space="preserve"><value>Geçmişi olan ve toplamı tam olarak sıfır olan geçerli kapsamlar gösterilir. Bilinmeyen bir kapsam hiçbir zaman sıfır olarak gösterilmez.</value></data>
+  <data name="Assets_Submit" xml:space="preserve"><value>Göster</value></data>
+  <data name="Assets_AllLotsLink" xml:space="preserve"><value>Tüm edinim lotları</value></data>
+  <data name="Assets_NoValuationNotice" xml:space="preserve"><value>Burada yalnızca miktarlar gösterilir. Piyasa değeri, fiyat, getiri veya performans gösterilmez.</value></data>
+  <data name="Assets_ScopeNotFoundTitle" xml:space="preserve"><value>Seçilen kapsam bulunamadı</value></data>
+  <data name="Assets_ScopeNotFoundExplanation" xml:space="preserve"><value>Seçilen portföy, hesap, kurum veya varlık bu hanede yok ya da birbiriyle eşleşmiyor. Sıfır gösterilmedi.</value></data>
+  <data name="Assets_PositionsAsOfHeading" xml:space="preserve"><value>Şu tarih itibarıyla pozisyonlar:</value></data>
+  <data name="Assets_PositionsCurrentHeading" xml:space="preserve"><value>Güncel pozisyonlar</value></data>
+  <data name="Assets_EmptyTitle" xml:space="preserve"><value>Gösterilecek pozisyon yok</value></data>
+  <data name="Assets_EmptyExplanation" xml:space="preserve"><value>Bu kapsamda sıfırdan farklı etkin pozisyon yok.</value></data>
+  <data name="Assets_ValidZeroNotice" xml:space="preserve"><value>Geçerli kapsam: etkin geçmişin toplamı tam olarak sıfır.</value></data>
+  <data name="Assets_TransactionsLink" xml:space="preserve"><value>Bu pozisyonu açıklayan işlemler</value></data>
+  <data name="Assets_LotsLink" xml:space="preserve"><value>Edinim lotları</value></data>
+  <data name="Assets_SourceEntryCountLabel" xml:space="preserve"><value>Kaynak kayıt satırı sayısı</value></data>
+  <data name="Assets_SourceTransactionCountLabel" xml:space="preserve"><value>Kaynak işlem sayısı</value></data>
+  <data name="Assets_RawQuantityLabel" xml:space="preserve"><value>Ham miktar (E8)</value></data>
+  <data name="Assets_ScopeIdsLabel" xml:space="preserve"><value>Portföy, hesap ve varlık kimlikleri</value></data>
+  <data name="Assets_NavigationErrorTitle" xml:space="preserve"><value>Bu envanter sayfası açılamadı</value></data>
+  <data name="Assets_NavigationErrorExplanation" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz, eski veya bu kapsamla ilişkili değil. İçeriği açıklanmadan reddedildi.</value></data>
+  <data name="Assets_StartOverLink" xml:space="preserve"><value>Varlıklara dön</value></data>
+  <data name="Assets_UnavailableTitle" xml:space="preserve"><value>Envanter şu anda türetilemiyor</value></data>
+  <data name="Assets_UnavailableExplanation" xml:space="preserve"><value>Kaydedilmiş geçmiş güvenle okunamadı veya türetilemedi. Hiçbir özel tanı ayrıntısı gösterilmedi.</value></data>
+  <data name="Assets_Error_FilterInvalid" xml:space="preserve"><value>Filtreler geçersiz. Değerleri düzeltip yeniden deneyin.</value></data>
+  <data name="Assets_Validation_Date" xml:space="preserve"><value>Tarih YYYY-AA-GG biçiminde geçerli bir tarih olmalı.</value></data>
+  <data name="Assets_Validation_Flag" xml:space="preserve"><value>Seçim geçersiz.</value></data>
+  <data name="Assets_Validation_Selection" xml:space="preserve"><value>Seçim geçersiz. Listeden bir değer seçin.</value></data>
+  <data name="Assets_PieceCount" xml:space="preserve"><value>{0} adet</value></data>
+  <data name="Assets_PieceDelta" xml:space="preserve"><value>{0} adet</value></data>
+  <data name="Lots_Title" xml:space="preserve"><value>Edinim lotları</value></data>
+  <data name="Lots_Introduction" xml:space="preserve"><value>Her lot bir edinim soyudur, saklama yeri değildir. Güncel ve saklama kapsamındaki miktarlar işaretli tahsislerden her okumada türetilir.</value></data>
+  <data name="Lots_BackToPositions" xml:space="preserve"><value>Pozisyonlara dön</value></data>
+  <data name="Lots_IncludeExhaustedLabel" xml:space="preserve"><value>Tükenmiş lotları da göster</value></data>
+  <data name="Lots_AsOfHeading" xml:space="preserve"><value>Şu tarih itibarıyla lotlar:</value></data>
+  <data name="Lots_CurrentHeading" xml:space="preserve"><value>Güncel lotlar</value></data>
+  <data name="Lots_EmptyTitle" xml:space="preserve"><value>Gösterilecek lot yok</value></data>
+  <data name="Lots_EmptyExplanation" xml:space="preserve"><value>Bu kapsamda gösterilecek edinim lotu yok.</value></data>
+  <data name="Lots_ExhaustedBadge" xml:space="preserve"><value>Tükenmiş</value></data>
+  <data name="Lots_AcquiredOnLabel" xml:space="preserve"><value>Edinim tarihi</value></data>
+  <data name="Lots_OriginalQuantityLabel" xml:space="preserve"><value>İlk miktar</value></data>
+  <data name="Lots_GlobalQuantityLabel" xml:space="preserve"><value>Güncel toplam miktar</value></data>
+  <data name="Lots_CostStatusLabel" xml:space="preserve"><value>Maliyet durumu</value></data>
+  <data name="Lots_CostLabel" xml:space="preserve"><value>Edinim maliyeti</value></data>
+  <data name="Lots_FinenessLabel" xml:space="preserve"><value>Ayar</value></data>
+  <data name="Lots_OriginalPiecesLabel" xml:space="preserve"><value>İlk parça sayısı</value></data>
+  <data name="Lots_GlobalPiecesLabel" xml:space="preserve"><value>Güncel parça sayısı</value></data>
+  <data name="Lots_GlobalFineWeightLabel" xml:space="preserve"><value>Türetilmiş saf ağırlık</value></data>
+  <data name="Lots_CustodyHeading" xml:space="preserve"><value>Saklama kapsamına göre</value></data>
+  <data name="Lots_NoCustody" xml:space="preserve"><value>Bu lotun hiçbir saklama kapsamında kalan miktarı yok.</value></data>
+  <data name="Lots_CreatingTransactionLink" xml:space="preserve"><value>Edinim işlemini aç</value></data>
+  <data name="Lots_AllocationsSummary" xml:space="preserve"><value>Tahsis geçmişi ve teknik ayrıntılar ({0} tahsis)</value></data>
+  <data name="Lots_LotIdLabel" xml:space="preserve"><value>Lot kimliği</value></data>
+  <data name="Lots_HallmarkLabel" xml:space="preserve"><value>Damga</value></data>
+  <data name="Lots_CertificateLabel" xml:space="preserve"><value>Sertifika referansı</value></data>
+  <data name="Lots_PaginationLabel" xml:space="preserve"><value>Lot sayfaları</value></data>
+  <data name="Lots_NextPageLink" xml:space="preserve"><value>Sonraki lotlar</value></data>
 </root>

@@ -213,6 +213,28 @@ public sealed partial class AccessibilityUiTests
         Assert.Contains("min-height: 2.75rem", combined, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task M010Pages_HaveLandmarksOneHeadingAndLabelledControls()
+    {
+        using var factory = new WealthLedgerApiFactory();
+        using var client = CreateClient(factory);
+        var history = await M010UiTestData.SeedAsync(factory, client);
+
+        foreach (var path in new[]
+                 {
+                     "/ledger",
+                     $"/ledger?accountId={history.Setup.AccountId:D}&type=BUY",
+                     "/assets",
+                     "/assets?includeZero=true",
+                     "/assets/lots",
+                     $"/assets/lots?assetId={history.Gold.GoldAssetId:D}"
+                 })
+        {
+            await AssertAccessibleDocumentAsync(client, path);
+            await AssertFormControlsAsync(client, path);
+        }
+    }
+
     private static async Task AssertModePageAsync(
         ApiTestStartupMode mode,
         string path)

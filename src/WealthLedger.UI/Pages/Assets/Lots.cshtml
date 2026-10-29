@@ -1,0 +1,271 @@
+@page "/assets/lots"
+@model WealthLedger.UI.Pages.Assets.LotsModel
+@inject UiText Text
+@inject ValuePresenter Values
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Lots_Title"];
+    ViewData["ActiveNavigation"] = "Assets";
+}
+
+<article class="flow" aria-labelledby="lots-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Assets_Eyebrow"]</p>
+        <h1 id="lots-heading">@Text["Lots_Title"]</h1>
+        <p class="lede">@Text["Lots_Introduction"]</p>
+        <p><a class="card-link" asp-page="/Assets/Index">@Text["Lots_BackToPositions"]</a></p>
+    </header>
+
+    @if (Model.NavigationError || Model.LoadUnavailable || !Model.HasHousehold)
+    {
+        <partial name="_InventoryState" model="Model" />
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Ready_CurrentHouseholdLabel"]
+            <strong>@Model.HouseholdName</strong>
+        </p>
+
+        <partial name="_ValidationSummary" />
+
+        <form class="filter-panel flow"
+              method="get"
+              action="@Url.Page("/Assets/Lots")"
+              aria-labelledby="lots-filter-heading">
+            <h2 id="lots-filter-heading">@Text["Assets_FilterHeading"]</h2>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="asOf">@Text["Assets_AsOfLabel"]</label>
+                    <input id="asOf"
+                           name="asOf"
+                           type="date"
+                           aria-describedby="asOf-help"
+                           value="@Model.Filters.AsOf" />
+                    <p class="help" id="asOf-help">@Text["Assets_AsOfHelp"]</p>
+                </div>
+                <partial name="_ScopeSelect" model="@Model.Select("portfolioId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("accountId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("institutionId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("assetId")" />
+            </div>
+            <div class="check-field">
+                <input id="includeExhausted"
+                       name="includeExhausted"
+                       type="checkbox"
+                       value="true"
+                       checked="@Model.IncludeExhausted" />
+                <label for="includeExhausted">@Text["Lots_IncludeExhaustedLabel"]</label>
+            </div>
+            <div class="action-row">
+                <button class="button" type="submit">@Text["Assets_Submit"]</button>
+                @if (Model.HasFilters)
+                {
+                    <a class="card-link" asp-page="/Assets/Lots">@Text["LedgerSearch_Clear"]</a>
+                }
+            </div>
+        </form>
+
+        <p class="muted">@Text["Assets_NoValuationNotice"]</p>
+
+        @if (Model.ScopeNotFound)
+        {
+            <section class="summary-card summary-card--warning flow" role="alert">
+                <h2>@Text["Assets_ScopeNotFoundTitle"]</h2>
+                <p>@Text["Assets_ScopeNotFoundExplanation"]</p>
+            </section>
+        }
+        else if (ViewData.ModelState.IsValid)
+        {
+            <section class="flow" aria-labelledby="lot-results-heading">
+                <h2 id="lot-results-heading">
+                    @if (Model.AsOfDate is DateOnly asOf)
+                    {
+                        <text>@Text["Lots_AsOfHeading"] @Values.BusinessDate(asOf).Text</text>
+                    }
+                    else
+                    {
+                        @Text["Lots_CurrentHeading"]
+                    }
+                </h2>
+
+                @if (Model.Lots.Count == 0)
+                {
+                    <div class="summary-card flow" role="status">
+                        <p><strong>@Text["Lots_EmptyTitle"]</strong></p>
+                        <p>@Text["Lots_EmptyExplanation"]</p>
+                    </div>
+                }
+
+                <ol class="transaction-list">
+                    @foreach (var lot in Model.Lots)
+                    {
+                        var lotHeadingId = "lot-" + lot.AssetLotId.ToString("N");
+                        <li class="transaction-card flow" aria-labelledby="@lotHeadingId">
+                            <header class="flow">
+                                <h3 id="@lotHeadingId">
+                                    @lot.AssetName
+                                    <code>@lot.AssetCode</code>
+                                </h3>
+                                @if (lot.IsExhausted)
+                                {
+                                    <p><span class="status-badge">@Text["Lots_ExhaustedBadge"]</span></p>
+                                }
+                            </header>
+
+                            <dl class="fact-grid">
+                                <div>
+                                    <dt>@Text["Lots_AcquiredOnLabel"]</dt>
+                                    <dd>@lot.AcquiredOn.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Lots_OriginalQuantityLabel"]</dt>
+                                    <dd aria-label="@lot.OriginalQuantity.AssistiveText">@lot.OriginalQuantity.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Lots_GlobalQuantityLabel"]</dt>
+                                    <dd class="quantity-figure"
+                                        aria-label="@lot.GlobalQuantity.AssistiveText">@lot.GlobalQuantity.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Lots_CostStatusLabel"]</dt>
+                                    <dd>@lot.CostStatus.Text</dd>
+                                </div>
+                                <div>
+                                    <dt>@Text["Lots_CostLabel"]</dt>
+                                    <dd>@lot.Cost.Text</dd>
+                                </div>
+                                @if (lot.PhysicalGold is not null)
+                                {
+                                    <div>
+                                        <dt>@Text["Lots_FinenessLabel"]</dt>
+                                        <dd>@lot.PhysicalGold.Fineness</dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Lots_OriginalPiecesLabel"]</dt>
+                                        <dd>@lot.PhysicalGold.OriginalPieces</dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Lots_GlobalPiecesLabel"]</dt>
+                                        <dd>@lot.PhysicalGold.GlobalPieces</dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Lots_GlobalFineWeightLabel"]</dt>
+                                        <dd>@lot.PhysicalGold.GlobalFineWeight</dd>
+                                    </div>
+                                }
+                            </dl>
+
+                            <section class="flow" aria-labelledby="@(lotHeadingId)-custody">
+                                <h4 id="@(lotHeadingId)-custody">@Text["Lots_CustodyHeading"]</h4>
+                                @if (lot.Custody.Count == 0)
+                                {
+                                    <p class="muted">@Text["Lots_NoCustody"]</p>
+                                }
+                                <ul class="entry-list">
+                                    @foreach (var custody in lot.Custody)
+                                    {
+                                        <li class="entry-card flow">
+                                            <p class="context-line">
+                                                <strong>@custody.PortfolioName · @custody.AccountName</strong>
+                                                @if (custody.InstitutionName is not null)
+                                                {
+                                                    <text> · @custody.InstitutionName</text>
+                                                }
+                                            </p>
+                                            <p aria-label="@custody.Quantity.AssistiveText">@custody.Quantity.Text</p>
+                                            @if (custody.Pieces is not null)
+                                            {
+                                                <p>@custody.Pieces</p>
+                                            }
+                                            @if (custody.FineWeight is not null)
+                                            {
+                                                <p>@custody.FineWeight</p>
+                                            }
+                                            @if (custody.IsInactive)
+                                            {
+                                                <p class="state-text state-text--inactive">
+                                                    @Text["Ledger_InactiveCurrentContext"]
+                                                </p>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </section>
+
+                            <p>
+                                <a class="card-link"
+                                   asp-page="/Ledger/Details"
+                                   asp-route-transactionId="@lot.CreatingTransactionId">
+                                    @Text["Lots_CreatingTransactionLink"]
+                                </a>
+                            </p>
+
+                            <details class="technical-details">
+                                <summary>
+                                    @string.Format(
+                                        System.Globalization.CultureInfo.InvariantCulture,
+                                        Text["Lots_AllocationsSummary"],
+                                        lot.Allocations.Count)
+                                </summary>
+                                <ol class="plain-list">
+                                    @foreach (var allocation in lot.Allocations)
+                                    {
+                                        <li class="flow">
+                                            <p>
+                                                <a asp-page="/Ledger/Details"
+                                                   asp-route-transactionId="@allocation.TransactionId">
+                                                    @allocation.TransactionType.Text
+                                                </a>
+                                                · @allocation.ExecutionDate.Text
+                                                · @allocation.Scope
+                                            </p>
+                                            <p aria-label="@allocation.QuantityDelta.AssistiveText">
+                                                @allocation.QuantityDelta.Text
+                                                @if (allocation.PieceDelta is not null)
+                                                {
+                                                    <text> · @allocation.PieceDelta</text>
+                                                }
+                                            </p>
+                                        </li>
+                                    }
+                                </ol>
+                                <dl class="fact-grid">
+                                    <div>
+                                        <dt>@Text["Lots_LotIdLabel"]</dt>
+                                        <dd><code class="technical-id">@lot.AssetLotId</code></dd>
+                                    </div>
+                                    <div>
+                                        <dt>@Text["Ledger_TransactionIdLabel"]</dt>
+                                        <dd><code class="technical-id">@lot.CreatingTransactionId</code></dd>
+                                    </div>
+                                    @if (lot.PhysicalGold?.Hallmark is not null)
+                                    {
+                                        <div>
+                                            <dt>@Text["Lots_HallmarkLabel"]</dt>
+                                            <dd>@lot.PhysicalGold.Hallmark</dd>
+                                        </div>
+                                    }
+                                    @if (lot.PhysicalGold?.CertificateReference is not null)
+                                    {
+                                        <div>
+                                            <dt>@Text["Lots_CertificateLabel"]</dt>
+                                            <dd>@lot.PhysicalGold.CertificateReference</dd>
+                                        </div>
+                                    }
+                                </dl>
+                            </details>
+                        </li>
+                    }
+                </ol>
+
+                <nav class="pagination" aria-label="@Text["Lots_PaginationLabel"]">
+                    @if (Model.NextPageUrl is not null)
+                    {
+                        <a href="@Model.NextPageUrl">@Text["Lots_NextPageLink"]</a>
+                    }
+                </nav>
+            </section>
+        }
+    }
+</article>

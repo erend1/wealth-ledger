@@ -171,6 +171,17 @@ internal static partial class M010UiTestData
     }
 
     /// <summary>
+    /// The page text after the given heading id, so assertions about results
+    /// do not match the filter form's select options above them.
+    /// </summary>
+    internal static string After(string html, string headingId)
+    {
+        var index = html.IndexOf($"id=\"{headingId}\"", StringComparison.Ordinal);
+        Assert.True(index >= 0, $"The page did not render the {headingId} heading.");
+        return html[index..];
+    }
+
+    /// <summary>
     /// The distinct transaction identities linked from a rendered result list,
     /// in page order.
     /// </summary>

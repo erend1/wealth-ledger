@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ReadyHouseholdResolver>();
         services.AddScoped<ScopeChoiceLoader>();
         services.AddSingleton<RecentLedgerPresenter>();
+        services.AddSingleton<Pages.Assets.InventoryPresenter>();
 
         services.AddAntiforgery(
             options =>
