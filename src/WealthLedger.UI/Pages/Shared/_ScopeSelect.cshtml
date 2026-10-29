@@ -1,0 +1,27 @@
+@model WealthLedger.UI.Pages.ScopeSelect
+@{
+    var helpId = Model.Help is null ? null : Model.Name + "-help";
+}
+<div class="field">
+    <label for="@Model.Name">@Model.Label</label>
+    <select id="@Model.Name"
+            name="@Model.Name"
+            aria-describedby="@helpId">
+        <option value="">@Model.EmptyOptionLabel</option>
+        @foreach (var option in Model.Options)
+        {
+            var label = option.IsActive
+                ? option.Label
+                : option.Label + " — " + Model.InactiveMarker;
+
+            <option value="@option.Value"
+                    selected="@(string.Equals(option.Value, Model.Selected, StringComparison.OrdinalIgnoreCase))">
+                @label
+            </option>
+        }
+    </select>
+    @if (Model.Help is not null)
+    {
+        <p class="help" id="@helpId">@Model.Help</p>
+    }
+</div>

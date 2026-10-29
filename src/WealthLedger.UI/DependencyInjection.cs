@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddSingleton<UiText>();
         services.AddSingleton<LocalUiStartupContext>();
         services.AddScoped<ReadyHouseholdResolver>();
+        services.AddScoped<ScopeChoiceLoader>();
         services.AddSingleton<RecentLedgerPresenter>();
 
         services.AddAntiforgery(

@@ -25,6 +25,33 @@
                 </p>
             </header>
 
+            @if (transaction.ReversalOfTransactionId is not null
+                 || transaction.ReversedByTransactionId is not null)
+            {
+                <ul class="badge-row">
+                    @if (transaction.ReversalOfTransactionId is not null)
+                    {
+                        <li>
+                            <a class="status-badge"
+                               asp-page="/Ledger/Details"
+                               asp-route-transactionId="@transaction.ReversalOfTransactionId">
+                                @Text["Ledger_IsReversalBadge"]
+                            </a>
+                        </li>
+                    }
+                    @if (transaction.ReversedByTransactionId is not null)
+                    {
+                        <li>
+                            <a class="status-badge"
+                               asp-page="/Ledger/Details"
+                               asp-route-transactionId="@transaction.ReversedByTransactionId">
+                                @Text["Ledger_IsReversedBadge"]
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+
             <dl class="fact-grid">
                 <div>
                     <dt>@Text["Ledger_ExecutionDateLabel"]</dt>

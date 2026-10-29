@@ -931,7 +931,7 @@
     <value>Kaydedilmiş geçmiş</value>
   </data>
   <data name="Ledger_Introduction" xml:space="preserve">
-    <value>En yeni kaydedilmiş işlemleri, değişmez ekonomik etkileriyle birlikte gösterir.</value>
+    <value>Kaydedilmiş etkin geçmişi gerçekleşme tarihine göre, en yeniden eskiye arar. Her sonuç değişmez işlem açıklamasını açar.</value>
   </data>
   <data name="Ledger_CurrentContextNotice" xml:space="preserve">
     <value>Adlar ve etkinlik durumları bugünkü ana veri bağlamıdır; işlem zamanındaki adların tarihsel görüntüsü değildir.</value>
@@ -955,7 +955,7 @@
     <value>Kaydedilmiş işlem bulunamadı</value>
   </data>
   <data name="Ledger_EmptyExplanation" xml:space="preserve">
-    <value>Bu hanenin son kaydedilmiş işlem akışı boş.</value>
+    <value>Bu hanede henüz kaydedilmiş işlem yok.</value>
   </data>
   <data name="Ledger_PaginationLabel" xml:space="preserve">
     <value>Defter sayfaları</value>
@@ -2023,4 +2023,38 @@
   <data name="RecordHub_GoldTransferExplanation" xml:space="preserve"><value>Edinim soyunu değiştirmeden seçilen altını iki saklama kapsamı arasında taşıyın.</value></data>
   <data name="RecordHub_GoldTransferAction" xml:space="preserve"><value>Saklama transferi kaydet</value></data>
   <data name="GoldReceipt_TechnicalIds" xml:space="preserve"><value>Teknik kapsam kimlikleri</value></data>
+  <data name="Scope_InactiveMarker" xml:space="preserve"><value>etkin değil</value></data>
+  <data name="Ledger_IsReversalBadge" xml:space="preserve"><value>Ters kayıt · asıl işlemi aç</value></data>
+  <data name="Ledger_IsReversedBadge" xml:space="preserve"><value>Ters çevrildi · ters kaydı aç</value></data>
+  <data name="LedgerSearch_Heading" xml:space="preserve"><value>İşlem ara</value></data>
+  <data name="LedgerSearch_PostedOnlyNotice" xml:space="preserve"><value>Yalnızca kalıcı olarak kaydedilmiş etkin geçmiş aranır. Taslak, emir ve iptal kayıtları normal defter aramasında gösterilmez.</value></data>
+  <data name="LedgerSearch_ExecutedFromLabel" xml:space="preserve"><value>Gerçekleşme tarihi, başlangıç</value></data>
+  <data name="LedgerSearch_ExecutedToLabel" xml:space="preserve"><value>Gerçekleşme tarihi, bitiş</value></data>
+  <data name="LedgerSearch_PortfolioLabel" xml:space="preserve"><value>Portföy</value></data>
+  <data name="LedgerSearch_AccountLabel" xml:space="preserve"><value>Hesap</value></data>
+  <data name="LedgerSearch_InstitutionLabel" xml:space="preserve"><value>Kurum</value></data>
+  <data name="LedgerSearch_AssetLabel" xml:space="preserve"><value>Varlık</value></data>
+  <data name="LedgerSearch_AnyOption" xml:space="preserve"><value>Tümü</value></data>
+  <data name="LedgerSearch_ReferenceLabel" xml:space="preserve"><value>Dış referans içerir</value></data>
+  <data name="LedgerSearch_ReferenceHelp" xml:space="preserve"><value>Büyük/küçük harf duyarsız, en fazla 256 karakter. Bu bir kimlik değil, kolaylık aramasıdır.</value></data>
+  <data name="LedgerSearch_MoreFilters" xml:space="preserve"><value>İşlem türü ve ters kayıt filtreleri</value></data>
+  <data name="LedgerSearch_TypeLegend" xml:space="preserve"><value>İşlem türü: seçilenlerden herhangi biri</value></data>
+  <data name="LedgerSearch_ReversalLegend" xml:space="preserve"><value>Ters kayıt ilişkisi</value></data>
+  <data name="LedgerSearch_Reversal_ANY" xml:space="preserve"><value>Tümü</value></data>
+  <data name="LedgerSearch_Reversal_ORIGINAL_ONLY" xml:space="preserve"><value>Yalnızca asıl işlemler, ters kayıtlar hariç</value></data>
+  <data name="LedgerSearch_Reversal_REVERSAL_ONLY" xml:space="preserve"><value>Yalnızca ters kayıtlar</value></data>
+  <data name="LedgerSearch_Reversal_REVERSED_ORIGINAL" xml:space="preserve"><value>Yalnızca ters çevrilmiş asıl işlemler</value></data>
+  <data name="LedgerSearch_Submit" xml:space="preserve"><value>Ara</value></data>
+  <data name="LedgerSearch_Clear" xml:space="preserve"><value>Filtreleri temizle</value></data>
+  <data name="LedgerSearch_ScopeNotFoundTitle" xml:space="preserve"><value>Seçilen kapsam bulunamadı</value></data>
+  <data name="LedgerSearch_ScopeNotFoundExplanation" xml:space="preserve"><value>Seçilen portföy, hesap, kurum veya varlık bu hanede yok. Boş bir sonuç gösterilmedi.</value></data>
+  <data name="LedgerSearch_ResultsHeading" xml:space="preserve"><value>Sonuçlar</value></data>
+  <data name="LedgerSearch_EmptyFiltered" xml:space="preserve"><value>Bu filtrelerle eşleşen kaydedilmiş işlem yok.</value></data>
+  <data name="LedgerSearch_Error_FilterInvalid" xml:space="preserve"><value>Filtreler geçersiz. Değerleri düzeltip yeniden arayın.</value></data>
+  <data name="LedgerSearch_Validation_Date" xml:space="preserve"><value>Tarih YYYY-AA-GG biçiminde geçerli bir tarih olmalı.</value></data>
+  <data name="LedgerSearch_Validation_DateRange" xml:space="preserve"><value>Bitiş tarihi başlangıç tarihinden önce olamaz.</value></data>
+  <data name="LedgerSearch_Validation_Type" xml:space="preserve"><value>Seçilen işlem türü desteklenmiyor.</value></data>
+  <data name="LedgerSearch_Validation_Selection" xml:space="preserve"><value>Seçim geçersiz. Listeden bir değer seçin.</value></data>
+  <data name="LedgerSearch_Validation_Reference" xml:space="preserve"><value>Referans araması en fazla 256 karakter olabilir.</value></data>
+  <data name="LedgerSearch_Validation_Reversal" xml:space="preserve"><value>Ters kayıt ilişkisi seçimi geçersiz.</value></data>
 </root>

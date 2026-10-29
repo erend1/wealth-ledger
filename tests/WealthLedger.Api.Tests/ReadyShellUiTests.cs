@@ -30,8 +30,11 @@ public sealed partial class ReadyShellUiTests
 
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
             Assert.Equal(HttpStatusCode.MethodNotAllowed, post.StatusCode);
+            // SQL is matched case-sensitively because the M010 Ledger search
+            // renders HTML <select> filters; EF Core emits upper-case SQL.
             Assert.DoesNotContain("Data Source=", html, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("SELECT ", html, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("SELECT ", html, StringComparison.Ordinal);
+            Assert.DoesNotContain(" FROM \"", html, StringComparison.Ordinal);
             Assert.DoesNotContain("SqliteException", html, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(" at WealthLedger", html, StringComparison.OrdinalIgnoreCase);
         }
