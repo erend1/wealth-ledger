@@ -671,7 +671,7 @@ public sealed class OpeningBalanceModel : PageModel
                 : null,
             AccountId = selectedAccount?.ToString("D"),
             AssetId = selectedAsset?.ToString("D"),
-            AsOfDate = CurrentOperatingDate().ToString(
+            AsOfDate = OperatingDate.Today(_timeProvider).ToString(
                 "yyyy-MM-dd",
                 System.Globalization.CultureInfo.InvariantCulture),
             IdempotencyKey = Guid.NewGuid().ToString("D")
@@ -689,13 +689,6 @@ public sealed class OpeningBalanceModel : PageModel
             LotTrackingMode.Required);
         AssetInput.BaseCurrencyCode = Choices.Household.BaseCurrency.Code;
     }
-
-    private DateOnly CurrentOperatingDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    _timeProvider.GetUtcNow(),
-                    _presentationCulture.DisplayTimeZone)
-                .DateTime);
 
     private void AddErrors(
         IReadOnlyList<OpeningBalanceFormError> errors,

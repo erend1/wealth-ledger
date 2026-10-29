@@ -62,7 +62,6 @@ public sealed class ContributionModel : PageModel
     private readonly ValuePresenter _values;
     private readonly UiText _text;
     private readonly TimeProvider _timeProvider;
-    private readonly PresentationCulture _presentationCulture;
 
     public ContributionModel(
         ReadyHouseholdResolver householdResolver,
@@ -71,8 +70,7 @@ public sealed class ContributionModel : PageModel
         RecordContributionUseCase record,
         ValuePresenter values,
         UiText text,
-        TimeProvider timeProvider,
-        PresentationCulture presentationCulture)
+        TimeProvider timeProvider)
     {
         _householdResolver = householdResolver
             ?? throw new ArgumentNullException(nameof(householdResolver));
@@ -88,8 +86,6 @@ public sealed class ContributionModel : PageModel
             ?? throw new ArgumentNullException(nameof(text));
         _timeProvider = timeProvider
             ?? throw new ArgumentNullException(nameof(timeProvider));
-        _presentationCulture = presentationCulture
-            ?? throw new ArgumentNullException(nameof(presentationCulture));
     }
 
     [BindProperty]
@@ -157,7 +153,7 @@ public sealed class ContributionModel : PageModel
             Choices!.CashAssets.Items.Select(x => x.AssetId));
 
         Input.CategoryCode ??= "OTHER";
-        Input.ExecutionDate ??= CurrentLocalDate().ToString("yyyy-MM-dd");
+        Input.ExecutionDate ??= OperatingDate.Today(_timeProvider).ToString("yyyy-MM-dd");
         Input.IdempotencyKey ??= Guid.NewGuid().ToString("D");
 
         return Page();
@@ -400,7 +396,7 @@ public sealed class ContributionModel : PageModel
                 "Fund_Validation_Date");
         }
 
-        if (parsed > CurrentLocalDate())
+        if (parsed > OperatingDate.Today(_timeProvider))
         {
             return Invalid<DateOnly?>(
                 nameof(Input.ExecutionDate),
@@ -440,13 +436,6 @@ public sealed class ContributionModel : PageModel
         ModelState.AddModelError(string.Empty, _text[resourceKey]);
         Response.StatusCode = statusCode;
     }
-
-    private DateOnly CurrentLocalDate()
-        => DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTime(
-                    _timeProvider.GetUtcNow(),
-                    _presentationCulture.DisplayTimeZone)
-                .DateTime);
 
     private async Task<bool> LoadChoicesAsync(
         CancellationToken cancellationToken)
