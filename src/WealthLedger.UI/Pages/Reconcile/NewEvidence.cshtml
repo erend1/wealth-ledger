@@ -1,0 +1,126 @@
+@page "/reconcile/evidence/new"
+@model WealthLedger.UI.Pages.Reconcile.NewEvidenceModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["NewEvidence_Title"];
+    ViewData["ActiveNavigation"] = "Reconcile";
+    var superseding = !string.IsNullOrWhiteSpace(Model.Input.SupersedesEvidenceId);
+}
+
+<article class="flow" aria-labelledby="new-evidence-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Reconcile_Eyebrow"]</p>
+        <h1 id="new-evidence-heading">@Text["NewEvidence_Title"]</h1>
+        <p class="lede">@Text["NewEvidence_Introduction"]</p>
+        <p><a class="card-link" asp-page="/Reconcile/Index">@Text["Reconcile_BackLink"]</a></p>
+    </header>
+
+    @if (Model.HasPageState)
+    {
+        <partial name="_ReconcileState" model="Model" />
+    }
+    else
+    {
+        <partial name="_ValidationSummary" />
+
+        @if (superseding)
+        {
+            <section class="summary-card summary-card--warning flow" role="note">
+                <h2>@Text["NewEvidence_SupersedingTitle"]</h2>
+                <p>@Text["NewEvidence_SupersedingExplanation"]</p>
+                <p>
+                    <a asp-page="/Reconcile/Evidence"
+                       asp-route-evidenceId="@Model.Input.SupersedesEvidenceId">
+                        @Text["NewEvidence_SupersededLink"]
+                    </a>
+                </p>
+            </section>
+        }
+
+        <form class="panel flow"
+              method="post"
+              enctype="multipart/form-data"
+              aria-labelledby="evidence-form-heading">
+            <h2 id="evidence-form-heading">@Text["NewEvidence_FormHeading"]</h2>
+            <input type="hidden" name="Input.IdempotencyKey" value="@Model.Input.IdempotencyKey" />
+            <input type="hidden" name="Input.SupersedesEvidenceId" value="@Model.Input.SupersedesEvidenceId" />
+
+            <fieldset class="choice-grid">
+                <legend id="Input_SourceKind">@Text["Evidence_SourceKindLegend"]</legend>
+                @foreach (var kind in Model.SourceKindChoices)
+                {
+                    var kindId = "Input_SourceKind_" + kind.Code;
+                    <div class="check-field">
+                        <input id="@kindId"
+                               name="Input.SourceKind"
+                               type="radio"
+                               value="@kind.Code"
+                               checked="@(kind.Code == Model.Input.SourceKind)" />
+                        <label for="@kindId">@kind.Label.Text</label>
+                    </div>
+                }
+            </fieldset>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label for="Input_EffectiveDate">@Text["Evidence_EffectiveDateLabel"]</label>
+                    <input id="Input_EffectiveDate"
+                           name="Input.EffectiveDate"
+                           type="date"
+                           required
+                           max="@Model.Today"
+                           aria-describedby="Input_EffectiveDate-help"
+                           value="@Model.Input.EffectiveDate" />
+                    <p class="help" id="Input_EffectiveDate-help">@Text["Evidence_EffectiveDateHelp"]</p>
+                </div>
+                <div class="field">
+                    <label for="Input_Label">@Text["Evidence_LabelLabel"]</label>
+                    <input id="Input_Label"
+                           name="Input.Label"
+                           type="text"
+                           required
+                           maxlength="256"
+                           aria-describedby="Input_Label-help"
+                           value="@Model.Input.Label" />
+                    <p class="help" id="Input_Label-help">@Text["Evidence_LabelHelp"]</p>
+                </div>
+                <partial name="_ScopeSelect" model="@Model.Select("Input.InstitutionId")" />
+                <partial name="_ScopeSelect" model="@Model.Select("Input.AccountId")" />
+                <div class="field">
+                    <label for="Input_Reference">@Text["Evidence_ReferenceLabel"]</label>
+                    <input id="Input_Reference"
+                           name="Input.Reference"
+                           type="text"
+                           maxlength="256"
+                           value="@Model.Input.Reference" />
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="Input_Note">@Text["Evidence_NoteLabel"]</label>
+                <textarea id="Input_Note"
+                          name="Input.Note"
+                          rows="3"
+                          maxlength="2000">@Model.Input.Note</textarea>
+            </div>
+
+            <div class="field">
+                <label for="Attachment">@Text["Evidence_AttachmentInputLabel"]</label>
+                <input id="Attachment"
+                       name="Attachment"
+                       type="file"
+                       accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,application/pdf,image/png,image/jpeg,text/plain,text/csv"
+                       aria-describedby="Attachment-help" />
+                <p class="help" id="Attachment-help">@Text["Evidence_AttachmentHelp"]</p>
+            </div>
+
+            <p class="muted">@Text["NewEvidence_ImmutableNotice"]</p>
+
+            <div class="action-row">
+                <button class="button" type="submit">@Text["NewEvidence_Submit"]</button>
+                <a class="card-link" asp-page="/Reconcile/Index">@Text["Common_Cancel"]</a>
+            </div>
+        </form>
+    }
+</article>

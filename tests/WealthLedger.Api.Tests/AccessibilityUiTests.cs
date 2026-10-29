@@ -219,9 +219,13 @@ public sealed partial class AccessibilityUiTests
         using var factory = new WealthLedgerApiFactory();
         using var client = CreateClient(factory);
         var history = await M010UiTestData.SeedAsync(factory, client);
+        var evidence = await ReconcileEvidenceUiTests.RecordStatementAsync(client, history);
 
         foreach (var path in new[]
                  {
+                     "/reconcile",
+                     "/reconcile/evidence/new",
+                     evidence,
                      "/ledger",
                      $"/ledger?accountId={history.Setup.AccountId:D}&type=BUY",
                      "/assets",

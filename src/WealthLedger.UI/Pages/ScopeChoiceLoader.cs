@@ -35,7 +35,8 @@ public sealed record ScopeSelect(
     string InactiveMarker,
     IReadOnlyList<ScopeOption> Options,
     string? Selected,
-    string? Help = null);
+    string? Help = null,
+    string? Id = null);
 
 /// <summary>
 /// Loads bounded scope choices through the existing M005 navigation use

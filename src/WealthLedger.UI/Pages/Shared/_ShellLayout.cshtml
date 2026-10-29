@@ -38,6 +38,10 @@
                    aria-current="@(activeNavigation == "Assets" ? "page" : null)">
                     @Text["Shell_Navigation_Assets"]
                 </a>
+                <a asp-page="/Reconcile/Index"
+                   aria-current="@(activeNavigation == "Reconcile" ? "page" : null)">
+                    @Text["Shell_Navigation_Reconcile"]
+                </a>
                 <a asp-page="/Record/Index"
                    aria-current="@(activeNavigation == "Record" ? "page" : null)">
                     @Text["Shell_Navigation_Record"]

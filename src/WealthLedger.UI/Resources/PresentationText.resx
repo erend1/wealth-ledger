@@ -2120,4 +2120,130 @@
   <data name="Lots_CertificateLabel" xml:space="preserve"><value>Sertifika referansı</value></data>
   <data name="Lots_PaginationLabel" xml:space="preserve"><value>Lot sayfaları</value></data>
   <data name="Lots_NextPageLink" xml:space="preserve"><value>Sonraki lotlar</value></data>
+  <data name="Shell_Navigation_Reconcile" xml:space="preserve"><value>Mutabakat</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Vazgeç</value></data>
+  <data name="Reconcile_Title" xml:space="preserve"><value>Mutabakat</value></data>
+  <data name="Reconcile_Eyebrow" xml:space="preserve"><value>Kanıt ve karşılaştırma</value></data>
+  <data name="Reconcile_Introduction" xml:space="preserve"><value>Hesap ekstresi, makbuz veya fiziki sayım gibi dış kanıtları saklayın ve defterle tarihli olarak karşılaştırın. Kanıt ve karşılaştırma hiçbir zaman işlem kaydetmez veya değiştirmez.</value></data>
+  <data name="Reconcile_NewEvidenceLink" xml:space="preserve"><value>Yeni kanıt kaydet</value></data>
+  <data name="Reconcile_EvidenceHeading" xml:space="preserve"><value>Kanıt kayıtları</value></data>
+  <data name="Reconcile_EvidenceEmptyTitle" xml:space="preserve"><value>Henüz kanıt kaydı yok</value></data>
+  <data name="Reconcile_EvidenceEmptyExplanation" xml:space="preserve"><value>Bir ekstre veya sayım kaydederek başlayın.</value></data>
+  <data name="Reconcile_EvidencePaginationLabel" xml:space="preserve"><value>Kanıt sayfaları</value></data>
+  <data name="Reconcile_EvidenceNextPage" xml:space="preserve"><value>Daha eski kanıtlar</value></data>
+  <data name="Reconcile_NavigationErrorTitle" xml:space="preserve"><value>Bu mutabakat sayfası açılamadı</value></data>
+  <data name="Reconcile_NavigationErrorExplanation" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz, eski veya bu kapsamla ilişkili değil. İçeriği açıklanmadan reddedildi.</value></data>
+  <data name="Reconcile_UnavailableTitle" xml:space="preserve"><value>Mutabakat bilgileri şu anda okunamıyor</value></data>
+  <data name="Reconcile_UnavailableExplanation" xml:space="preserve"><value>Kayıtlar güvenle okunamadı. Hiçbir özel tanı ayrıntısı gösterilmedi.</value></data>
+  <data name="Reconcile_NotFoundTitle" xml:space="preserve"><value>Kayıt bulunamadı</value></data>
+  <data name="Reconcile_BackLink" xml:space="preserve"><value>Mutabakata dön</value></data>
+  <data name="Evidence_Title" xml:space="preserve"><value>Kanıt kaydı</value></data>
+  <data name="Evidence_SupersededBadge" xml:space="preserve"><value>Yenisiyle değiştirildi</value></data>
+  <data name="Evidence_ContextLabel" xml:space="preserve"><value>Hesap / kurum</value></data>
+  <data name="Evidence_NoContext" xml:space="preserve"><value>Belirtilmedi</value></data>
+  <data name="Evidence_AttachmentLabel" xml:space="preserve"><value>Saklanan dosya</value></data>
+  <data name="Evidence_NoAttachment" xml:space="preserve"><value>Yok; yalnızca üst veri</value></data>
+  <data name="Evidence_LinkCountLabel" xml:space="preserve"><value>Bağlı işlem sayısı</value></data>
+  <data name="Evidence_ReferenceLabel" xml:space="preserve"><value>Kaynak referansı</value></data>
+  <data name="Evidence_ByteSize" xml:space="preserve"><value>{0} bayt</value></data>
+  <data name="NewEvidence_Title" xml:space="preserve"><value>Yeni kanıt kaydet</value></data>
+  <data name="NewEvidence_Introduction" xml:space="preserve"><value>Dış bir kaynağın tarihini ve türünü kaydedin. Dosya saklamak isteğe bağlıdır; yalnızca üst veri içeren kanıt da geçerlidir.</value></data>
+  <data name="NewEvidence_SupersedingTitle" xml:space="preserve"><value>Mevcut bir kaydı değiştiriyorsunuz</value></data>
+  <data name="NewEvidence_SupersedingExplanation" xml:space="preserve"><value>Yeni kayıt eskisinin yerini alır. Eski kayıt ve dosyası okunabilir kalır; hiçbir şey silinmez veya yeniden yazılmaz.</value></data>
+  <data name="NewEvidence_SupersededLink" xml:space="preserve"><value>Değiştirilecek kaydı aç</value></data>
+  <data name="NewEvidence_FormHeading" xml:space="preserve"><value>Kanıt bilgileri</value></data>
+  <data name="NewEvidence_ImmutableNotice" xml:space="preserve"><value>Kayıt kaydedildikten sonra değiştirilemez; bir hata, kaydı yenisiyle değiştirerek düzeltilir. Bir doğrulama hatasından sonra dosyayı yeniden seçmeniz gerekir.</value></data>
+  <data name="NewEvidence_Submit" xml:space="preserve"><value>Kanıtı kaydet</value></data>
+  <data name="Evidence_SourceKindLegend" xml:space="preserve"><value>Kanıt türü</value></data>
+  <data name="Evidence_EffectiveDateLabel" xml:space="preserve"><value>Kanıt tarihi</value></data>
+  <data name="Evidence_EffectiveDateHelp" xml:space="preserve"><value>Ekstrenin veya sayımın geçerli olduğu tarih. Karşılaştırma bu tarih itibarıyla yapılır; bugünden sonra olamaz.</value></data>
+  <data name="Evidence_LabelLabel" xml:space="preserve"><value>Ad</value></data>
+  <data name="Evidence_LabelHelp" xml:space="preserve"><value>Kanıtı tanımanızı sağlayan kısa bir ad, en fazla 256 karakter.</value></data>
+  <data name="Evidence_InstitutionLabel" xml:space="preserve"><value>Kurum (isteğe bağlı)</value></data>
+  <data name="Evidence_AccountLabel" xml:space="preserve"><value>Hesap (isteğe bağlı)</value></data>
+  <data name="Evidence_NoContextOption" xml:space="preserve"><value>Belirtilmedi</value></data>
+  <data name="Evidence_ContextHelp" xml:space="preserve"><value>Kanıt belirli bir kurum veya hesaba aitse seçin. Gözlemler bu kapsamın içinde olmalıdır.</value></data>
+  <data name="Evidence_NoteLabel" xml:space="preserve"><value>Not</value></data>
+  <data name="Evidence_AttachmentInputLabel" xml:space="preserve"><value>Kaynak dosya (isteğe bağlı)</value></data>
+  <data name="Evidence_AttachmentHelp" xml:space="preserve"><value>En fazla 10 MiB. Kabul edilen türler: PDF, PNG, JPEG, UTF-8 düz metin ve UTF-8 CSV. Dosya veritabanının içinde, değiştirilemez olarak ve SHA-256 özetiyle saklanır.</value></data>
+  <data name="Evidence_Validation_SourceKind" xml:space="preserve"><value>Bir kanıt türü seçin.</value></data>
+  <data name="Evidence_Validation_Date" xml:space="preserve"><value>Tarih YYYY-AA-GG biçiminde geçerli bir tarih olmalı.</value></data>
+  <data name="Evidence_Validation_LabelRequired" xml:space="preserve"><value>Ad zorunludur.</value></data>
+  <data name="Evidence_Validation_LabelLength" xml:space="preserve"><value>Ad en fazla 256 karakter olabilir.</value></data>
+  <data name="Evidence_Validation_ReferenceLength" xml:space="preserve"><value>Referans en fazla 256 karakter olabilir.</value></data>
+  <data name="Evidence_Validation_NoteLength" xml:space="preserve"><value>Not en fazla 2000 karakter olabilir.</value></data>
+  <data name="Evidence_Validation_Selection" xml:space="preserve"><value>Seçim geçersiz. Listeden bir değer seçin.</value></data>
+  <data name="Evidence_Validation_AttachmentType" xml:space="preserve"><value>Bu dosya türü saklanamaz. PDF, PNG, JPEG, UTF-8 metin veya UTF-8 CSV seçin.</value></data>
+  <data name="Evidence_Validation_LinkSelection" xml:space="preserve"><value>Bağlamak için en az bir işlem seçin.</value></data>
+  <data name="Evidence_Error_FormExpired" xml:space="preserve"><value>Form geçersiz veya süresi dolmuş. Sayfayı yeniden açıp tekrar deneyin.</value></data>
+  <data name="Evidence_Error_IdempotencyConflict" xml:space="preserve"><value>Bu form daha önce farklı bilgilerle gönderildi. Yeni bir kayıt için sayfayı yeniden açın.</value></data>
+  <data name="Evidence_Error_Persistence" xml:space="preserve"><value>Kanıt güvenle kaydedilemedi veya okunamadı. Hiçbir özel tanı ayrıntısı gösterilmedi.</value></data>
+  <data name="Evidence_LinkResult" xml:space="preserve"><value>{0} işlem bağlandı; {1} işlem zaten bağlıydı.</value></data>
+  <data name="Evidence_SupersededTitle" xml:space="preserve"><value>Bu kayıt yenisiyle değiştirildi</value></data>
+  <data name="Evidence_SupersededExplanation" xml:space="preserve"><value>Eski kayıt denetim geçmişi olarak okunabilir kalır, ancak yeni bağlantı, gözlem veya karşılaştırma almaz.</value></data>
+  <data name="Evidence_OpenReplacementLink" xml:space="preserve"><value>Yeni kaydı aç</value></data>
+  <data name="Evidence_OpenSupersededLink" xml:space="preserve"><value>Bu kaydın değiştirdiği eski kaydı aç</value></data>
+  <data name="Evidence_FactsHeading" xml:space="preserve"><value>Kanıt bilgileri</value></data>
+  <data name="Evidence_CreatedAtLabel" xml:space="preserve"><value>Kaydedilme zamanı</value></data>
+  <data name="Evidence_ImmutableNotice" xml:space="preserve"><value>Bu kayıt değiştirilemez ve silinemez. Yalnızca işlem bağlantıları ve gözlemler ayrı kayıtlar olarak eklenebilir.</value></data>
+  <data name="Evidence_MetadataOnly" xml:space="preserve"><value>Saklanmış dosya yok; bu kayıt yalnızca üst veri içerir.</value></data>
+  <data name="Evidence_FileNameLabel" xml:space="preserve"><value>Dosya adı</value></data>
+  <data name="Evidence_MediaTypeLabel" xml:space="preserve"><value>Tür</value></data>
+  <data name="Evidence_SizeLabel" xml:space="preserve"><value>Boyut</value></data>
+  <data name="Evidence_DownloadLink" xml:space="preserve"><value>Dosyayı indir</value></data>
+  <data name="Evidence_DownloadNotice" xml:space="preserve"><value>Dosya uygulamada açılmaz veya önizlenmez; yalnızca indirilir.</value></data>
+  <data name="Evidence_Sha256Label" xml:space="preserve"><value>SHA-256 özeti</value></data>
+  <data name="Evidence_MediaTypeCodeLabel" xml:space="preserve"><value>Tür kodu</value></data>
+  <data name="Evidence_LinksHeading" xml:space="preserve"><value>Bağlı işlemler</value></data>
+  <data name="Evidence_NoLinks" xml:space="preserve"><value>Bu kanıta bağlı işlem yok.</value></data>
+  <data name="Evidence_LinkHeading" xml:space="preserve"><value>İşlem bağla</value></data>
+  <data name="Evidence_LinkHelp" xml:space="preserve"><value>Kanıt tarihinde veya öncesinde, kanıtın hesabındaki ya da kurumundaki kalıcı olarak kaydedilmiş işlemler listelenir. Bağlamak işlemin kendisini değiştirmez.</value></data>
+  <data name="Evidence_CandidatesUnavailable" xml:space="preserve"><value>Bağlanabilecek işlemler şu anda listelenemiyor.</value></data>
+  <data name="Evidence_NoCandidates" xml:space="preserve"><value>Bu kapsamda bağlanabilecek işlem yok.</value></data>
+  <data name="Evidence_CandidateLegend" xml:space="preserve"><value>Bağlanacak işlemler</value></data>
+  <data name="Evidence_AlreadyLinked" xml:space="preserve"><value>zaten bağlı</value></data>
+  <data name="Evidence_OpenTransactionLink" xml:space="preserve"><value>İşlemi aç</value></data>
+  <data name="Evidence_LinkSubmit" xml:space="preserve"><value>Seçilen işlemleri bağla</value></data>
+  <data name="Evidence_MoreCandidates" xml:space="preserve"><value>Daha eski işlemler</value></data>
+  <data name="Evidence_SupersedeLink" xml:space="preserve"><value>Bu kaydı yenisiyle değiştir</value></data>
+  <data name="Evidence_IdLabel" xml:space="preserve"><value>Kanıt kimliği</value></data>
+  <data name="M010Error_EVIDENCE_INPUT_INVALID" xml:space="preserve"><value>Kanıt bilgileri geçersiz. Zorunlu alanları ve uzunluk sınırlarını kontrol edin.</value></data>
+  <data name="M010Error_EVIDENCE_EFFECTIVE_DATE_IN_FUTURE" xml:space="preserve"><value>Kanıt tarihi bugünden sonra olamaz.</value></data>
+  <data name="M010Error_EVIDENCE_HOUSEHOLD_NOT_FOUND" xml:space="preserve"><value>Hane bulunamadı.</value></data>
+  <data name="M010Error_EVIDENCE_CONTEXT_NOT_FOUND" xml:space="preserve"><value>Seçilen kurum veya hesap bu hanede bulunamadı.</value></data>
+  <data name="M010Error_EVIDENCE_CONTEXT_MISMATCH" xml:space="preserve"><value>Seçilen hesap seçilen kuruma ait değil.</value></data>
+  <data name="M010Error_EVIDENCE_TRANSACTION_LINK_INVALID" xml:space="preserve"><value>Seçilen işlemlerden biri bu hanede kalıcı olarak kaydedilmiş bir işlem değil.</value></data>
+  <data name="M010Error_EVIDENCE_TRANSACTION_LINK_LIMIT_EXCEEDED" xml:space="preserve"><value>Bağlantı sınırı aşıldı: bir kanıt en fazla 500 işleme, tek seferde en fazla 100 işleme bağlanabilir.</value></data>
+  <data name="M010Error_EVIDENCE_SUPERSESSION_INVALID" xml:space="preserve"><value>Değiştirilecek kayıt bulunamadı veya zaten başka bir kayıtla değiştirilmiş.</value></data>
+  <data name="M010Error_EVIDENCE_SUPERSEDED" xml:space="preserve"><value>Bu kanıt kaydı yenisiyle değiştirildi; yeni bağlantı veya gözlem yalnızca yeni kayda eklenebilir.</value></data>
+  <data name="M010Error_EVIDENCE_NOT_FOUND" xml:space="preserve"><value>Kanıt kaydı bu hanede bulunamadı.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_EMPTY" xml:space="preserve"><value>Seçilen dosya boş.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_TOO_LARGE" xml:space="preserve"><value>Dosya 10 MiB sınırını aşıyor.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_FILE_NAME_INVALID" xml:space="preserve"><value>Dosya adı kullanılamıyor. Daha kısa, düz bir dosya adı kullanın.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_TYPE_MISMATCH" xml:space="preserve"><value>Dosya uzantısı veya içeriği bildirilen türle uyuşmuyor.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_CONTENT_REJECTED" xml:space="preserve"><value>Dosya içeriği kabul edilmedi. Yalnızca PDF, PNG, JPEG, UTF-8 metin ve UTF-8 CSV saklanabilir.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_NOT_FOUND" xml:space="preserve"><value>Bu kanıt kaydında saklanmış dosya yok.</value></data>
+  <data name="M010Error_EVIDENCE_ATTACHMENT_INTEGRITY_FAILED" xml:space="preserve"><value>Saklanan dosyanın bütünlük denetimi başarısız oldu; dosya verilmedi.</value></data>
+  <data name="M010Error_EVIDENCE_PAGE_SIZE_INVALID" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz.</value></data>
+  <data name="M010Error_EVIDENCE_CURSOR_INVALID" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz veya eski.</value></data>
+  <data name="M010Error_EVIDENCE_CURSOR_SCOPE_MISMATCH" xml:space="preserve"><value>Sayfalama bağlantısı bu kapsamla ilişkili değil.</value></data>
+  <data name="M010Error_EVIDENCE_OBSERVATION_INVALID" xml:space="preserve"><value>Gözlem geçersiz. Miktarı, toleransı ve parça sayısını kontrol edin.</value></data>
+  <data name="M010Error_EVIDENCE_OBSERVATION_SCOPE_NOT_FOUND" xml:space="preserve"><value>Seçilen portföy, hesap veya varlık bu hanede bulunamadı.</value></data>
+  <data name="M010Error_EVIDENCE_OBSERVATION_SCOPE_MISMATCH" xml:space="preserve"><value>Gözlem kapsamı kanıtın hesabı veya kurumuyla uyuşmuyor ya da parça sayısı fiziki altın dışında bir varlık için girildi.</value></data>
+  <data name="M010Error_EVIDENCE_OBSERVATION_CONFLICT" xml:space="preserve"><value>Bu kapsam için bu kanıtta farklı bir gözlem zaten var. Düzeltmek için kanıtı yenisiyle değiştirin.</value></data>
+  <data name="M010Error_EVIDENCE_OBSERVATION_LIMIT_EXCEEDED" xml:space="preserve"><value>Bir kanıt kaydı en fazla 100 gözlem taşıyabilir.</value></data>
+  <data name="M010Error_RECONCILIATION_HOUSEHOLD_NOT_FOUND" xml:space="preserve"><value>Hane bulunamadı.</value></data>
+  <data name="M010Error_RECONCILIATION_EVIDENCE_NOT_FOUND" xml:space="preserve"><value>Kanıt kaydı bu hanede bulunamadı.</value></data>
+  <data name="M010Error_RECONCILIATION_EVIDENCE_SUPERSEDED" xml:space="preserve"><value>Değiştirilmiş bir kanıt için yeni karşılaştırma çalıştırılamaz; yeni kaydı kullanın.</value></data>
+  <data name="M010Error_RECONCILIATION_NO_OBSERVATIONS" xml:space="preserve"><value>Karşılaştırmadan önce en az bir gözlem girin.</value></data>
+  <data name="M010Error_RECONCILIATION_ARITHMETIC_OVERFLOW" xml:space="preserve"><value>Defter miktarı güvenle hesaplanamadı; karşılaştırma yapılmadı.</value></data>
+  <data name="M010Error_RECONCILIATION_RUN_NOT_FOUND" xml:space="preserve"><value>Karşılaştırma bu hanede bulunamadı.</value></data>
+  <data name="M010Error_RECONCILIATION_ITEM_NOT_FOUND" xml:space="preserve"><value>Karşılaştırma kalemi bulunamadı.</value></data>
+  <data name="M010Error_RECONCILIATION_ITEM_MATCHED" xml:space="preserve"><value>Eşleşen bir kalem çözümlenmez.</value></data>
+  <data name="M010Error_RECONCILIATION_ITEM_ALREADY_RESOLVED" xml:space="preserve"><value>Bu kalem farklı bir çözümle zaten kapatıldı.</value></data>
+  <data name="M010Error_RECONCILIATION_RESOLUTION_INVALID" xml:space="preserve"><value>Çözüm geçersiz. Belgelenmiş istisna için en fazla 2000 karakterlik bir açıklama zorunludur.</value></data>
+  <data name="M010Error_RECONCILIATION_CORRECTION_INVALID" xml:space="preserve"><value>Düzeltici işlem bu hanede kalıcı olarak kaydedilmiş bir işlem olmalıdır.</value></data>
+  <data name="M010Error_RECONCILIATION_PAGE_SIZE_INVALID" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz.</value></data>
+  <data name="M010Error_RECONCILIATION_CURSOR_INVALID" xml:space="preserve"><value>Sayfalama bağlantısı geçersiz veya eski.</value></data>
+  <data name="M010Error_RECONCILIATION_CURSOR_SCOPE_MISMATCH" xml:space="preserve"><value>Sayfalama bağlantısı bu kapsamla ilişkili değil.</value></data>
 </root>

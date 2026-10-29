@@ -1,0 +1,100 @@
+@page "/reconcile"
+@model WealthLedger.UI.Pages.Reconcile.IndexModel
+@inject UiText Text
+@{
+    Layout = "/Pages/Shared/_ShellLayout.cshtml";
+    ViewData["Title"] = Text["Reconcile_Title"];
+    ViewData["ActiveNavigation"] = "Reconcile";
+}
+
+<article class="flow" aria-labelledby="reconcile-heading">
+    <header class="page-heading">
+        <p class="eyebrow">@Text["Reconcile_Eyebrow"]</p>
+        <h1 id="reconcile-heading">@Text["Reconcile_Title"]</h1>
+        <p class="lede">@Text["Reconcile_Introduction"]</p>
+    </header>
+
+    @if (Model.HasPageState)
+    {
+        <partial name="_ReconcileState" model="Model" />
+    }
+    else
+    {
+        <p class="context-line">
+            @Text["Ready_CurrentHouseholdLabel"]
+            <strong>@Model.HouseholdName</strong>
+        </p>
+
+        <p>
+            <a class="button" asp-page="/Reconcile/NewEvidence">@Text["Reconcile_NewEvidenceLink"]</a>
+        </p>
+
+        <section class="flow" aria-labelledby="evidence-list-heading">
+            <div class="section-heading">
+                <h2 id="evidence-list-heading">@Text["Reconcile_EvidenceHeading"]</h2>
+            </div>
+
+            @if (Model.Evidence.Count == 0)
+            {
+                <div class="summary-card flow" role="status">
+                    <p><strong>@Text["Reconcile_EvidenceEmptyTitle"]</strong></p>
+                    <p>@Text["Reconcile_EvidenceEmptyExplanation"]</p>
+                </div>
+            }
+
+            <ol class="transaction-list">
+                @foreach (var evidence in Model.Evidence)
+                {
+                    <li class="transaction-card flow">
+                        <header class="transaction-card__header">
+                            <div>
+                                <h3>
+                                    <a asp-page="/Reconcile/Evidence"
+                                       asp-route-evidenceId="@evidence.EvidenceId">
+                                        @evidence.Label
+                                    </a>
+                                </h3>
+                                <p class="muted">@evidence.SourceKind.Text · @evidence.EffectiveDate.Text</p>
+                            </div>
+                            @if (evidence.SupersededByEvidenceId is not null)
+                            {
+                                <p><span class="status-badge status-badge--stale">@Text["Evidence_SupersededBadge"]</span></p>
+                            }
+                        </header>
+                        <dl class="fact-grid">
+                            <div>
+                                <dt>@Text["Evidence_ContextLabel"]</dt>
+                                <dd>@(evidence.Context ?? Text["Evidence_NoContext"])</dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Evidence_AttachmentLabel"]</dt>
+                                <dd>@(evidence.AttachmentType?.Text ?? Text["Evidence_NoAttachment"])</dd>
+                            </div>
+                            <div>
+                                <dt>@Text["Evidence_LinkCountLabel"]</dt>
+                                <dd>@evidence.TransactionLinkCount</dd>
+                            </div>
+                            @if (evidence.Reference is not null)
+                            {
+                                <div>
+                                    <dt>@Text["Evidence_ReferenceLabel"]</dt>
+                                    <dd>@evidence.Reference</dd>
+                                </div>
+                            }
+                        </dl>
+                    </li>
+                }
+            </ol>
+
+            <nav class="pagination" aria-label="@Text["Reconcile_EvidencePaginationLabel"]">
+                @if (Model.NextEvidenceCursor is not null)
+                {
+                    <a asp-page="/Reconcile/Index"
+                       asp-route-evidenceCursor="@Model.NextEvidenceCursor">
+                        @Text["Reconcile_EvidenceNextPage"]
+                    </a>
+                }
+            </nav>
+        </section>
+    }
+</article>

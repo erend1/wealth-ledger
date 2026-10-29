@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<ScopeChoiceLoader>();
         services.AddSingleton<RecentLedgerPresenter>();
         services.AddSingleton<Pages.Assets.InventoryPresenter>();
+        services.AddSingleton<Pages.Reconcile.EvidencePresenter>();
 
         services.AddAntiforgery(
             options =>

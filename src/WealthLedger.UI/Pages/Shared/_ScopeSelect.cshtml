@@ -1,10 +1,11 @@
 @model WealthLedger.UI.Pages.ScopeSelect
 @{
-    var helpId = Model.Help is null ? null : Model.Name + "-help";
+    var id = Model.Id ?? Model.Name;
+    var helpId = Model.Help is null ? null : id + "-help";
 }
 <div class="field">
-    <label for="@Model.Name">@Model.Label</label>
-    <select id="@Model.Name"
+    <label for="@id">@Model.Label</label>
+    <select id="@id"
             name="@Model.Name"
             aria-describedby="@helpId">
         <option value="">@Model.EmptyOptionLabel</option>
