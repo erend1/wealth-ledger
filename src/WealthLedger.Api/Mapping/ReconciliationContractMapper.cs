@@ -75,14 +75,14 @@ internal static class ReconciliationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(ReconciliationMethod value)
+    internal static string ToCode(ReconciliationMethod value)
         => value switch
         {
             ReconciliationMethod.ExactScopeQuantityAsOf => "EXACT_SCOPE_QUANTITY_AS_OF",
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(ReconciliationComparisonStatus value)
+    internal static string ToCode(ReconciliationComparisonStatus value)
         => value switch
         {
             ReconciliationComparisonStatus.Matched => "MATCHED",
@@ -90,7 +90,7 @@ internal static class ReconciliationContractMapper
             _ => throw Unsupported(value)
         };
 
-    private static string ToCode(ReconciliationResolutionState value)
+    internal static string ToCode(ReconciliationResolutionState value)
         => value switch
         {
             ReconciliationResolutionState.Open => "OPEN",

@@ -274,6 +274,125 @@ fieldset.panel > legend,
     font-size: 0.88rem;
 }
 
+/*
+ * M010 comparison, resolution and freshness states. Each state carries its own
+ * text and border style, so none depends on colour alone and all stay distinct
+ * in forced-colors mode.
+ */
+.status-badge {
+    display: inline-flex;
+    min-height: 1.9rem;
+    align-items: center;
+    padding: 0.2rem 0.65rem;
+    border: 0.125rem solid var(--line);
+    border-radius: 999rem;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.9rem;
+    font-weight: 750;
+}
+
+.status-badge--matched {
+    border-color: var(--accent);
+    background: var(--success-bg);
+    color: var(--accent-dark);
+}
+
+.status-badge--out-of-tolerance {
+    border-style: double;
+    border-width: 0.25rem;
+    border-color: var(--danger);
+    background: #fff2f1;
+    color: var(--danger);
+}
+
+.status-badge--open {
+    border-style: dashed;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.status-badge--corrected {
+    border-color: var(--accent-dark);
+    color: var(--accent-dark);
+}
+
+.status-badge--exception {
+    border-style: dotted;
+    border-color: var(--warning);
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.status-badge--stale {
+    border-style: dashed;
+    border-color: var(--warning);
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.filter-panel {
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+    border: 0.0625rem solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.filter-panel > summary {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 0.25rem 1rem;
+    padding: 0;
+    margin: 0;
+    border: 0;
+}
+
+.choice-grid > legend {
+    margin-block-end: 0.35rem;
+    font-weight: 700;
+}
+
+.choice-grid .check-field label {
+    font-weight: 400;
+}
+
+.scope-group {
+    display: grid;
+    gap: 1rem;
+}
+
+.scope-group > h2,
+.scope-group > h3 {
+    margin: 0;
+}
+
+.quantity-figure {
+    font-size: 1.2rem;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+}
+
+dd {
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 36rem) {
     .app-header__inner {
         min-height: 3.5rem;
@@ -328,5 +447,9 @@ fieldset.panel > legend,
 
     .primary-nav a[aria-current="page"] {
         border-bottom-color: Highlight;
+    }
+
+    .status-badge {
+        border-color: CanvasText;
     }
 }

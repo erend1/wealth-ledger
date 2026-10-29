@@ -1,10 +1,13 @@
 using WealthLedger.Api.Mapping;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.Navigation;
+using WealthLedger.Application.Reconciliation;
 using WealthLedger.Domain.Assets;
+using WealthLedger.Domain.Evidence;
 using WealthLedger.Domain.Ledger;
 using WealthLedger.Domain.Lots;
 using WealthLedger.Domain.Portfolios;
+using WealthLedger.Domain.Reconciliation;
 using WealthLedger.UI.Presentation;
 
 namespace WealthLedger.UI.Tests.Presentation;
@@ -204,6 +207,62 @@ public sealed class StableCodeContractTests
         AssertDescribed(
             Enum.GetValues<CostBasisStatus>(),
             presenter.StableCode);
+        AssertDescribed(
+            Enum.GetValues<EvidenceSourceKind>(),
+            presenter.StableCode);
+        AssertDescribed(
+            Enum.GetValues<EvidenceMediaType>(),
+            presenter.StableCode);
+        AssertDescribed(
+            Enum.GetValues<ReconciliationMethod>(),
+            presenter.StableCode);
+        AssertDescribed(
+            Enum.GetValues<ReconciliationComparisonStatus>(),
+            presenter.StableCode);
+        AssertDescribed(
+            Enum.GetValues<ReconciliationResolutionState>(),
+            presenter.StableCode);
+    }
+
+    [Fact]
+    public void EvidenceAndReconciliationCodes_MatchTheApiTransportCodes()
+    {
+        foreach (var kind in Enum.GetValues<EvidenceSourceKind>())
+        {
+            Assert.Equal(
+                EvidenceContractMapper.ToCode(kind),
+                StableCodes.ToCode(kind));
+        }
+
+        foreach (var mediaType in Enum.GetValues<EvidenceMediaType>())
+        {
+            Assert.Equal(
+                EvidenceContractMapper.ToCode(mediaType),
+                StableCodes.ToCode(mediaType));
+        }
+
+        foreach (var method in Enum.GetValues<ReconciliationMethod>())
+        {
+            Assert.Equal(
+                ReconciliationContractMapper.ToCode(method),
+                StableCodes.ToCode(method));
+        }
+
+        foreach (var status in
+                 Enum.GetValues<ReconciliationComparisonStatus>())
+        {
+            Assert.Equal(
+                ReconciliationContractMapper.ToCode(status),
+                StableCodes.ToCode(status));
+        }
+
+        foreach (var state in
+                 Enum.GetValues<ReconciliationResolutionState>())
+        {
+            Assert.Equal(
+                ReconciliationContractMapper.ToCode(state),
+                StableCodes.ToCode(state));
+        }
     }
 
     [Fact]

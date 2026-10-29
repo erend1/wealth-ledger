@@ -339,6 +339,54 @@
   <data name="Code_CostBasisStatus_NOT_APPLICABLE" xml:space="preserve">
     <value>Uygulanamaz</value>
   </data>
+  <data name="Code_EvidenceSourceKind_STATEMENT" xml:space="preserve">
+    <value>Hesap ekstresi</value>
+  </data>
+  <data name="Code_EvidenceSourceKind_RECEIPT" xml:space="preserve">
+    <value>Makbuz veya dekont</value>
+  </data>
+  <data name="Code_EvidenceSourceKind_PHYSICAL_COUNT" xml:space="preserve">
+    <value>Fiziki sayım</value>
+  </data>
+  <data name="Code_EvidenceSourceKind_CONTRACT_OR_CERTIFICATE" xml:space="preserve">
+    <value>Sözleşme veya sertifika</value>
+  </data>
+  <data name="Code_EvidenceSourceKind_OTHER" xml:space="preserve">
+    <value>Diğer kanıt</value>
+  </data>
+  <data name="Code_EvidenceMediaType_PDF" xml:space="preserve">
+    <value>PDF belgesi</value>
+  </data>
+  <data name="Code_EvidenceMediaType_PNG" xml:space="preserve">
+    <value>PNG görseli</value>
+  </data>
+  <data name="Code_EvidenceMediaType_JPEG" xml:space="preserve">
+    <value>JPEG görseli</value>
+  </data>
+  <data name="Code_EvidenceMediaType_PLAIN_TEXT" xml:space="preserve">
+    <value>UTF-8 düz metin</value>
+  </data>
+  <data name="Code_EvidenceMediaType_CSV" xml:space="preserve">
+    <value>UTF-8 CSV tablosu</value>
+  </data>
+  <data name="Code_ReconciliationMethod_EXACT_SCOPE_QUANTITY_AS_OF" xml:space="preserve">
+    <value>Kanıt tarihindeki kesin kapsam miktarı karşılaştırması</value>
+  </data>
+  <data name="Code_ReconciliationComparisonStatus_MATCHED" xml:space="preserve">
+    <value>Eşleşti</value>
+  </data>
+  <data name="Code_ReconciliationComparisonStatus_OUT_OF_TOLERANCE" xml:space="preserve">
+    <value>Tolerans dışı</value>
+  </data>
+  <data name="Code_ReconciliationResolutionState_OPEN" xml:space="preserve">
+    <value>Açık</value>
+  </data>
+  <data name="Code_ReconciliationResolutionState_CORRECTED_BY_TRANSACTION" xml:space="preserve">
+    <value>İşlemle düzeltildi</value>
+  </data>
+  <data name="Code_ReconciliationResolutionState_DOCUMENTED_EXCEPTION" xml:space="preserve">
+    <value>Belgelenmiş istisna</value>
+  </data>
   <data name="Code_LocalDatabaseCompatibility_UNINITIALIZED" xml:space="preserve">
     <value>Başlatılmamış</value>
   </data>
