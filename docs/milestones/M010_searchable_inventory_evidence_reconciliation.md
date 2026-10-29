@@ -32,9 +32,10 @@ explicit milestone amendment and ADR before it is adopted.
 Implementation is tracked by parent issue #19 and child issues #20-#26. It
 began on 2026-10-02, when #20 merged via PR #27; this In Progress status was
 recorded on 2026-10-26. #21 merged via PR #28 on 2026-10-27, #22 merged via
-PR #32 on 2026-10-28, #23 merged via PR #34 on 2026-10-28, and #24 merged via
-PR #36 on 2026-10-29; #25-#26 remain open. The start adds no M010 Verified
-behavior; implementation evidence is recorded only after it is proved.
+PR #32 on 2026-10-28, #23 merged via PR #34 on 2026-10-28, #24 merged via
+PR #36 on 2026-10-29, and #25 merged via PR #39 on 2026-10-29; #26 remains
+open. The start adds no M010 Verified behavior; implementation evidence is
+recorded only after it is proved.
 
 ## Objective
 
