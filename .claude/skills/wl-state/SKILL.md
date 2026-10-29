@@ -107,6 +107,8 @@ below use Bash quoting.
       - **Parent issue:** the `[MNNN]` issue with no `Parent:` line, found with
         `gh issue list --state all --search "\"[MNNN]\" in:title" --json number,title,body --jq '[.[] | select(.body | test("(?m)^Parent:") | not) | .number]'`.
         For M010 this prints `[19]`. Record the parent in the start commit.
+        Collect its state and its "## Definition of done" alongside the child
+        issues, with `gh issue view <parent> --json state,body`.
       - **Child issues:**
         `gh issue list --state all --search "\"Parent: #<parent>\" in:body" --json number,state,title`.
       - **The PR for each child.** Collect candidates from three lookups:
@@ -149,6 +151,10 @@ Mark each row `OK` or `DRIFT`.
   `git merge-base --is-ancestor <sha> origin/main`.
 - **Issues and PRs match.** Merged child PRs and closed child issues match
   exactly, and no open child issue has a merged PR.
+- **Parent issue.** For every milestone with a parent issue, the parent is open
+  while the milestone is In Progress and closed once it is Verified. An open
+  parent of a Verified milestone, or a closed parent of an unverified one, is
+  DRIFT.
 - **README count.** The README checkpoint sentence names the same milestone and
   counts as PROJECT_STATE's checkpoint, or it has been replaced by a pointer.
 - **Migrations and ADRs.** The migration list matches the folder, and the ADR
@@ -238,9 +244,13 @@ Edit nothing. If the owner approves fixes in this same session, continue as
    test name, a PR, a doc section, or a recovery step done with `/safe-lab`.
    - Also check every Definition-of-done item in `docs/milestones/README.md`,
      and that the canonical docs agree with the code.
-   - If anything is unproven or disagrees, stop. Report it, and propose a
-     worker issue where code or canonical docs must change. Do not mark the
-     milestone Verified.
+   - This step proves the parent issue's own "## Definition of done". For #19
+     that is: all 27 acceptance criteria pass, and the canonical docs agree
+     with the code.
+   - If anything is unproven or disagrees, stop and report it. Do not mark the
+     milestone Verified; the parent stays open. Propose a new child issue with
+     `Parent: #<parent>`, not a checkpoint, for the code or canonical docs that
+     must change.
 3. Make one commit, `docs(state): record verified MNNN checkpoint`. It changes:
    - **PROJECT_STATE:**
      - `As of` set to today;
@@ -273,8 +283,10 @@ Edit nothing. If the owner approves fixes in this same session, continue as
    Show the list. Create issues only after the owner approves.
 5. Propose which auto-memory notes to delete.
 6. Ask before pushing and before creating the PR. The PR title is the commit
-   subject. Push with `git push -u origin docs/mNNN-checkpoint`, and create
-   the PR with `gh pr create --head docs/mNNN-checkpoint`.
+   subject. The body carries `Closes #<parent>`, so the merge closes the
+   parent issue; CLAUDE.md "Git and GitHub" allows a closing keyword only in
+   that line. Push with `git push -u origin docs/mNNN-checkpoint`, and create
+   the PR with `gh pr create --head docs/mNNN-checkpoint --body-file <file>`.
 
 ## 6. `repair <slug>`
 
