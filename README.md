@@ -30,7 +30,7 @@ See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint a
 | [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Concise verified repository checkpoint |
 | [docs/UX_MVP.md](docs/UX_MVP.md) | Proposed broader interaction model and its implemented M006-M010 subsets |
 | [docs/DATA_CAPTURE.md](docs/DATA_CAPTURE.md) | Source facts each financial workflow should preserve |
-| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements and implemented M004-M007 operating boundaries |
+| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements, implemented M004-M007 operating boundaries, and the M010 evidence boundary |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Canonical database, backup, restore, migration, and recovery guide |
 | [docs/milestones/README.md](docs/milestones/README.md) | Milestone statuses, template, agent prompts, and definition of done |
 | [docs/decisions/README.md](docs/decisions/README.md) | Accepted architectural decisions |

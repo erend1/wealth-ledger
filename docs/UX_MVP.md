@@ -394,13 +394,18 @@ result must be retrieved by its retry identity.
 - Layouts reflow at narrow and desktop widths and at a 200%-equivalent effective
   viewport. CSS respects reduced-motion and forced-color preferences.
 - Critical first-run, Ledger navigation, opening, Fund, and physical-gold
-  review/post/receipt/reversal paths, and the M010 Ledger search, Assets
-  drilldown and Reconcile paths, pass in real Chromium with JavaScript
-  disabled and with keyboard operation. They include linked financial
+  review/post/receipt/reversal paths pass in real Chromium with JavaScript
+  disabled and with keyboard-only operation. They include linked financial
   validation, double-submit/retry, restart readback, narrow and
-  200%-equivalent reflow, reduced motion, and forced colors. These focused
-  checks do not claim general WCAG conformance or replace assistive-technology
-  review.
+  200%-equivalent reflow, reduced motion, and forced colors.
+- The M010 Ledger search, Assets drilldown and Reconcile paths pass in real
+  Chromium with JavaScript disabled, at narrow and 200%-equivalent widths,
+  with reduced motion and forced colors, and read back after a restart. The
+  search, the Assets filter and drilldown links, one observation and the
+  documented exception are operated by keyboard; the other steps use the
+  pointer. Their validation and retry behavior is covered by host tests.
+- These focused checks do not claim general WCAG conformance or replace
+  assistive-technology review.
 - Confirmation text and errors use plain, sanitized language.
 - Screenshots and diagnostic exports default to hiding household names,
   references, notes, and exact values unless explicitly included.
@@ -439,8 +444,10 @@ history, follow a derived position to its lots and transactions, record
 evidence with an optional retained file, record exact observations, run a dated
 reconciliation, and resolve a difference by a documented exception or a Posted
 correction, without any page posting or editing history. That outcome is
-implemented and covered by a real-browser journey and a fresh-process recovery
-drill; `docs/PROJECT_STATE.md` records whether M010 is Verified.
+implemented and covered by host tests, a real-browser journey and a
+fresh-process recovery drill; the journey resolves by documented exception,
+and host tests cover the Posted correction. `docs/PROJECT_STATE.md` records
+whether M010 is Verified.
 
 Valuation, market observations, and planning remain in later milestones.
 
@@ -610,20 +617,23 @@ with JavaScript disabled, at a narrow viewport and its 200%-equivalent reflow,
 with reduced motion and forced colors:
 
 - a Ledger search that combines asset, account and reference filters;
-- an Assets position followed to its Ledger search, its lot and the lot's
-  acquisition transaction;
+- Assets filtered to one account, and a position followed to its Ledger
+  search, its lot and the lot's acquisition transaction;
 - evidence recorded with an in-memory synthetic PDF and linked to a candidate
   transaction;
 - one matching and one out-of-tolerance gold count, each through the review
   step;
 - a run, and a documented exception on the out-of-tolerance item.
 
-The search, one observation and the exception are submitted by keyboard. The
-retained file is downloaded through Chromium, never shown inline, and the
-download is deleted at once. After a restart the run, its badges and
-explanation, the evidence, its digest and its observations read back exactly.
-The journey makes only loopback requests and leaves no screenshot, trace,
-download, database or backup behind.
+The search, the Assets filter and drilldown links, one observation and the
+exception are operated by keyboard. The retained file is downloaded through
+Chromium, never shown inline, and the download is deleted at once. After a
+restart the run items, the observations and the transaction links render
+exactly as before, and the evidence keeps its file name, digest and download
+headers. The journey makes only loopback requests and leaves no screenshot,
+trace, download, database or backup behind. Correction by a Posted
+transaction, staleness after a reversal, validation and retry are covered by
+host tests rather than this journey.
 
 A separate process test records evidence, observations, a run and a
 resolution through the JSON API of a live host. It then backs up, verifies

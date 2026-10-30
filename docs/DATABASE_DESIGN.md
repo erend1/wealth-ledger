@@ -843,11 +843,12 @@ races, every direct-SQL guard, the query plans, backup, verify and stage
 readback, and 009 -> 010 -> 009 -> 010.
 
 M010 as a whole is also tested from M009: migrations 009 and 010 applied to a
-migration-008 database, removed together, and applied again. Each step keeps
-the exact migration-008 schema when back at 008, every ledger row, the M005
-point positions, the M009 custody inventory and the M009 physical-gold piece
-guard, and a reconciliation over the same history gives the same result after
-the second apply. A process-level drill backs up, verifies and stages a
+migration-008 database, removed together, and applied again. Back at 008 the
+schema is exactly the migration-008 schema; at 010 every object that existed
+before M010 keeps its exact definition. Every step keeps every ledger row, the
+M005 point positions and the M009 custody inventory, the M009 physical-gold
+piece guard still refuses, and a reconciliation over the same history gives
+the same result after each apply. A process-level drill backs up, verifies and stages a
 database whose evidence, retained file, observations, run and resolution were
 recorded through the HTTP API, and a fresh host over the staged copy serves
 every M010 read route exactly as the live host did.

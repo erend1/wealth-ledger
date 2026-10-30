@@ -206,8 +206,8 @@ routes.
 - One real-Chromium journey records evidence with an in-memory synthetic file
   and reconciles it. It makes only loopback requests, deletes its one download
   at once, and leaves no screenshot, trace, download, database or backup
-  behind. Its host output holds no paths, labels, references, file names,
-  explanations, digests or SQL.
+  behind. Its host output holds no database or backup path, label,
+  reference, file name, explanation, digest or SQL.
 
 ### M010 recovery evidence
 
@@ -217,10 +217,12 @@ then creates and independently verifies a `.wlbackup`, stages it to a separate
 target, and starts a fresh host over the staged copy. Every M010 read route,
 including ledger search and position and lot inventory, returns exactly what
 the live host served, and the downloaded file keeps its length, SHA-256,
-attachment disposition and `nosniff` header. Neither host's output holds paths, household text, references, file
-names, digests or SQL. A real-SQLite test also proves that migrations 009 and
-010 can be removed and applied again over M009 history without changing the
-M009 schema, ledger rows, derivations or guards.
+attachment disposition and `nosniff` header. Once each host has exited, its
+output holds no path under the test root, household text, references, file
+name, digest, retry key or SQL. A real-SQLite test also proves that migrations
+009 and 010 can be removed and applied again over M009 history without
+changing any pre-M010 schema object, ledger row or derivation, and that the
+M009 physical-gold piece guard still refuses throughout.
 
 ## Remaining operational boundaries
 
