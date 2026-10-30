@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using WealthLedger.Api.Contracts;
 using WealthLedger.Application.CoreLedger;
 using WealthLedger.Application.LocalData;
@@ -277,6 +279,120 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         Assert.DoesNotContain("RECOVERY-GOLD", process.CombinedOutput);
         Assert.DoesNotContain("Data Source=", process.CombinedOutput);
         Assert.DoesNotContain("SELECT ", process.CombinedOutput);
+    }
+
+    [Fact]
+    public async Task
+        LocalHosting_M010EvidenceAndReconciliationBackupReadsBackFromFreshProcess()
+    {
+        await PrepareReadyWorkspaceAsync();
+        var ledger = await CreateM010RecoveryLedgerAsync();
+        M010RecoveryRecords records;
+        M010Readback live;
+
+        // Evidence, its retained file, observations, the run and its
+        // resolution are created through the shipped API of a live host.
+        await using (var process = ApiProcess.Start(
+                         _databasePath,
+                         _backupDirectory))
+        {
+            using var client = new HttpClient
+            {
+                BaseAddress = new Uri(await process.WaitForListeningUrlAsync())
+            };
+            records = await RecordM010EvidenceAndReconciliationAsync(
+                client,
+                ledger);
+            live = await ReadM010StateAsync(client, ledger, records);
+            AssertM010OutputIsPrivate(process.CombinedOutput, _databasePath);
+        }
+
+        var restoredDatabasePath = await BackUpVerifyAndStageAsync(
+            "m010-restore-drill");
+
+        await using var fresh = ApiProcess.Start(
+            restoredDatabasePath,
+            _backupDirectory);
+        using var freshClient = new HttpClient
+        {
+            BaseAddress = new Uri(await fresh.WaitForListeningUrlAsync())
+        };
+        var restored = await ReadM010StateAsync(freshClient, ledger, records);
+
+        // Every M010 readback is byte-for-byte what the live host served.
+        Assert.Equal(live, restored);
+
+        var evidence = Deserialize<EvidenceDetailResponse>(restored.Evidence);
+        Assert.Equal("Synthetic recovery statement", evidence.Label);
+        Assert.Equal(
+            new[] { ledger.PurchaseTransactionId, records.ContributionTransactionId }.Order(),
+            evidence.TransactionLinks.Select(x => x.TransactionId).Order());
+        Assert.Equal(M010RecoveryPdf.Length, evidence.Attachment!.ByteLength);
+        Assert.Equal(
+            Convert.ToHexString(SHA256.HashData(M010RecoveryPdf)).ToLowerInvariant(),
+            evidence.Attachment.Sha256);
+        Assert.Equal(evidence.Attachment.Sha256, restored.AttachmentSha256);
+        Assert.Equal(M010RecoveryPdf.Length, restored.AttachmentLength);
+        Assert.Equal("attachment", restored.AttachmentDisposition);
+        Assert.Equal("nosniff", restored.AttachmentContentTypeOptions);
+
+        var observations = Deserialize<EvidenceObservationListResponse>(
+            restored.Observations);
+        Assert.Equal(2, observations.Items.Count);
+
+        var run = Deserialize<ReconciliationRunDetailResponse>(restored.Run);
+        Assert.False(run.IsStale);
+        var gold = Assert.Single(
+            run.Items,
+            x => x.Scope.AssetId == ledger.GoldAssetId);
+        Assert.Equal("MATCHED", gold.ComparisonStatusCode);
+        Assert.Equal(30 * RawE8Unit, gold.LedgerQuantityRawE8);
+        Assert.Equal(3, gold.LedgerPieceCount);
+        var cash = Assert.Single(
+            run.Items,
+            x => x.Scope.AssetId == ledger.CashAssetId);
+        Assert.Equal("OUT_OF_TOLERANCE", cash.ComparisonStatusCode);
+        Assert.Equal(2_000 * RawE8Unit, cash.LedgerQuantityRawE8);
+        Assert.Equal(2_100 * RawE8Unit, cash.ObservedQuantityRawE8);
+        Assert.Equal(RawE8Unit / 2, cash.ToleranceRawE8);
+        Assert.Equal("DOCUMENTED_EXCEPTION", cash.ResolutionStateCode);
+        Assert.Equal(M010RecoveryExplanation, cash.Explanation);
+
+        var runs = Deserialize<NavigationPageResponse<ReconciliationRunSummaryResponse>>(
+            restored.Runs);
+        var summary = Assert.Single(runs.Items);
+        Assert.Equal(records.ReconciliationRunId, summary.ReconciliationRunId);
+        Assert.Equal(1, summary.MatchedCount);
+        Assert.Equal(1, summary.OutOfToleranceCount);
+        Assert.Equal(1, summary.DocumentedExceptionCount);
+
+        var positions = Deserialize<PositionInventoryResponse>(
+            restored.PositionsAsOfEvidence);
+        Assert.Contains(
+            positions.Items,
+            x => x.AccountId == ledger.VaultId
+                 && x.AssetId == ledger.GoldAssetId
+                 && x.QuantityRawE8 == 30 * RawE8Unit);
+        Assert.Contains(
+            positions.Items,
+            x => x.AccountId == ledger.CashAccountId
+                 && x.AssetId == ledger.CashAssetId
+                 && x.QuantityRawE8 == 2_000 * RawE8Unit);
+
+        var lots = Deserialize<LotInventoryResponse>(restored.Lots);
+        var lot = Assert.Single(lots.Items);
+        Assert.Equal(ledger.AssetLotId, lot.AssetLotId);
+        Assert.Equal(30 * RawE8Unit, lot.GlobalQuantityRawE8);
+        Assert.Equal(3, lot.PhysicalGold!.GlobalPieceCount);
+        Assert.Equal(
+            ledger.VaultId,
+            Assert.Single(lot.Custody).AccountId);
+
+        Assert.Contains(
+            "Local startup mode: Ready",
+            fresh.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
+        AssertM010OutputIsPrivate(fresh.CombinedOutput, restoredDatabasePath);
     }
 
     [Fact]
@@ -837,6 +953,357 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         Guid TransferTransactionId,
         string BackupFilePath,
         string RestoredDatabasePath);
+
+    private const long RawE8Unit = 100_000_000L;
+
+    private const string M010RecoveryExplanation =
+        "Synthetic recovery exception explanation.";
+
+    private static readonly DateOnly M010EvidenceDate = new(2026, 9, 30);
+
+    private static readonly byte[] M010RecoveryPdf = Encoding.ASCII.GetBytes(
+        "%PDF-1.7\n%synthetic recovery statement\n%%EOF\n");
+
+    // Household text, references and the file name that must never reach a
+    // host log.
+    private static readonly string[] M010PrivateText =
+    [
+        "Synthetic recovery statement",
+        "recovery-statement.pdf",
+        "RECOVERY-M010",
+        "RECOVERY_M010",
+        "Synthetic Recovery M010",
+        M010RecoveryExplanation
+    ];
+
+    private ServiceProvider CreateLocalServices(
+        Action<IServiceCollection> addUseCases)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["Storage:DatabasePath"] = _databasePath,
+                    ["Backup:Directory"] = _backupDirectory,
+                    ["Backup:DestinationSeparationConfirmed"] = "true",
+                    ["Backup:DestinationEncryptionConfirmed"] = "true"
+                })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddWealthLedgerInfrastructure(
+            configuration,
+            new LocalDataRuntimeContext(
+                "Testing",
+                Directory.GetCurrentDirectory()));
+        addUseCases(services);
+
+        return services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateScopes = true,
+                ValidateOnBuild = true
+            });
+    }
+
+    /// <summary>
+    /// Posts a three-piece gold purchase into a new vault. The cash that pays
+    /// for it is contributed later through the live host.
+    /// </summary>
+    private async Task<M010RecoveryLedger> CreateM010RecoveryLedgerAsync()
+    {
+        await using var provider = CreateLocalServices(services =>
+        {
+            services.AddScoped<CreateOpeningBalanceAccountUseCase>();
+            services.AddScoped<CreateOpeningBalanceAssetUseCase>();
+            services.AddScoped<RecordPhysicalGoldPurchaseUseCase>();
+        });
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider
+            .GetRequiredService<WealthLedgerDbContext>();
+        var householdId = await context.Households
+            .Select(x => x.Id)
+            .SingleAsync();
+        var portfolioId = await context.Portfolios
+            .Select(x => x.Id)
+            .SingleAsync();
+        var cashAccountId = await context.Accounts
+            .Where(x => x.Code == "PRIMARY")
+            .Select(x => x.Id)
+            .SingleAsync();
+        var cashAssetId = await context.Assets
+            .Where(x => x.Code == "SYNTHETIC_CASH")
+            .Select(x => x.Id)
+            .SingleAsync();
+
+        var vaultId = (await scope.ServiceProvider
+                .GetRequiredService<CreateOpeningBalanceAccountUseCase>()
+                .ExecuteAsync(
+                    new CreateOpeningBalanceAccountCommand(
+                        householdId,
+                        InstitutionId: null,
+                        "RECOVERY_M010_VAULT",
+                        "Synthetic Recovery M010 Vault",
+                        AccountType.PhysicalVault,
+                        new DateOnly(2026, 1, 1))))
+            .Reference.AccountId;
+        var goldAssetId = (await scope.ServiceProvider
+                .GetRequiredService<CreateOpeningBalanceAssetUseCase>()
+                .ExecuteAsync(
+                    new CreateOpeningBalanceAssetCommand(
+                        "RECOVERY_M010_GOLD",
+                        "Synthetic Recovery M010 Gold",
+                        AssetType.PhysicalGold,
+                        CurrencyCode.TRY,
+                        LotTrackingMode.Required)))
+            .Reference.AssetId;
+        var purchase = await scope.ServiceProvider
+            .GetRequiredService<RecordPhysicalGoldPurchaseUseCase>()
+            .ExecuteAsync(
+                Guid.NewGuid().ToString("D"),
+                new PhysicalGoldPurchaseCommand(
+                    householdId,
+                    portfolioId,
+                    vaultId,
+                    cashAccountId,
+                    goldAssetId,
+                    cashAssetId,
+                    Quantity.FromDecimal(30m),
+                    new Fineness(916_000),
+                    PieceCount: 3,
+                    Money.FromMinorUnits(300_000, CurrencyCode.TRY),
+                    new DateOnly(2026, 9, 15),
+                    ExternalReference: "RECOVERY-M010-GOLD-PURCHASE",
+                    Note: "Synthetic Recovery M010 purchase."));
+
+        return new M010RecoveryLedger(
+            householdId,
+            portfolioId,
+            cashAccountId,
+            cashAssetId,
+            vaultId,
+            goldAssetId,
+            purchase.TransactionId,
+            purchase.AssetLotId);
+    }
+
+    /// <summary>
+    /// Records a statement with a retained PDF, two links, a matching gold
+    /// count and an out-of-tolerance cash balance, runs it, and documents the
+    /// cash difference as an exception.
+    /// </summary>
+    private static async Task<M010RecoveryRecords>
+        RecordM010EvidenceAndReconciliationAsync(
+            HttpClient client,
+            M010RecoveryLedger ledger)
+    {
+        var households = $"/api/households/{ledger.HouseholdId:D}";
+        var contributionId = await M010ApiTestData.ContributeAsync(
+            client,
+            ledger.HouseholdId,
+            ledger.PortfolioId,
+            ledger.CashAccountId,
+            ledger.CashAssetId,
+            500_000,
+            new DateOnly(2026, 9, 10),
+            "RECOVERY-M010-CONTRIBUTION");
+
+        using var upload = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{households}/evidence/uploads")
+        {
+            Content = EvidenceAttachmentApiTests.Upload(
+                new RecordEvidenceRequest(
+                    "STATEMENT",
+                    M010EvidenceDate,
+                    "Synthetic recovery statement",
+                    Reference: "RECOVERY-M010-STATEMENT",
+                    Note: "Synthetic recovery statement note.",
+                    TransactionIds: [ledger.PurchaseTransactionId]),
+                "recovery-statement.pdf",
+                "application/pdf",
+                M010RecoveryPdf)
+        };
+        upload.Headers.Add("Idempotency-Key", "m010-recovery-upload");
+        using var uploaded = await client.SendAsync(upload);
+        Assert.Equal(HttpStatusCode.Created, uploaded.StatusCode);
+        var evidenceId = (await uploaded.Content
+                .ReadFromJsonAsync<RecordEvidenceResponse>())!
+            .EvidenceId;
+        var evidence = $"{households}/evidence/{evidenceId:D}";
+
+        await M010ApiTestData.PostAsync<LinkEvidenceTransactionsResponse>(
+            client,
+            $"{evidence}/transaction-links",
+            new LinkEvidenceTransactionsRequest([contributionId]));
+        await M010ApiTestData.PostAsync<RecordEvidenceObservationsResponse>(
+            client,
+            $"{evidence}/observations",
+            new RecordEvidenceObservationsRequest(
+            [
+                new EvidenceObservationRequest(
+                    ledger.PortfolioId,
+                    ledger.VaultId,
+                    ledger.GoldAssetId,
+                    30 * RawE8Unit,
+                    ObservedPieceCount: 3),
+                new EvidenceObservationRequest(
+                    ledger.PortfolioId,
+                    ledger.CashAccountId,
+                    ledger.CashAssetId,
+                    2_100 * RawE8Unit,
+                    ToleranceRawE8: RawE8Unit / 2)
+            ]));
+
+        var run = await M010ApiTestData.PostAsync<RunReconciliationResponse>(
+            client,
+            $"{households}/reconciliations",
+            new RunReconciliationRequest(evidenceId),
+            "m010-recovery-run");
+        var detail = await M010ApiTestData.GetAsync<ReconciliationRunDetailResponse>(
+            client,
+            run.ReconciliationLocation);
+        var outOfTolerance = Assert.Single(
+            detail.Items,
+            x => x.ComparisonStatusCode == "OUT_OF_TOLERANCE");
+        await M010ApiTestData.PostAsync<ResolveReconciliationItemResponse>(
+            client,
+            $"{run.ReconciliationLocation}/items/{outOfTolerance.ReconciliationItemId:D}/resolution",
+            new ResolveReconciliationItemRequest(
+                "DOCUMENTED_EXCEPTION",
+                Explanation: M010RecoveryExplanation));
+
+        return new M010RecoveryRecords(
+            contributionId,
+            evidenceId,
+            run.ReconciliationRunId);
+    }
+
+    /// <summary>
+    /// Every M010 read route as served, raw, plus the downloaded file's
+    /// digest, length and safety headers.
+    /// </summary>
+    private static async Task<M010Readback> ReadM010StateAsync(
+        HttpClient client,
+        M010RecoveryLedger ledger,
+        M010RecoveryRecords records)
+    {
+        var households = $"/api/households/{ledger.HouseholdId:D}";
+        var evidence = $"{households}/evidence/{records.EvidenceId:D}";
+        using var download = await client.GetAsync($"{evidence}/attachment");
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+        var bytes = await download.Content.ReadAsByteArrayAsync();
+
+        return new M010Readback(
+            await client.GetStringAsync(evidence),
+            await client.GetStringAsync($"{households}/evidence"),
+            await client.GetStringAsync($"{evidence}/observations"),
+            await client.GetStringAsync(
+                $"{households}/reconciliations/{records.ReconciliationRunId:D}"),
+            await client.GetStringAsync($"{households}/reconciliations"),
+            await client.GetStringAsync(
+                $"{households}/inventory/positions?asOf=2026-09-30"),
+            await client.GetStringAsync($"{households}/inventory/positions"),
+            await client.GetStringAsync($"{households}/inventory/lots"),
+            Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(),
+            bytes.Length,
+            download.Content.Headers.ContentDisposition?.DispositionType,
+            download.Headers.TryGetValues(
+                "X-Content-Type-Options",
+                out var contentTypeOptions)
+                ? string.Join(',', contentTypeOptions)
+                : null);
+    }
+
+    private async Task<string> BackUpVerifyAndStageAsync(string drillDirectory)
+    {
+        await using var provider = CreateLocalServices(services =>
+        {
+            services.AddScoped<CreateLocalBackupUseCase>();
+            services.AddScoped<VerifyLocalBackupUseCase>();
+            services.AddScoped<StageLocalRestoreUseCase>();
+        });
+        await using var scope = provider.CreateAsyncScope();
+        var backup = await scope.ServiceProvider
+            .GetRequiredService<CreateLocalBackupUseCase>()
+            .ExecuteAsync();
+        Assert.True(backup.Succeeded, backup.Failure?.Message);
+
+        var verification = await scope.ServiceProvider
+            .GetRequiredService<VerifyLocalBackupUseCase>()
+            .ExecuteAsync(backup.Value!.FilePath);
+        Assert.True(verification.Succeeded, verification.Failure?.Message);
+        Assert.Equal(
+            LocalDatabaseCompatibility.Compatible,
+            verification.Value!.Compatibility);
+
+        var restoredDatabasePath = Path.Combine(
+            _testRoot,
+            drillDirectory,
+            "restored.db");
+        var restore = await scope.ServiceProvider
+            .GetRequiredService<StageLocalRestoreUseCase>()
+            .ExecuteAsync(backup.Value.FilePath, restoredDatabasePath);
+        Assert.True(restore.Succeeded, restore.Failure?.Message);
+
+        return restoredDatabasePath;
+    }
+
+    private static void AssertM010OutputIsPrivate(
+        string output,
+        string databasePath)
+    {
+        Assert.DoesNotContain(
+            databasePath,
+            output,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            Convert.ToHexString(SHA256.HashData(M010RecoveryPdf)),
+            output,
+            StringComparison.OrdinalIgnoreCase);
+
+        foreach (var text in M010PrivateText)
+        {
+            Assert.DoesNotContain(text, output, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.DoesNotContain("Data Source=", output);
+        Assert.DoesNotContain("SELECT ", output);
+        Assert.DoesNotContain(" at WealthLedger", output);
+    }
+
+    private static T Deserialize<T>(string json)
+        => Assert.IsType<T>(
+            JsonSerializer.Deserialize<T>(json, JsonSerializerOptions.Web));
+
+    private sealed record M010RecoveryLedger(
+        Guid HouseholdId,
+        Guid PortfolioId,
+        Guid CashAccountId,
+        Guid CashAssetId,
+        Guid VaultId,
+        Guid GoldAssetId,
+        Guid PurchaseTransactionId,
+        Guid AssetLotId);
+
+    private sealed record M010RecoveryRecords(
+        Guid ContributionTransactionId,
+        Guid EvidenceId,
+        Guid ReconciliationRunId);
+
+    private sealed record M010Readback(
+        string Evidence,
+        string EvidenceList,
+        string Observations,
+        string Run,
+        string Runs,
+        string PositionsAsOfEvidence,
+        string Positions,
+        string Lots,
+        string AttachmentSha256,
+        int AttachmentLength,
+        string? AttachmentDisposition,
+        string? AttachmentContentTypeOptions);
 
     private sealed class ApiProcess : IAsyncDisposable
     {
