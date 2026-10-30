@@ -1,6 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using WealthLedger.Api.Contracts;
 
@@ -8,6 +11,18 @@ namespace WealthLedger.UI.BrowserTests;
 
 public sealed class CriticalJourneysTests
 {
+    private const string EvidenceLabel = "Synthetic browser statement";
+
+    private const string EvidenceReference = "BROWSER-EVIDENCE-REFERENCE";
+
+    private const string EvidenceFileName = "browser-statement.pdf";
+
+    private const string ExceptionExplanation =
+        "Synthetic browser exception for the vault count.";
+
+    private static readonly byte[] EvidencePdf = Encoding.ASCII.GetBytes(
+        "%PDF-1.7\n%synthetic browser statement\n%%EOF\n");
+
     [Fact]
     public Task CompleteFirstRunAndReadyNavigation_WorkAtDesktopViewport()
         => RunJourneyAsync(
@@ -30,7 +45,8 @@ public sealed class CriticalJourneysTests
                 ViewportWidth: 390,
                 ViewportHeight: 844,
                 ExerciseFundLifecycle: true,
-                ExercisePhysicalGoldLifecycle: true));
+                ExercisePhysicalGoldLifecycle: true,
+                ExerciseM010Workflows: true));
 
     [Fact]
     public Task FirstRunAndLedgerNavigation_WorkByKeyboardWithValidationFocus()
@@ -148,6 +164,14 @@ public sealed class CriticalJourneysTests
             Assert.DoesNotContain("BROWSER-JOURNEY-REFERENCE", hostOutput);
             Assert.DoesNotContain("BROWSER-OPENING-REFERENCE", hostOutput);
             Assert.DoesNotContain("Synthetic browser opening", hostOutput);
+            Assert.DoesNotContain(EvidenceLabel, hostOutput);
+            Assert.DoesNotContain(EvidenceReference, hostOutput);
+            Assert.DoesNotContain(EvidenceFileName, hostOutput);
+            Assert.DoesNotContain(ExceptionExplanation, hostOutput);
+            Assert.DoesNotContain(
+                Convert.ToHexString(SHA256.HashData(EvidencePdf)),
+                hostOutput,
+                StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(
                 "Data Source=",
                 hostOutput,
@@ -398,6 +422,15 @@ public sealed class CriticalJourneysTests
         if (options.ExercisePhysicalGoldLifecycle)
         {
             baseAddress = await RunPhysicalGoldLifecycleAsync(
+                page,
+                workspace,
+                baseAddress,
+                options);
+        }
+
+        if (options.ExerciseM010Workflows)
+        {
+            baseAddress = await RunM010WorkflowsAsync(
                 page,
                 workspace,
                 baseAddress,
@@ -1151,6 +1184,404 @@ public sealed class CriticalJourneysTests
 
         return baseAddress;
     }
+
+    /// <summary>
+    /// M010 over the history the earlier legs posted: a filtered Ledger
+    /// search, the Assets drilldown from a position to its lot and
+    /// transaction, evidence with a retained synthetic file, one matching and
+    /// one out-of-tolerance gold count, a documented exception, and exact
+    /// readback after a restart.
+    /// </summary>
+    /// <remarks>
+    /// The statement is dated 2026-09-30, after the gold lifecycle. The
+    /// second vault then holds only the transferred 10 g, one-piece bracelet;
+    /// the first vault's count of 15 g differs from its ledger quantity
+    /// whatever the opening cutover's date. Link candidates are Posted on or
+    /// before that date, newest first, 20 to a page. The cutover's openings
+    /// take the host operating date, which is later, so the corrected gold
+    /// sale of 2026-09-15 heads the first page.
+    /// </remarks>
+    private static async Task<Uri> RunM010WorkflowsAsync(
+        IPage page,
+        BrowserTestWorkspace workspace,
+        Uri baseAddress,
+        JourneyOptions options)
+    {
+        // Asset, account and reference filters combine. The original sale and
+        // its corrected replacement match; their reversal has no reference.
+        await GoToAsync(page, baseAddress, "/ledger");
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        await SelectOptionContainingAsync(
+            page.Locator("#assetId"),
+            "(BROWSER_GOLD)");
+        await SelectOptionContainingAsync(
+            page.Locator("#accountId"),
+            "(BROWSER_VAULT)");
+        await page.Locator("#reference").FillAsync("BROWSER-GOLD-SALE");
+        await TabToAsync(page, "form[role=\"search\"] button[type=\"submit\"]");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForURLAsync(new Regex("reference=BROWSER-GOLD-SALE"));
+        Assert.Equal(2, await page.Locator(".transaction-card").CountAsync());
+        Assert.Equal(
+            1,
+            await page.Locator(".transaction-card a.status-badge").CountAsync());
+        await AssertResponsiveReflowAsync(page, options);
+        await page.Locator(".transaction-card h2 a").First.ClickAsync();
+        await page.Locator("#detail-heading").WaitForAsync();
+        Assert.Contains(
+            "BROWSER-GOLD-SALE-CORRECTED",
+            await page.Locator("main").TextContentAsync());
+
+        // Assets, by keyboard: filter to the second vault, then follow its
+        // gold position to the lot and the lot's acquisition transaction.
+        await GoToAsync(page, baseAddress, "/assets");
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        await SelectOptionContainingAsync(
+            page.Locator("#accountId"),
+            "(BROWSER_SECOND_VAULT)");
+        await TabToAsync(page, "form.filter-panel button[type=\"submit\"]");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForURLAsync(new Regex("accountId="));
+        await AssertResponsiveReflowAsync(page, options);
+        Assert.Equal(1, await page.Locator("section.transaction-card").CountAsync());
+        var secondVaultGold = page
+            .Locator(
+                "section.transaction-card",
+                new PageLocatorOptions { HasText = "Browser Test Second Vault" })
+            .Locator(
+                "li.entry-card",
+                new LocatorLocatorOptions { HasText = "BROWSER_GOLD" });
+        Assert.Equal(
+            "1000000000",
+            await secondVaultGold
+                .Locator("details.technical-details code")
+                .First
+                .TextContentAsync());
+        await secondVaultGold
+            .GetByRole(
+                AriaRole.Link,
+                new LocatorGetByRoleOptions
+                {
+                    Name = "Bu pozisyonu açıklayan işlemler",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#ledger-results-heading").WaitForAsync();
+        Assert.Equal(1, await page.Locator(".transaction-card").CountAsync());
+
+        await AssertResponsiveReflowAsync(page, options);
+
+        await page.GoBackAsync(
+            new PageGoBackOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+        var lotsHref = await secondVaultGold
+            .GetByRole(
+                AriaRole.Link,
+                new LocatorGetByRoleOptions
+                {
+                    Name = "Edinim lotları",
+                    Exact = true
+                })
+            .GetAttributeAsync("href");
+        Assert.StartsWith("/assets/lots?", lotsHref, StringComparison.Ordinal);
+        await TabToAsync(page, $"a[href=\"{lotsHref}\"]");
+        await page.Keyboard.PressAsync("Enter");
+        await page.Locator("#lot-results-heading").WaitForAsync();
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        var lot = page.Locator("ol.transaction-list > li.transaction-card");
+        Assert.Equal(1, await lot.CountAsync());
+        Assert.Contains(
+            "Browser Test Second Vault",
+            await lot.InnerTextAsync(),
+            StringComparison.Ordinal);
+        await TabToAsync(page, "a.card-link:has-text(\"Edinim işlemini aç\")");
+        await page.Keyboard.PressAsync("Enter");
+        await page.Locator("#detail-heading").WaitForAsync();
+        Assert.Contains(
+            "BROWSER-GOLD-PURCHASE-BRACELET",
+            await page.Locator("main").TextContentAsync());
+
+        // Evidence with a retained file. The file exists only in memory, so
+        // nothing on disk ever holds it apart from the database.
+        await GoToAsync(page, baseAddress, "/reconcile");
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Yeni kanıt kaydet",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#new-evidence-heading").WaitForAsync();
+        await AssertResponsiveReflowAsync(page, options);
+        await page.Locator("#Input_EffectiveDate").FillAsync("2026-09-30");
+        await page.Locator("#Input_Label").FillAsync(EvidenceLabel);
+        await page.Locator("#Input_Reference").FillAsync(EvidenceReference);
+        await page.Locator("#Input_Note")
+            .FillAsync("Synthetic browser statement note.");
+        await page.Locator("#Attachment").SetInputFilesAsync(
+            new FilePayload
+            {
+                Name = EvidenceFileName,
+                MimeType = "application/pdf",
+                Buffer = EvidencePdf
+            });
+        await ClickReconcileButtonAsync(page, "Kanıtı kaydet");
+        await page.Locator("#evidence-heading").WaitForAsync();
+        Assert.Equal(
+            EvidenceLabel,
+            (await page.Locator("h1").InnerTextAsync()).Trim());
+        var evidencePath = new Uri(page.Url).AbsolutePath;
+        Assert.Matches("^/reconcile/evidence/[0-9a-f-]{36}$", evidencePath);
+        await AssertResponsiveReflowAsync(page, options);
+
+        await page.Locator(
+                "label",
+                new PageLocatorOptions { HasText = "BROWSER-GOLD-SALE-CORRECTED" })
+            .ClickAsync();
+        await ClickReconcileButtonAsync(page, "Seçilen işlemleri bağla");
+        await page.Locator("#evidence-links-heading").WaitForAsync();
+        Assert.Contains(
+            "1 işlem bağlandı",
+            await page.Locator("main").InnerTextAsync(),
+            StringComparison.Ordinal);
+
+        await RecordObservationAsync(
+            page,
+            options,
+            "(BROWSER_SECOND_VAULT)",
+            quantity: "10",
+            pieces: "1",
+            byKeyboard: false);
+        await RecordObservationAsync(
+            page,
+            options,
+            "(BROWSER_VAULT)",
+            quantity: "15",
+            pieces: "1",
+            byKeyboard: true);
+
+        await ClickReconcileButtonAsync(page, "Defterle karşılaştır");
+        await page.Locator("#run-heading").WaitForAsync();
+        await AssertPageFrameAsync(page);
+        await AssertResponsiveReflowAsync(page, options);
+        var runPath = new Uri(page.Url).AbsolutePath;
+        Assert.Matches("^/reconcile/runs/[0-9a-f-]{36}$", runPath);
+        Assert.Equal(1, await page.Locator("[data-state=\"MATCHED\"]").CountAsync());
+        Assert.Equal(
+            1,
+            await page.Locator("[data-state=\"OUT_OF_TOLERANCE\"]").CountAsync());
+        Assert.Equal(0, await page.Locator("#run-stale-heading").CountAsync());
+
+        // The documented exception is submitted by keyboard.
+        var outOfTolerance = page.Locator(
+            "li.transaction-card",
+            new PageLocatorOptions
+            {
+                Has = page.Locator("[data-state=\"OUT_OF_TOLERANCE\"]")
+            });
+        await outOfTolerance.Locator("textarea[name=\"explanation\"]")
+            .FillAsync(ExceptionExplanation);
+        await TabToAsync(page, "button:has-text(\"İstisna olarak belgele\")");
+        await page.Keyboard.PressAsync("Enter");
+        await page.Locator("[data-state=\"DOCUMENTED_EXCEPTION\"]").WaitForAsync();
+        Assert.Equal(runPath, new Uri(page.Url).AbsolutePath);
+        Assert.Equal(
+            1,
+            await page.Locator("[data-state=\"OUT_OF_TOLERANCE\"]").CountAsync());
+
+        // A retained file is only ever downloaded. The download is read and
+        // deleted at once, so no browser artifact keeps the evidence.
+        // Chromium reports the navigation that turns into a download as an
+        // aborted request, so it runs on its own page, outside the journey's
+        // request-failure check; the context's loopback guard still applies.
+        var downloadPage = await page.Context.NewPageAsync();
+
+        try
+        {
+            await GoToAsync(downloadPage, baseAddress, evidencePath);
+            var download = await downloadPage.RunAndWaitForDownloadAsync(
+                () => downloadPage.GetByRole(
+                        AriaRole.Link,
+                        new PageGetByRoleOptions
+                        {
+                            Name = "Dosyayı indir",
+                            Exact = true
+                        })
+                    .ClickAsync());
+            Assert.Equal(EvidenceFileName, download.SuggestedFilename);
+            Assert.Equal(
+                EvidencePdf,
+                await File.ReadAllBytesAsync(await download.PathAsync()));
+            await download.DeleteAsync();
+            Assert.Equal(evidencePath, new Uri(downloadPage.Url).AbsolutePath);
+        }
+        finally
+        {
+            await downloadPage.CloseAsync();
+        }
+
+        // Rendered run items, observations and links, compared after restart.
+        await GoToAsync(page, baseAddress, runPath);
+        var runItems = await SectionTextAsync(page, "run-items-heading");
+        await GoToAsync(page, baseAddress, evidencePath);
+        var observations = await SectionTextAsync(
+            page,
+            "evidence-observations-heading");
+        var links = await SectionTextAsync(page, "evidence-links-heading");
+
+        await workspace.StopHostAsync();
+        baseAddress = await workspace.StartHostAsync();
+
+        await GoToAsync(page, baseAddress, runPath);
+        Assert.Equal(runItems, await SectionTextAsync(page, "run-items-heading"));
+        Assert.Equal(1, await page.Locator("[data-state=\"MATCHED\"]").CountAsync());
+        Assert.Equal(
+            1,
+            await page.Locator("[data-state=\"OUT_OF_TOLERANCE\"]").CountAsync());
+        Assert.Equal(
+            1,
+            await page.Locator("[data-state=\"DOCUMENTED_EXCEPTION\"]").CountAsync());
+        Assert.Equal(0, await page.Locator("#run-stale-heading").CountAsync());
+        Assert.Contains(
+            ExceptionExplanation,
+            await page.Locator("main").InnerTextAsync(),
+            StringComparison.Ordinal);
+
+        await GoToAsync(page, baseAddress, evidencePath);
+        var evidenceText = await page.Locator("main").TextContentAsync();
+        Assert.Contains(EvidenceFileName, evidenceText, StringComparison.Ordinal);
+        Assert.Contains(
+            Convert.ToHexString(SHA256.HashData(EvidencePdf)).ToLowerInvariant(),
+            evidenceText,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            observations,
+            await SectionTextAsync(page, "evidence-observations-heading"));
+        Assert.Equal(
+            2,
+            await page.Locator(
+                    "section[aria-labelledby=\"evidence-observations-heading\"] li.entry-card")
+                .CountAsync());
+        Assert.Equal(
+            links,
+            await SectionTextAsync(page, "evidence-links-heading"));
+        Assert.Equal(
+            1,
+            await page.Locator("#evidence-links-heading")
+                .Locator("xpath=..")
+                .Locator("li a[href^=\"/ledger/\"]")
+                .CountAsync());
+
+        using (var client = new HttpClient { BaseAddress = baseAddress })
+        using (var response = await client.GetAsync(
+                   $"{evidencePath}?handler=Attachment"))
+        {
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(
+                "attachment",
+                response.Content.Headers.ContentDisposition?.DispositionType);
+            Assert.Equal(
+                "nosniff",
+                Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
+            Assert.Equal(EvidencePdf, await response.Content.ReadAsByteArrayAsync());
+        }
+
+        await GoToAsync(page, baseAddress, "/reconcile");
+        var reconcileText = await page.Locator("main").InnerTextAsync();
+        Assert.Contains(EvidenceLabel, reconcileText, StringComparison.Ordinal);
+        Assert.Equal(
+            1,
+            await page.Locator($"a[href=\"{runPath}\"]").CountAsync());
+
+        return baseAddress;
+    }
+
+    /// <summary>
+    /// Adds one gold count for the given vault from the evidence page, through
+    /// the review step, and returns to the evidence page.
+    /// </summary>
+    private static async Task RecordObservationAsync(
+        IPage page,
+        JourneyOptions options,
+        string accountCode,
+        string quantity,
+        string pieces,
+        bool byKeyboard)
+    {
+        await page.GetByRole(
+                AriaRole.Link,
+                new PageGetByRoleOptions
+                {
+                    Name = "Gözlem ekle",
+                    Exact = true
+                })
+            .ClickAsync();
+        await page.Locator("#observe-heading").WaitForAsync();
+        await AssertResponsiveReflowAsync(page, options);
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_PortfolioId"),
+            "Browser Test Portfolio");
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AccountId"),
+            accountCode);
+        await SelectOptionContainingAsync(
+            page.Locator("#Input_AssetId"),
+            "(BROWSER_GOLD)");
+        await page.Locator("#Input_ObservedQuantity").FillAsync(quantity);
+        await page.Locator("#Input_ObservedPieceCount").FillAsync(pieces);
+
+        if (byKeyboard)
+        {
+            await TabToAsync(page, "button:has-text(\"Gözlemi incele\")");
+            await page.Keyboard.PressAsync("Enter");
+            await page.Locator("#observe-review-heading").WaitForAsync();
+            await TabToAsync(page, "button:has-text(\"Gözlemi kaydet\")");
+            await page.Keyboard.PressAsync("Enter");
+        }
+        else
+        {
+            await ClickReconcileButtonAsync(page, "Gözlemi incele");
+            await page.Locator("#observe-review-heading").WaitForAsync();
+            await AssertResponsiveReflowAsync(page, options);
+            Assert.Contains(
+                $"{quantity}00000000",
+                await page.Locator("main").TextContentAsync(),
+                StringComparison.Ordinal);
+            await ClickReconcileButtonAsync(page, "Gözlemi kaydet");
+        }
+
+        await page.Locator("#evidence-heading").WaitForAsync();
+        Assert.Contains(
+            "1 gözlem kaydedildi",
+            await page.Locator("main").InnerTextAsync(),
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The visible text of the section a heading labels.
+    /// </summary>
+    private static Task<string> SectionTextAsync(IPage page, string headingId)
+        => page.Locator($"#{headingId}")
+            .Locator("xpath=..")
+            .InnerTextAsync();
+
+    private static Task ClickReconcileButtonAsync(IPage page, string name)
+        => page.GetByRole(
+                AriaRole.Button,
+                new PageGetByRoleOptions
+                {
+                    Name = name,
+                    Exact = true
+                })
+            .ClickAsync();
 
     private static async Task CreateGoldReferencesAsync(
         IPage page,
@@ -2009,5 +2440,6 @@ public sealed class CriticalJourneysTests
         int ViewportWidth,
         int ViewportHeight,
         bool ExerciseFundLifecycle = false,
-        bool ExercisePhysicalGoldLifecycle = false);
+        bool ExercisePhysicalGoldLifecycle = false,
+        bool ExerciseM010Workflows = false);
 }

@@ -2,7 +2,7 @@
 
 Status: Proposed canonical capture requirements
 
-Last reviewed: 2026-09-16
+Last reviewed: 2026-10-30
 
 ## Purpose
 
@@ -278,8 +278,8 @@ cost. M007 neither asks for nor stores current value, gain/loss, or performance.
 After review and posting, read the persisted transaction and derived position.
 An incorrect opening is corrected with a separate reversal and a new opening;
 never edit or delete the original. An evidence record (see "Evidence records")
-can retain the source and link it to the opening; the M010 JSON API exposes
-this now, and the capture screens arrive with M010's UI slice. Neither the note/reference nor a linked evidence record proves
+can retain the source and link it to the opening, through Reconcile's evidence
+pages or the M010 JSON API. Neither the note/reference nor a linked evidence record proves
 that an independent reconciliation occurred; only a reconciliation run (see
 "Reconciliation evidence") records that comparison.
 
@@ -362,8 +362,9 @@ a human submits a validated command.
 An evidence record is retained external support for ledger facts. It is audit
 data, not a ledger fact: recording or linking it never posts, edits or deletes
 a transaction and never changes a balance. The rules below are enforced by the
-Application and SQLite. The Ready-mode JSON API exposes them (see the README's
-M010 API section); the capture screens arrive with M010's UI slice.
+Application and SQLite. Capture them through Reconcile's evidence pages (see
+"Implemented M010 workflows" in `UX_MVP.md`) or the Ready-mode JSON API (see
+the README's M010 API section).
 
 Capture:
 
@@ -412,8 +413,8 @@ only in the owner's live database and its backups.
 A reconciliation compares what a statement or physical count observed with what
 the ledger derives for the same scopes on the same date. It is audit data: it
 never posts, edits or deletes a transaction and adds no Adjustment shortcut. The
-rules below are enforced by the Application and SQLite. The Ready-mode JSON API
-exposes them; the capture and review screens arrive with M010's UI slice.
+rules below are enforced by the Application and SQLite. Capture and review them
+through Reconcile's observation and run pages or the Ready-mode JSON API.
 
 Observations belong to an evidence record, whose effective date applies to all
 of them. Capture, per observed scope:

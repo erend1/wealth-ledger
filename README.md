@@ -28,9 +28,9 @@ See [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) for the verified checkpoint a
 | [docs/PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md) | Durable product outcomes and boundaries |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Intended delivery order, never proof of implementation |
 | [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | Concise verified repository checkpoint |
-| [docs/UX_MVP.md](docs/UX_MVP.md) | Proposed broader interaction model and verified M006/M007 subsets |
+| [docs/UX_MVP.md](docs/UX_MVP.md) | Proposed broader interaction model and its implemented M006-M010 subsets |
 | [docs/DATA_CAPTURE.md](docs/DATA_CAPTURE.md) | Source facts each financial workflow should preserve |
-| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements and implemented M004-M007 operating boundaries |
+| [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md) | Accepted requirements, implemented M004-M007 operating boundaries, and the M010 evidence boundary |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Canonical database, backup, restore, migration, and recovery guide |
 | [docs/milestones/README.md](docs/milestones/README.md) | Milestone statuses, template, agent prompts, and definition of done |
 | [docs/decisions/README.md](docs/decisions/README.md) | Accepted architectural decisions |
@@ -119,9 +119,11 @@ startup and never promotes itself dynamically:
    and create one new immutable generation through the verified M004 backup
    operation.
 4. After the completion page, restart once more and open
-   `http://127.0.0.1:54876/`. `Ready` exposes Today, recent Ledger and
-   transaction explanations, read-only Settings, and the dedicated M007 opening-
-   balance workflow under Record. Setup routes now return 404.
+   `http://127.0.0.1:54876/`. `Ready` exposes Today, Ledger search and
+   transaction explanations, derived Assets inventory, Reconcile evidence and
+   reconciliation, read-only Settings, and the dedicated M007-M009 opening,
+   contribution, Fund and physical-gold workflows under Record. Setup routes
+   now return 404.
 
 An unsafe path, incompatible or migration-required database, failed integrity
 check, partial workspace, or other non-recoverable startup classification shows
@@ -244,9 +246,9 @@ unknown or cross-household scope returns the sanitized 404 code
 
 ## M010 search, inventory, evidence and reconciliation API
 
-In progress under M010: these Ready-only loopback routes expose the bounded
-M010 Application contracts. They read and record audit data, but never post,
-edit or delete a ledger transaction:
+These Ready-only loopback routes expose the bounded M010 Application
+contracts. They read and record audit data, but never post, edit or delete a
+ledger transaction:
 
 ```text
 GET  /api/households/{householdId}/ledger/search

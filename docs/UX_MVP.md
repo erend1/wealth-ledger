@@ -2,7 +2,7 @@
 
 Status: Proposed product interaction model
 
-Last reviewed: 2026-10-29
+Last reviewed: 2026-10-30
 
 ## Scope and constraint
 
@@ -91,8 +91,8 @@ posted transaction.
 ### Assets
 
 Assets was not implemented by M006. M010 adds it as a derived inventory
-surface, in progress and not yet verified; see "Implemented M010 workflows (in
-progress)" below. It shows positions grouped by portfolio and account, and
+surface; see "Implemented M010 workflows" below. It shows positions grouped by
+portfolio and account, and
 lot-tracked positions open their acquisition lots. Physical-gold lots show
 pieces, gross and fine weight, fineness, acquisition lineage, and custody.
 
@@ -109,7 +109,7 @@ fineness, piece count, optional identifiers/notes, and exact derived fine weight
 Opening receipts are a focused verification view over the same persisted
 history, not client-side success state.
 
-M010 (in progress, not yet verified) replaces the unfiltered recent feed on the
+M010 replaces the unfiltered recent feed on the
 Ledger page with bounded search over effective Posted history: date, type,
 asset, institution, account, portfolio, external reference, and reversal
 relationship filters, ordered by financial date. Status is fixed to Posted.
@@ -117,9 +117,8 @@ Today keeps the M005 recent-Posted preview.
 
 ### Reconcile
 
-M010 (in progress, not yet verified) adds Reconcile for retained evidence and
-dated reconciliation. It is described in "Implemented M010 workflows (in
-progress)" below.
+M010 adds Reconcile for retained evidence and dated reconciliation. It is
+described in "Implemented M010 workflows" below.
 
 ### Plan
 
@@ -398,16 +397,24 @@ result must be retrieved by its retry identity.
   review/post/receipt/reversal paths pass in real Chromium with JavaScript
   disabled and with keyboard-only operation. They include linked financial
   validation, double-submit/retry, restart readback, narrow and
-  200%-equivalent reflow, reduced motion, and forced colors. These focused
-  checks do not claim general WCAG conformance or replace assistive-technology
-  review.
+  200%-equivalent reflow, reduced motion, and forced colors.
+- The M010 Ledger search, Assets drilldown and Reconcile paths pass in real
+  Chromium with JavaScript disabled, at narrow and 200%-equivalent widths,
+  with reduced motion and forced colors, and read back after a restart. The
+  search, the Assets filter and drilldown links, one observation and the
+  documented exception are operated by keyboard; the other steps use the
+  pointer. Their validation and retry behavior is covered by host tests.
+- These focused checks do not claim general WCAG conformance or replace
+  assistive-technology review.
 - Confirmation text and errors use plain, sanitized language.
 - Screenshots and diagnostic exports default to hiding household names,
   references, notes, and exact values unless explicitly included.
 - The UI must not expose connection strings, raw SQL, stack traces, or internal
   row representations during routine use.
-- M006-M009 add no screenshot or diagnostic-export feature. Tests and any
-  manually captured artifacts use synthetic isolated data only.
+- M006-M010 add no screenshot or diagnostic-export feature. Tests and any
+  manually captured artifacts use synthetic isolated data only. A retained
+  evidence file is only ever downloaded on an explicit action, never
+  previewed.
 
 ## MVP UX acceptance
 
@@ -430,9 +437,19 @@ gold custody, inspect persisted receipts, and correct supported activity through
 reversal plus a separate reviewed replacement. That outcome is implemented and
 covered by real-browser and disposable recovery journeys.
 
-The first M002-M009 entry slice is complete. Searchable inventory and
-reconciliation, evidence objects, valuation, market observations, and planning
-remain in later milestones.
+The first M002-M009 entry slice is complete.
+
+The M010 subset is met when that Ready user can search effective Posted
+history, follow a derived position to its lots and transactions, record
+evidence with an optional retained file, record exact observations, run a dated
+reconciliation, and resolve a difference by a documented exception or a Posted
+correction, without any page posting or editing history. That outcome is
+implemented and covered by host tests, a real-browser journey and a
+fresh-process recovery drill; the journey resolves by documented exception,
+and host tests cover the Posted correction. `docs/PROJECT_STATE.md` records
+whether M010 is Verified.
+
+Valuation, market observations, and planning remain in later milestones.
 
 ## Implemented recording workflows (M008)
 
@@ -504,11 +521,12 @@ counterparty rows. After reversal, the UI offers a new normal workflow for a
 separately reviewed corrected replacement; it does not claim a mutable or
 durable replacement link.
 
-## Implemented M010 workflows (in progress)
+## Implemented M010 workflows
 
-M010 is In Progress. The pages below are implemented with focused host and
-presentation tests. Their real-browser journey, recovery drill and
-verification are still outstanding, so nothing here is Verified yet. The
+The pages below are implemented and covered by focused host and presentation
+tests, a real-Chromium journey and a fresh-process recovery drill (see
+"Browser and recovery coverage" at the end of this section).
+`docs/PROJECT_STATE.md` records the milestone's verification status. The
 primary navigation now reads Today, Ledger, Assets, Reconcile, Record and
 Settings:
 
@@ -567,8 +585,8 @@ list shows its stored counts; only its own page re-derives staleness.
   `nosniff`, `no-store` and a sandbox content-security policy. It is never
   previewed.
 - *Links.* The reviewer selects Posted transactions to link, from the
-  evidence's account (or else its institution) dated on or before the
-  effective date. Linking changes no ledger fact.
+  evidence's account (or else its institution, or else the whole household)
+  dated on or before the effective date. Linking changes no ledger fact.
 - *Corrections.* A record is immutable. A mistake is corrected by recording
   a superseding record. The old record stays readable and accepts no new
   links, observations or runs.
@@ -592,3 +610,32 @@ list shows its stored counts; only its own page re-derives staleness.
   stays visibly out of tolerance. The second links a Posted corrective
   transaction recorded through the existing Record workflows. Reconcile
   itself never posts or edits a transaction.
+
+**Browser and recovery coverage.** One real-Chromium journey runs these pages
+over the opening, Fund and physical-gold history of the earlier journey legs,
+with JavaScript disabled, at a narrow viewport and its 200%-equivalent reflow,
+with reduced motion and forced colors:
+
+- a Ledger search that combines asset, account and reference filters;
+- Assets filtered to one account, and a position followed to its Ledger
+  search, its lot and the lot's acquisition transaction;
+- evidence recorded with an in-memory synthetic PDF and linked to a candidate
+  transaction;
+- one matching and one out-of-tolerance gold count, each through the review
+  step;
+- a run, and a documented exception on the out-of-tolerance item.
+
+The search, the Assets filter and drilldown links, one observation and the
+exception are operated by keyboard. The retained file is downloaded through
+Chromium, never shown inline, and the download is deleted at once. After a
+restart the run items, the observations and the transaction links render
+exactly as before, and the evidence keeps its file name, digest and download
+headers. The journey makes only loopback requests and leaves no screenshot,
+trace, download, database or backup behind. Correction by a Posted
+transaction, staleness after a reversal, validation and retry are covered by
+host tests rather than this journey.
+
+A separate process test records evidence, observations, a run and a
+resolution through the JSON API of a live host. It then backs up, verifies
+and stages the database, and starts a fresh host over the staged copy. Every
+M010 read route returns exactly what the live host served.

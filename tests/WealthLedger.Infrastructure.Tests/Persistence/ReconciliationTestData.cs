@@ -70,6 +70,23 @@ internal static class ReconciliationTestData
     internal static async Task<ReconciliationHistory> SeedAsync(
         Func<WealthLedgerDbContext> createContext)
     {
+        var otherPostedId = await SeedLedgerAsync(createContext);
+        var evidenceId = await RecordStatementAsync(createContext);
+
+        return new ReconciliationHistory(
+            evidenceId,
+            otherPostedId,
+            Guid.Parse("70000000-0000-0000-0000-0000000000d1"));
+    }
+
+    /// <summary>
+    /// Posts the compared ledger history only. It writes no M010 row, so it
+    /// also seeds a database migrated no further than M009.
+    /// </summary>
+    /// <returns>The other household's Posted contribution.</returns>
+    internal static async Task<Guid> SeedLedgerAsync(
+        Func<WealthLedgerDbContext> createContext)
+    {
         await using (var context = createContext())
         {
             await CoreLedgerTestData.SeedMasterDataAsync(context);
@@ -128,7 +145,7 @@ internal static class ReconciliationTestData
             10_000,
             ContributionDate);
         await RecordGoldPurchaseAsync(createContext);
-        var otherPostedId = await RecordContributionAsync(
+        return await RecordContributionAsync(
             createContext,
             "reconcile-other-household",
             5_000,
@@ -136,7 +153,14 @@ internal static class ReconciliationTestData
             CoreLedgerTestData.OtherHouseholdId,
             CoreLedgerTestData.OtherPortfolioId,
             CoreLedgerTestData.OtherAccountId);
+    }
 
+    /// <summary>
+    /// Records the synthetic September statement and its three observations.
+    /// </summary>
+    internal static async Task<Guid> RecordStatementAsync(
+        Func<WealthLedgerDbContext> createContext)
+    {
         Guid evidenceId;
 
         await using (var context = createContext())
@@ -163,10 +187,7 @@ internal static class ReconciliationTestData
                     ]));
         }
 
-        return new ReconciliationHistory(
-            evidenceId,
-            otherPostedId,
-            Guid.Parse("70000000-0000-0000-0000-0000000000d1"));
+        return evidenceId;
     }
 
     internal static EvidenceObservationInput CashObservation
