@@ -77,14 +77,22 @@ failure, show the failing output, then fix it or report it.
 **Known flake, until it is fixed.** `CriticalJourneysTests` in the browser
 project can fail with `Assert.Empty() Failure` at the
 `Assert.Empty(consoleErrors)` line in `RunJourneyAsync`, with entries like
-`Failed to load resource: net::ERR_CONNECTION_REFUSED` (xUnit may truncate them).
+`Failed to load resource: net::ERR_CONNECTION_REFUSED`.
 
 - These console errors are captured while the test restarts the host on purpose.
 - Line numbers move, so open the line in the stack trace and check that it is
   this assertion. Any other line, including `Assert.Empty(requestFailures)`, is
   not this flake.
-- If it is the flake, rerun the browser project once:
+- That assertion also catches other console errors and uncaught page exceptions.
+  It is the flake only if every visible entry starts with
+  `Failed to load resource: net::ERR_CONNECTION`. Any other entry is a real
+  failure, even at this line.
+- xUnit truncates long entries and lists. If the list is cut off, say so in the
+  report: the hidden entries are unproven.
+- Every failed test in the project must match. If it is the flake, rerun the
+  browser project once:
   `dotnet test tests/WealthLedger.UI.BrowserTests/WealthLedger.UI.BrowserTests.csproj --no-build --verbosity minimal`
+- The rerun must pass completely; a second failure is a stop.
 - Report both the flake and the rerun. Never present it as a clean pass.
 
 ## Report
