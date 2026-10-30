@@ -113,10 +113,8 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         var firstUrl =
             await first.WaitForListeningUrlAsync();
 
-        Assert.Contains(
-            "Local startup mode: Ready",
-            first.CombinedOutput,
-            StringComparison.OrdinalIgnoreCase);
+        first.AssertOutputContains(
+            "Local startup mode: Ready");
 
         using var firstClient =
             new HttpClient();
@@ -145,15 +143,11 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         var collisionUrl =
             await collision.WaitForListeningUrlAsync();
 
-        Assert.Contains(
-            "Local startup mode: Blocked",
-            collision.CombinedOutput,
-            StringComparison.OrdinalIgnoreCase);
+        collision.AssertOutputContains(
+            "Local startup mode: Blocked");
 
-        Assert.Contains(
-            nameof(LocalDataFailureCategory.OwnershipBusy),
-            collision.CombinedOutput,
-            StringComparison.OrdinalIgnoreCase);
+        collision.AssertOutputContains(
+            nameof(LocalDataFailureCategory.OwnershipBusy));
 
         using var collisionClient =
             new HttpClient();
@@ -183,10 +177,8 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         var restartedUrl =
             await restarted.WaitForListeningUrlAsync();
 
-        Assert.Contains(
-            "Local startup mode: Ready",
-            restarted.CombinedOutput,
-            StringComparison.OrdinalIgnoreCase);
+        restarted.AssertOutputContains(
+            "Local startup mode: Ready");
 
         using var restartedClient =
             new HttpClient();
@@ -1405,9 +1397,26 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
                 return await _listeningUrl.Task;
             }
 
+            if (exitTask.IsCanceled)
+            {
+                throw new TimeoutException(
+                    $"The API did not listen in time. Output: {CombinedOutput}");
+            }
+
             await exitTask;
             throw new InvalidOperationException(
                 $"The API exited before listening. Output: {CombinedOutput}");
+        }
+
+        internal void AssertOutputContains(string expected)
+        {
+            var output = CombinedOutput;
+
+            Assert.True(
+                output.Contains(
+                    expected,
+                    StringComparison.OrdinalIgnoreCase),
+                $"Expected '{expected}' in the API output. Output: {output}");
         }
 
         internal async Task<int> WaitForExitAsync()
