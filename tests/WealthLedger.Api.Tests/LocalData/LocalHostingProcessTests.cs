@@ -336,6 +336,12 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         Assert.Equal("attachment", restored.AttachmentDisposition);
         Assert.Equal("nosniff", restored.AttachmentContentTypeOptions);
 
+        var search = Deserialize<NavigationPageResponse<LedgerSearchTransactionResponse>>(
+            restored.LedgerSearch);
+        Assert.Contains(
+            search.Items,
+            x => x.TransactionId == records.ContributionTransactionId);
+
         var observations = Deserialize<EvidenceObservationListResponse>(
             restored.Observations);
         Assert.Equal(2, observations.Items.Count);
@@ -1195,6 +1201,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         var bytes = await download.Content.ReadAsByteArrayAsync();
 
         return new M010Readback(
+            await client.GetStringAsync($"{households}/ledger/search"),
             await client.GetStringAsync(evidence),
             await client.GetStringAsync($"{households}/evidence"),
             await client.GetStringAsync($"{evidence}/observations"),
@@ -1292,6 +1299,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         Guid ReconciliationRunId);
 
     private sealed record M010Readback(
+        string LedgerSearch,
         string Evidence,
         string EvidenceList,
         string Observations,
