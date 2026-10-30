@@ -337,9 +337,20 @@ roots outside the repository, then started a fresh Ready process over the
 staged copy and read back the ledger, corrected position, receipt, and physical-
 gold derivation without replacing the active database.
 
-This procedure does not satisfy independent evidence reconciliation. M010 and
-the remaining ROADMAP real-data gate still apply, so M007 completion is not a
-recommendation to make WealthLedger the sole real household record.
+Posting an opening does not reconcile it. Retain the source statement or count
+as an evidence record in Reconcile, record its observed quantities, and run a
+reconciliation dated to the source; resolve each out-of-tolerance item through a
+separately posted correction or a documented exception, never by editing
+history. The remaining ROADMAP real-data gate still applies, so completing
+these workflows is not a recommendation to make WealthLedger the sole real
+household record.
+
+Retained evidence files live inside the database, so each one enlarges every
+later backup generation by its size (at most 10 MiB) and is exactly as private
+as the package. When a restore drill starts a fresh Ready process over the
+staged copy, read back the evidence records, each retained file's SHA-256 and
+the reconciliation runs as well as the ledger. An M010 process test proves
+that the normal package carries all of them.
 
 ## Synthetic verification workflow
 
@@ -357,6 +368,10 @@ dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.cs
 
 dotnet test tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj --no-restore --filter FullyQualifiedName~Migration_FromM001BacksUpFullChainAndPreservesData --verbosity minimal
 
+dotnet test tests/WealthLedger.Infrastructure.Tests/WealthLedger.Infrastructure.Tests.csproj --no-restore --filter FullyQualifiedName~M010MigrationRoundTripTests --verbosity minimal
+
+dotnet test tests/WealthLedger.Api.Tests/WealthLedger.Api.Tests.csproj --no-restore --filter FullyQualifiedName~LocalHosting_M010EvidenceAndReconciliationBackupReadsBackFromFreshProcess --verbosity minimal
+
 dotnet test WealthLedger.slnx --no-restore --verbosity minimal
 dotnet format WealthLedger.slnx --verify-no-changes --no-restore --verbosity minimal
 dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj --startup-project src/WealthLedger.Infrastructure/WealthLedger.Infrastructure.csproj --context WealthLedgerDbContext --no-build
@@ -365,7 +380,10 @@ dotnet ef migrations has-pending-model-changes --project src/WealthLedger.Infras
 These checks cover initialize, status, consistent package creation, independent
 verification, isolated staging, restore validation, verified pre-migration and
 pre-restore paths, confirmed replacement, restart/readback, and preservation of
-recovery evidence without using real household data.
+recovery evidence without using real household data. The two M010 commands add
+the 008 -> 010 -> 008 -> 010 migration round trip over M009 history and the
+fresh-process readback of evidence, retained files, observations and
+reconciliation runs from a staged backup.
 
 The verified M007 checkpoint contains 676 passing tests and six migrations.
 Its three Playwright journeys use unique explicit database/backup roots, block

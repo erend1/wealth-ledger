@@ -2,7 +2,7 @@
 
 Status: Accepted operational requirements
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-10-30
 
 ## Purpose
 
@@ -113,10 +113,9 @@ screenshot or trace by default.
 
 ## M010 evidence storage boundary
 
-The M010 evidence persistence and reconciliation slices add Application use
-cases, SQLite storage and tests. The M010 API slice exposes them as Ready-only
-loopback JSON routes (see "M010 HTTP boundary" below); no page captures
-evidence or runs a reconciliation yet.
+M010 adds evidence and reconciliation as Application use cases with SQLite
+storage. Ready-only loopback JSON routes (see "M010 HTTP boundary" below) and
+the Reconcile pages (see "M010 pages" below) expose them.
 
 - Retained evidence files are BLOBs inside the same SQLite database, never a
   sidecar directory. The M004 `.wlbackup` package therefore captures evidence
@@ -186,6 +185,42 @@ reconciliation routes. They carry the rules only an HTTP surface can:
   for each, and proves the log holds no
   identities, idempotency keys, cursors, labels, notes, references, file
   names, digests, bytes, master names, quantities, paths, SQL or stack traces.
+
+### M010 pages
+
+The Ledger, Assets and Reconcile pages run in the same `Ready` host and call the
+Application use cases directly, as ADR-008 accepts; they never call the JSON
+routes.
+
+- Every Reconcile POST requires antiforgery. Evidence capture, a run and a
+  rerun carry a page-issued retry key, so a double submit returns the first
+  result.
+- The evidence form reads its request through the same 10 MiB plus 64 KiB
+  bound and the same attachment policy as the upload route. A retained file
+  leaves only through the evidence page's explicit download, with the same
+  attachment, `nosniff`, `no-store` and sandbox headers; no page embeds,
+  frames or previews it.
+- Page failures are sanitized messages keyed by stable codes. They never echo
+  input, cursors, SQL or paths, and host tests check that page logs hold no
+  labels, notes, references, file names or digests.
+- One real-Chromium journey records evidence with an in-memory synthetic file
+  and reconciles it. It makes only loopback requests, deletes its one download
+  at once, and leaves no screenshot, trace, download, database or backup
+  behind. Its host output holds no paths, labels, references, file names,
+  explanations, digests or SQL.
+
+### M010 recovery evidence
+
+A process test records evidence with a retained PDF, links, observations, a
+run and a documented exception through the HTTP API of a live `Ready` host. It
+then creates and independently verifies a `.wlbackup`, stages it to a separate
+target, and starts a fresh host over the staged copy. Every M010 read route,
+including ledger search and position and lot inventory, returns exactly what
+the live host served, and the downloaded file keeps its length, SHA-256,
+attachment disposition and `nosniff` header. Neither host's output holds paths, household text, references, file
+names, digests or SQL. A real-SQLite test also proves that migrations 009 and
+010 can be removed and applied again over M009 history without changing the
+M009 schema, ledger rows, derivations or guards.
 
 ## Remaining operational boundaries
 
@@ -482,9 +517,10 @@ Before entering real household balances:
 - [ ] Duplicate-request behavior and correction behavior are verified.
 - [ ] M007 is Verified and every proposed opening has retained independent
       source evidence; current market value is not used as historical cost.
-- [ ] Each entered position can be reconciled independently; until M010
-      supplies the broader workbench, retain that comparison outside the ledger
-      without treating it as an application-verified fact.
+- [ ] Each entered position is reconciled independently against retained
+      source evidence through a Reconcile run, and every out-of-tolerance item
+      is corrected through a Posted transaction or documented as an exception.
+      A run is audit data, never a ledger fact.
 - [ ] The household understands which copy is authoritative and which copies
       are backups or exports.
 
