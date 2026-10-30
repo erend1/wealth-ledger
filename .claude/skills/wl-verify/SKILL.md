@@ -75,13 +75,14 @@ failure, show the failing output, then fix it or report it.
    It should print `No changes have been made to the model since the last migration.`
 
 **Known flake, until it is fixed.** `CriticalJourneysTests` in the browser
-project can fail with `Assert.Empty() Failure` at `CriticalJourneysTests.cs`
-line 121, with entries like
-`Failed to load resource: net::ERR_CONNECTION_REFUSED`.
+project can fail with `Assert.Empty() Failure` at the
+`Assert.Empty(consoleErrors)` line in `RunJourneyAsync`, with entries like
+`Failed to load resource: net::ERR_CONNECTION_REFUSED` (xUnit may truncate them).
 
 - These console errors are captured while the test restarts the host on purpose.
-- A failure at any other line, including line 122 (request failures), is not
-  this flake.
+- Line numbers move, so open the line in the stack trace and check that it is
+  this assertion. Any other line, including `Assert.Empty(requestFailures)`, is
+  not this flake.
 - If it is the flake, rerun the browser project once:
   `dotnet test tests/WealthLedger.UI.BrowserTests/WealthLedger.UI.BrowserTests.csproj --no-build --verbosity minimal`
 - Report both the flake and the rerun. Never present it as a clean pass.
