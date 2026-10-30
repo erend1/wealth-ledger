@@ -103,18 +103,48 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
     public async Task
         LocalHosting_ReadyOwnershipCollisionBlocksSecondHostAndRecoversAfterExit()
     {
+        var hosts = new List<ApiProcess>();
+
+        try
+        {
+            await RunOwnershipCollisionScenarioAsync(hosts);
+        }
+        catch (Exception exception)
+        {
+            /*
+             * This test has failed intermittently under full-solution
+             * load without a captured cause. Report every host's output
+             * so that the next failure names its own cause.
+             */
+            var outputs = hosts.Select(
+                (host, index) =>
+                    $"Host {index + 1} output:{Environment.NewLine}{host.CombinedOutput}");
+
+            throw new InvalidOperationException(
+                $"The ownership-collision scenario failed.{Environment.NewLine}"
+                + string.Join(Environment.NewLine, outputs),
+                exception);
+        }
+    }
+
+    private async Task RunOwnershipCollisionScenarioAsync(
+        List<ApiProcess> hosts)
+    {
         await PrepareReadyWorkspaceAsync();
 
         await using var first =
             ApiProcess.Start(
                 _databasePath,
                 _backupDirectory);
+        hosts.Add(first);
 
         var firstUrl =
             await first.WaitForListeningUrlAsync();
 
-        first.AssertOutputContains(
-            "Local startup mode: Ready");
+        Assert.Contains(
+            "Local startup mode: Ready",
+            first.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
 
         using var firstClient =
             new HttpClient();
@@ -139,15 +169,20 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             ApiProcess.Start(
                 _databasePath,
                 _backupDirectory);
+        hosts.Add(collision);
 
         var collisionUrl =
             await collision.WaitForListeningUrlAsync();
 
-        collision.AssertOutputContains(
-            "Local startup mode: Blocked");
+        Assert.Contains(
+            "Local startup mode: Blocked",
+            collision.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
 
-        collision.AssertOutputContains(
-            nameof(LocalDataFailureCategory.OwnershipBusy));
+        Assert.Contains(
+            nameof(LocalDataFailureCategory.OwnershipBusy),
+            collision.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
 
         using var collisionClient =
             new HttpClient();
@@ -173,12 +208,15 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             ApiProcess.Start(
                 _databasePath,
                 _backupDirectory);
+        hosts.Add(restarted);
 
         var restartedUrl =
             await restarted.WaitForListeningUrlAsync();
 
-        restarted.AssertOutputContains(
-            "Local startup mode: Ready");
+        Assert.Contains(
+            "Local startup mode: Ready",
+            restarted.CombinedOutput,
+            StringComparison.OrdinalIgnoreCase);
 
         using var restartedClient =
             new HttpClient();
@@ -1397,26 +1435,9 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
                 return await _listeningUrl.Task;
             }
 
-            if (exitTask.IsCanceled)
-            {
-                throw new TimeoutException(
-                    $"The API did not listen in time. Output: {CombinedOutput}");
-            }
-
             await exitTask;
             throw new InvalidOperationException(
                 $"The API exited before listening. Output: {CombinedOutput}");
-        }
-
-        internal void AssertOutputContains(string expected)
-        {
-            var output = CombinedOutput;
-
-            Assert.True(
-                output.Contains(
-                    expected,
-                    StringComparison.OrdinalIgnoreCase),
-                $"Expected '{expected}' in the API output. Output: {output}");
         }
 
         internal async Task<int> WaitForExitAsync()
