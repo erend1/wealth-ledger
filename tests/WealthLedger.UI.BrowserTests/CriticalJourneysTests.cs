@@ -1196,7 +1196,10 @@ public sealed class CriticalJourneysTests
     /// The statement is dated 2026-09-30, after the gold lifecycle. The
     /// second vault then holds only the transferred 10 g, one-piece bracelet;
     /// the first vault's count of 15 g differs from its ledger quantity
-    /// whatever the opening cutover's date.
+    /// whatever the opening cutover's date. Link candidates are Posted on or
+    /// before that date, newest first, 20 to a page. The cutover's openings
+    /// take the host operating date, which is later, so the corrected gold
+    /// sale of 2026-09-15 heads the first page.
     /// </remarks>
     private static async Task<Uri> RunM010WorkflowsAsync(
         IPage page,
@@ -1230,11 +1233,19 @@ public sealed class CriticalJourneysTests
             "BROWSER-GOLD-SALE-CORRECTED",
             await page.Locator("main").TextContentAsync());
 
-        // Assets: the second vault's gold position, its lot, and the lot's
-        // acquisition transaction.
+        // Assets, by keyboard: filter to the second vault, then follow its
+        // gold position to the lot and the lot's acquisition transaction.
         await GoToAsync(page, baseAddress, "/assets");
         await AssertPageFrameAsync(page);
         await AssertResponsiveReflowAsync(page, options);
+        await SelectOptionContainingAsync(
+            page.Locator("#accountId"),
+            "(BROWSER_SECOND_VAULT)");
+        await TabToAsync(page, "form.filter-panel button[type=\"submit\"]");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForURLAsync(new Regex("accountId="));
+        await AssertResponsiveReflowAsync(page, options);
+        Assert.Equal(1, await page.Locator("section.transaction-card").CountAsync());
         var secondVaultGold = page
             .Locator(
                 "section.transaction-card",
@@ -1260,12 +1271,14 @@ public sealed class CriticalJourneysTests
         await page.Locator("#ledger-results-heading").WaitForAsync();
         Assert.Equal(1, await page.Locator(".transaction-card").CountAsync());
 
+        await AssertResponsiveReflowAsync(page, options);
+
         await page.GoBackAsync(
             new PageGoBackOptions
             {
                 WaitUntil = WaitUntilState.DOMContentLoaded
             });
-        await secondVaultGold
+        var lotsHref = await secondVaultGold
             .GetByRole(
                 AriaRole.Link,
                 new LocatorGetByRoleOptions
@@ -1273,7 +1286,10 @@ public sealed class CriticalJourneysTests
                     Name = "Edinim lotları",
                     Exact = true
                 })
-            .ClickAsync();
+            .GetAttributeAsync("href");
+        Assert.StartsWith("/assets/lots?", lotsHref, StringComparison.Ordinal);
+        await TabToAsync(page, $"a[href=\"{lotsHref}\"]");
+        await page.Keyboard.PressAsync("Enter");
         await page.Locator("#lot-results-heading").WaitForAsync();
         await AssertPageFrameAsync(page);
         await AssertResponsiveReflowAsync(page, options);
@@ -1283,14 +1299,8 @@ public sealed class CriticalJourneysTests
             "Browser Test Second Vault",
             await lot.InnerTextAsync(),
             StringComparison.Ordinal);
-        await lot.GetByRole(
-                AriaRole.Link,
-                new LocatorGetByRoleOptions
-                {
-                    Name = "Edinim işlemini aç",
-                    Exact = true
-                })
-            .ClickAsync();
+        await TabToAsync(page, "a.card-link:has-text(\"Edinim işlemini aç\")");
+        await page.Keyboard.PressAsync("Enter");
         await page.Locator("#detail-heading").WaitForAsync();
         Assert.Contains(
             "BROWSER-GOLD-PURCHASE-BRACELET",
@@ -1345,12 +1355,14 @@ public sealed class CriticalJourneysTests
 
         await RecordObservationAsync(
             page,
+            options,
             "(BROWSER_SECOND_VAULT)",
             quantity: "10",
             pieces: "1",
             byKeyboard: false);
         await RecordObservationAsync(
             page,
+            options,
             "(BROWSER_VAULT)",
             quantity: "15",
             pieces: "1",
@@ -1416,10 +1428,20 @@ public sealed class CriticalJourneysTests
             await downloadPage.CloseAsync();
         }
 
+        // Rendered run items, observations and links, compared after restart.
+        await GoToAsync(page, baseAddress, runPath);
+        var runItems = await SectionTextAsync(page, "run-items-heading");
+        await GoToAsync(page, baseAddress, evidencePath);
+        var observations = await SectionTextAsync(
+            page,
+            "evidence-observations-heading");
+        var links = await SectionTextAsync(page, "evidence-links-heading");
+
         await workspace.StopHostAsync();
         baseAddress = await workspace.StartHostAsync();
 
         await GoToAsync(page, baseAddress, runPath);
+        Assert.Equal(runItems, await SectionTextAsync(page, "run-items-heading"));
         Assert.Equal(1, await page.Locator("[data-state=\"MATCHED\"]").CountAsync());
         Assert.Equal(
             1,
@@ -1441,9 +1463,21 @@ public sealed class CriticalJourneysTests
             evidenceText,
             StringComparison.Ordinal);
         Assert.Equal(
+            observations,
+            await SectionTextAsync(page, "evidence-observations-heading"));
+        Assert.Equal(
             2,
             await page.Locator(
                     "section[aria-labelledby=\"evidence-observations-heading\"] li.entry-card")
+                .CountAsync());
+        Assert.Equal(
+            links,
+            await SectionTextAsync(page, "evidence-links-heading"));
+        Assert.Equal(
+            1,
+            await page.Locator("#evidence-links-heading")
+                .Locator("xpath=..")
+                .Locator("li a[href^=\"/ledger/\"]")
                 .CountAsync());
 
         using (var client = new HttpClient { BaseAddress = baseAddress })
@@ -1476,6 +1510,7 @@ public sealed class CriticalJourneysTests
     /// </summary>
     private static async Task RecordObservationAsync(
         IPage page,
+        JourneyOptions options,
         string accountCode,
         string quantity,
         string pieces,
@@ -1490,6 +1525,7 @@ public sealed class CriticalJourneysTests
                 })
             .ClickAsync();
         await page.Locator("#observe-heading").WaitForAsync();
+        await AssertResponsiveReflowAsync(page, options);
         await SelectOptionContainingAsync(
             page.Locator("#Input_PortfolioId"),
             "Browser Test Portfolio");
@@ -1514,6 +1550,7 @@ public sealed class CriticalJourneysTests
         {
             await ClickReconcileButtonAsync(page, "Gözlemi incele");
             await page.Locator("#observe-review-heading").WaitForAsync();
+            await AssertResponsiveReflowAsync(page, options);
             Assert.Contains(
                 $"{quantity}00000000",
                 await page.Locator("main").TextContentAsync(),
@@ -1527,6 +1564,14 @@ public sealed class CriticalJourneysTests
             await page.Locator("main").InnerTextAsync(),
             StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The visible text of the section a heading labels.
+    /// </summary>
+    private static Task<string> SectionTextAsync(IPage page, string headingId)
+        => page.Locator($"#{headingId}")
+            .Locator("xpath=..")
+            .InnerTextAsync();
 
     private static Task ClickReconcileButtonAsync(IPage page, string name)
         => page.GetByRole(

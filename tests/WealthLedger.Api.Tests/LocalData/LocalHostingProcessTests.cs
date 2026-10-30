@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -292,20 +293,22 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
 
         // Evidence, its retained file, observations, the run and its
         // resolution are created through the shipped API of a live host.
-        await using (var process = ApiProcess.Start(
-                         _databasePath,
-                         _backupDirectory))
+        var liveProcess = ApiProcess.Start(_databasePath, _backupDirectory);
+
+        await using (liveProcess)
         {
             using var client = new HttpClient
             {
-                BaseAddress = new Uri(await process.WaitForListeningUrlAsync())
+                BaseAddress = new Uri(await liveProcess.WaitForListeningUrlAsync())
             };
             records = await RecordM010EvidenceAndReconciliationAsync(
                 client,
                 ledger);
             live = await ReadM010StateAsync(client, ledger, records);
-            AssertM010OutputIsPrivate(process.CombinedOutput, _databasePath);
         }
+
+        // Read after exit, so the check sees everything the host wrote.
+        AssertM010OutputIsPrivate(liveProcess.CombinedOutput);
 
         var restoredDatabasePath = await BackUpVerifyAndStageAsync(
             "m010-restore-drill");
@@ -394,11 +397,12 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             ledger.VaultId,
             Assert.Single(lot.Custody).AccountId);
 
+        await fresh.StopAsync();
         Assert.Contains(
             "Local startup mode: Ready",
             fresh.CombinedOutput,
             StringComparison.OrdinalIgnoreCase);
-        AssertM010OutputIsPrivate(fresh.CombinedOutput, restoredDatabasePath);
+        AssertM010OutputIsPrivate(fresh.CombinedOutput);
     }
 
     [Fact]
@@ -970,8 +974,8 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
     private static readonly byte[] M010RecoveryPdf = Encoding.ASCII.GetBytes(
         "%PDF-1.7\n%synthetic recovery statement\n%%EOF\n");
 
-    // Household text, references and the file name that must never reach a
-    // host log.
+    // Household text, references, the file name and the retry keys that must
+    // never reach a host log.
     private static readonly string[] M010PrivateText =
     [
         "Synthetic recovery statement",
@@ -979,7 +983,9 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         "RECOVERY-M010",
         "RECOVERY_M010",
         "Synthetic Recovery M010",
-        M010RecoveryExplanation
+        M010RecoveryExplanation,
+        "m010-recovery-upload",
+        "m010-recovery-run"
     ];
 
     private ServiceProvider CreateLocalServices(
@@ -1209,7 +1215,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
                 $"{households}/reconciliations/{records.ReconciliationRunId:D}"),
             await client.GetStringAsync($"{households}/reconciliations"),
             await client.GetStringAsync(
-                $"{households}/inventory/positions?asOf=2026-09-30"),
+                $"{households}/inventory/positions?asOf={M010EvidenceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}"),
             await client.GetStringAsync($"{households}/inventory/positions"),
             await client.GetStringAsync($"{households}/inventory/lots"),
             Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(),
@@ -1256,12 +1262,14 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         return restoredDatabasePath;
     }
 
-    private static void AssertM010OutputIsPrivate(
-        string output,
-        string databasePath)
+    /// <summary>
+    /// The live database, the backups and the staged copy all lie under the
+    /// test root, so no path below it may appear.
+    /// </summary>
+    private void AssertM010OutputIsPrivate(string output)
     {
         Assert.DoesNotContain(
-            databasePath,
+            _testRoot,
             output,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(

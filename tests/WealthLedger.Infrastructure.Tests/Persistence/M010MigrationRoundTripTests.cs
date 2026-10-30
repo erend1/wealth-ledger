@@ -13,8 +13,9 @@ namespace WealthLedger.Infrastructure.Tests.Persistence;
 
 /// <summary>
 /// M010 as a whole: both of its migrations applied to an M009 database,
-/// removed, and applied again, with M009 schema, history, derivations and
-/// guards unchanged at every step.
+/// removed, and applied again. At every step the pre-M010 schema objects,
+/// ledger rows and derivations stay unchanged and the M009 piece guard still
+/// refuses.
 /// </summary>
 public sealed class M010MigrationRoundTripTests
 {
@@ -49,6 +50,7 @@ public sealed class M010MigrationRoundTripTests
         var m010Schema = await ReadSchemaAsync(database);
 
         Assert.Equal(60L, await CountM010ObjectsAsync(database));
+        Assert.Equal(m009Schema, await ReadSchemaAsync(database, excludeM010: true));
         Assert.Equal(ledger, await SnapshotLedgerAsync(database));
         Assert.Equal(derived, await ReadM009DerivedStateAsync(database));
         await AssertM009GuardRefusesPieceLessGoldSaleAsync(database);
@@ -70,6 +72,7 @@ public sealed class M010MigrationRoundTripTests
         }
 
         Assert.Equal(m010Schema, await ReadSchemaAsync(database));
+        Assert.Equal(m009Schema, await ReadSchemaAsync(database, excludeM010: true));
         Assert.Equal(ledger, await SnapshotLedgerAsync(database));
         Assert.Equal(derived, await ReadM009DerivedStateAsync(database));
         await AssertM009GuardRefusesPieceLessGoldSaleAsync(database);
@@ -245,7 +248,14 @@ public sealed class M010MigrationRoundTripTests
                OR name LIKE '%Reconciliation%';
             """));
 
-    private static async Task<string> ReadSchemaAsync(SqliteTestDatabase database)
+    /// <summary>
+    /// Every schema object, or with <paramref name="excludeM010"/> every
+    /// object that existed before M010, whose definitions M010 must not
+    /// change.
+    /// </summary>
+    private static async Task<string> ReadSchemaAsync(
+        SqliteTestDatabase database,
+        bool excludeM010 = false)
         => Convert.ToString(await database.ExecuteScalarAsync(
             """
             SELECT group_concat(type || ':' || name || ':' || COALESCE(sql, ''), char(10))
@@ -254,7 +264,11 @@ public sealed class M010MigrationRoundTripTests
                 FROM sqlite_master
                 WHERE name <> '__EFMigrationsHistory'
                   AND name <> '__EFMigrationsLock'
+                  AND NOT ($excludeM010
+                           AND (name LIKE '%Evidence%'
+                                OR name LIKE '%Reconciliation%'))
                 ORDER BY type, name
             );
-            """))!;
+            """,
+            new SqliteParameter("$excludeM010", excludeM010 ? 1 : 0)))!;
 }
