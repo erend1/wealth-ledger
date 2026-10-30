@@ -1426,9 +1426,10 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
         internal async Task<string> WaitForListeningUrlAsync()
         {
             /*
-             * Host starts took up to 14 seconds under full-solution load,
-             * too close to the former 20-second limit. This bounds the
-             * wait only: a host that never listens still fails the test.
+             * The former 20-second limit expired intermittently when the
+             * full solution ran under heavy file load, where measured starts
+             * reached 14 seconds. This bounds the wait only: a host that
+             * never listens still fails the test.
              */
             using var timeout = new CancellationTokenSource(
                 TimeSpan.FromSeconds(60));
