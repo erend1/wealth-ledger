@@ -103,12 +103,40 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
     public async Task
         LocalHosting_ReadyOwnershipCollisionBlocksSecondHostAndRecoversAfterExit()
     {
+        var hosts = new List<ApiProcess>();
+
+        try
+        {
+            await RunOwnershipCollisionScenarioAsync(hosts);
+        }
+        catch (Exception exception)
+        {
+            /*
+             * This test has failed intermittently under full-solution
+             * load without a captured cause. Report every host's output
+             * so that the next failure names its own cause.
+             */
+            var outputs = hosts.Select(
+                (host, index) =>
+                    $"Host {index + 1} output:{Environment.NewLine}{host.CombinedOutput}");
+
+            throw new InvalidOperationException(
+                $"The ownership-collision scenario failed.{Environment.NewLine}"
+                + string.Join(Environment.NewLine, outputs),
+                exception);
+        }
+    }
+
+    private async Task RunOwnershipCollisionScenarioAsync(
+        List<ApiProcess> hosts)
+    {
         await PrepareReadyWorkspaceAsync();
 
         await using var first =
             ApiProcess.Start(
                 _databasePath,
                 _backupDirectory);
+        hosts.Add(first);
 
         var firstUrl =
             await first.WaitForListeningUrlAsync();
@@ -141,6 +169,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             ApiProcess.Start(
                 _databasePath,
                 _backupDirectory);
+        hosts.Add(collision);
 
         var collisionUrl =
             await collision.WaitForListeningUrlAsync();
@@ -179,6 +208,7 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
             ApiProcess.Start(
                 _databasePath,
                 _backupDirectory);
+        hosts.Add(restarted);
 
         var restartedUrl =
             await restarted.WaitForListeningUrlAsync();
@@ -1395,14 +1425,26 @@ public sealed class LocalHostingProcessTests : IAsyncLifetime
 
         internal async Task<string> WaitForListeningUrlAsync()
         {
+            /*
+             * The former 20-second limit expired intermittently when the
+             * full solution ran under heavy file load, where measured starts
+             * reached 14 seconds. This bounds the wait only: a host that
+             * never listens still fails the test.
+             */
             using var timeout = new CancellationTokenSource(
-                TimeSpan.FromSeconds(20));
+                TimeSpan.FromSeconds(60));
             var exitTask = _process.WaitForExitAsync(timeout.Token);
             var completed = await Task.WhenAny(_listeningUrl.Task, exitTask);
 
             if (completed == _listeningUrl.Task)
             {
                 return await _listeningUrl.Task;
+            }
+
+            if (exitTask.IsCanceled)
+            {
+                throw new TimeoutException(
+                    $"The API did not listen in time. Output: {CombinedOutput}");
             }
 
             await exitTask;
