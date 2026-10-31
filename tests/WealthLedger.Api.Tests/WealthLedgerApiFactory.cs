@@ -480,12 +480,37 @@ internal sealed class WealthLedgerApiFactory
 
         SqliteConnection.ClearAllPools();
 
-        if (Directory.Exists(
-                _directoryPath))
+        DeleteWorkspaceDirectory();
+    }
+
+    private void DeleteWorkspaceDirectory()
+    {
+        /*
+         * The host's own app.Run thread may still be releasing the
+         * ownership lease here, and two concurrent deletes of its lock
+         * file fail transiently. Retry for a bounded time, so that a
+         * handle that is really leaked still fails the test.
+         */
+        for (var attempt = 1; ; attempt++)
         {
-            Directory.Delete(
-                _directoryPath,
-                recursive: true);
+            try
+            {
+                if (Directory.Exists(
+                        _directoryPath))
+                {
+                    Directory.Delete(
+                        _directoryPath,
+                        recursive: true);
+                }
+
+                return;
+            }
+            catch (Exception exception)
+                when (exception is IOException or UnauthorizedAccessException
+                      && attempt < 50)
+            {
+                Thread.Sleep(100);
+            }
         }
     }
 
