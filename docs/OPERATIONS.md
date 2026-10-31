@@ -1,10 +1,12 @@
 # WealthLedger Local Data Operations
 
-Status: Canonical operator guide for the local database lifecycle, backup,
-restore, migration, recovery, opening cutover, and post-cutover reconciliation
-and retained evidence. See `docs/PROJECT_STATE.md` for verification status.
+Status: Canonical local-data operator guide
 
 Last verified: 2026-10-31
+
+This guide covers the local database lifecycle, backup, restore, migration,
+recovery, opening cutover, and post-cutover reconciliation and retained
+evidence. See `docs/PROJECT_STATE.md` for verification status.
 
 ## Safety boundary
 
@@ -207,12 +209,11 @@ identifiers and the recovery-package path. A backup or verification failure
 prevents the first schema-changing command.
 
 A database's applied migrations must be an exact prefix of the known chain. The
-bounded table check then reads the representative tables of
-`001_CoreLedger`, `002_CommandReceipt`, and `005_WorkspaceIdentity` only when
-the prefix contains that migration; it does not probe every table. In
-particular, a valid M001 database does not require the M002 `CommandReceipt`
-table before backup; it is reported as `MigrationRequired` and can follow the
-protected M001-to-current chain.
+bounded table check then reads a fixed set of representative tables, each only
+when the prefix contains the migration that introduced it; it does not probe
+every table. In particular, a valid M001 database does not require the M002
+`CommandReceipt` table before backup; it is reported as `MigrationRequired` and
+can follow the protected M001-to-current chain.
 
 If migration reports failure:
 
@@ -361,9 +362,9 @@ that the normal package carries all of them.
 ## Synthetic verification workflow
 
 The process tests execute the same commands against unique temporary paths and
-ephemeral state. From a clean checkout, the first commands also restore the
-local `dotnet-ef` tool and install the pinned Chromium that the full test run
-needs:
+ephemeral state. From a clean checkout, first restore the local `dotnet-ef` tool
+and the solution, build, and install the pinned Chromium that the full test run
+needs, then run the checks:
 
 ```powershell
 dotnet tool restore
@@ -397,8 +398,8 @@ fresh-process readback of evidence, retained files, observations and
 reconciliation runs from a staged backup.
 
 `docs/PROJECT_STATE.md` records the current verified checkpoint, its test
-counts, and its migration chain; `CHANGELOG.md` records the evidence for earlier
-checkpoints. The Playwright journeys use unique explicit database/backup roots,
-block external requests, and produce no screenshot or trace by default. The
-retained human learning lab is not test-owned and is never deleted
-automatically.
+counts, and its migration chain; `CHANGELOG.md` and the milestone verification
+records hold the evidence for earlier checkpoints. The Playwright journeys use
+unique explicit database/backup roots, block external requests, and produce no
+screenshot or trace by default. The retained human learning lab is not
+test-owned and is never deleted automatically.
