@@ -1,8 +1,8 @@
 # WealthLedger Project State
 
-As of: 2026-09-16
+As of: 2026-10-31
 
-Verified against: dd3ad33
+Verified against: 875b5cc
 
 Status source: verified against the repository, the generated EF model, local
 .NET/SQLite test runs, real-process lifecycle smoke tests, and local Chromium
@@ -29,6 +29,12 @@ M009 adds the verified complete physical-gold lifecycle: reviewed cash purchase
 into physical custody, exact gross/fineness/piece evidence, explicitly selected-
 lot sale, same-lineage custody transfer, completeness-aware realized cost,
 persisted verification/receipts, and exact immutable correction.
+M010 adds the verified independently checkable record: broad Posted-history
+search with filter-bound pagination, derived current and as-of position and lot
+inventory, immutable evidence with an optional bounded attachment inside SQLite,
+exact observations, and deterministic dated reconciliation with explicit
+tolerance, staleness, and resolution. None of it stores a balance or writes a
+ledger row.
 
 Starting without a database, the explicit operations CLI can initialize the
 accepted migration chain and verify the resulting file. The default-off setup
@@ -49,21 +55,20 @@ effects. Where a corrected replacement is required, it remains a separate
 normal submission with its own idempotency identity and no fabricated durable
 replacement relationship.
 
-The M009 checkpoint suite results follow. `CHANGELOG.md` records the commands
-and the full verification evidence:
+The M010 checkpoint suite results follow. The M010 milestone's "Implementation
+verification" section maps them to its acceptance criteria:
 
-- Domain tests: 193 passed, 0 failed.
-- Application tests: 226 passed, 0 failed.
-- Infrastructure tests against real SQLite files: 245 passed, 0 failed.
-- UI presentation/contract tests: 81 passed, 0 failed.
-- API/UI host tests against real SQLite files: 159 passed, 0 failed.
+- Domain tests: 297 passed, 0 failed.
+- Application tests: 391 passed, 0 failed.
+- Infrastructure tests against real SQLite files: 318 passed, 0 failed.
+- UI presentation/contract tests: 129 passed, 0 failed.
+- API/UI host tests against real SQLite files: 218 passed, 0 failed.
 - Operations process/contract tests: 23 passed, 0 failed.
 - Playwright Chromium browser tests: 3 passed, 0 failed.
-- Total: 930 passed, 0 failed, 0 skipped.
-- Formatting drift: no M009 drift; the check reports only the three documented
-  pre-existing `LedgerTransaction.cs` findings described in `CHANGELOG.md`.
-- EF model drift: none. The migration chain contains eight migrations and ends
-  at `008_PhysicalGoldLifecycle`.
+- Total: 1379 passed, 0 failed, 0 skipped.
+- Formatting drift: none; `dotnet format --verify-no-changes` passes.
+- EF model drift: none. The migration chain contains ten migrations and ends at
+  `010_ReconciliationPersistence`.
 
 ## Delivery planning
 
@@ -123,36 +128,18 @@ Recommended decisions without amendment. ADR-010 records signed allocation-
 level piece movement and the physical-gold extension of ADR-009 cumulative
 realized-cost apportionment. M009 was verified on 2026-09-16 after its Domain,
 Application, real-SQLite, API, Razor UI, real-browser, privacy, migration,
-concurrency, backup, restore, and fresh-process readback evidence passed. M009
-remains Verified while M010 is implemented.
+concurrency, backup, restore, and fresh-process readback evidence passed.
 
 [`M010: Searchable Inventory, Evidence, and Reconciliation`](milestones/M010_searchable_inventory_evidence_reconciliation.md)
 was accepted on 2026-10-02 after the human owners approved all twenty-two
-Recommended decisions without amendment. M010 became the sole In Progress
-milestone on 2026-10-02, when #20 merged via PR #27. #21 merged via PR #28,
-#22 via PR #32, #23 via PR #34, #24 via PR #36 and #25 via PR #39; parent
-issue #19 tracks the open child #26. This adds no M010 Verified behavior;
-implementation evidence will be recorded only after it is proved.
-
-The verified M006 delivery includes workspace-bound protection readiness, the
-`WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
-fail-closed startup-mode boundary, guided browser initialization for storage,
-workspace setup and the required initial backup, and the Ready shell with its
-complete read-only transaction explanation. Semantic landmarks, labels,
-validation focus, keyboard focus, skip navigation, reduced-motion handling,
-forced-color support, and responsive reflow have focused automated coverage;
-this is not a claim of general WCAG conformance.
-
-`InitialBackupRequired` maps the initial-backup review/action and completion
-pages. The running setup process remains in that static mode after backup
-creation and clearly requires one clean restart. `Ready` maps Today, Ledger
-with direct transaction explanation, read-only Settings, and the dedicated
-M007-M009 opening, Fund, and physical-gold review/receipt/reversal pages and
-JSON adapters. The real-browser suite covers the complete restart-delimited
-first run, Ready navigation, opening cutover, Fund trades, and the physical-
-gold purchase/sale/transfer/correction lifecycle; JavaScript-disabled
-operation, keyboard-only paths, narrow and desktop viewports, external-request
-rejection, and process/file cleanup.
+Recommended decisions without amendment. Its implementation began that day. M010
+was verified on 2026-10-31 at `875b5cc` after its Domain, Application, real-
+SQLite, API, Razor UI, real-browser, privacy, migration, backup, restore, and
+fresh-process readback evidence passed. Parent issue #19 tracked child issues
+#20-#26 and #45. No new ADR was required. The milestone's verification record
+states two limits: keyboard operation of the remaining Ledger, Assets, and
+Reconcile steps is inferred from native controls, and narrow-viewport overflow
+was measured once rather than guarded by a committed test.
 
 ## Migrations
 
@@ -164,21 +151,19 @@ rejection, and process/file cleanup.
 - M007 migration: `20260910101810_006_OpeningBalanceCutoverGuards`.
 - M008 migration: `20260913054039_007_FundTradeLifecycleGuards`.
 - M009 migration: `20260915082550_008_PhysicalGoldLifecycle`.
-- M010 migrations (In Progress, not yet verified):
-  `20261028065838_009_EvidencePersistence` and
+- M010 migrations: `20261028065838_009_EvidencePersistence` and
   `20261028082512_010_ReconciliationPersistence`.
 
 ## Next delivery candidate
 
-M009 is Verified. Its accepted contract and ADR-010 are implemented through
-the exact piece-movement Domain model, reviewed Application workflows,
-migration 008 asset-family dispatch and guards, API and Razor boundaries, three
-real-browser journeys, and disposable backup/restore verification recorded
-in `CHANGELOG.md`.
+M010 is Verified, and no milestone is In Progress. M011 (market/reference
+observations and dated valuation) is the next Planned candidate in `ROADMAP.md`.
+It has no milestone contract, so it needs one drafted and accepted before any
+implementation.
 
-M010 is the sole In Progress delivery milestone under parent issue #19. Its
-accepted contract bounds transaction search, position/lot inventory, evidence,
-and reconciliation; no later milestone has started.
+Every ROADMAP real-data readiness clause is now verified for synthetic data.
+Relying on WealthLedger for real household data remains the owner's decision,
+under the operator duties in `SECURITY_OPERATIONS.md`.
 
 Do not start live market data, provider-specific integration, optimization, AI/LLM integration, broad UI work, materialized analytics, microservices, messaging, caching, or CQRS infrastructure without a new accepted milestone need.
 
@@ -193,5 +178,12 @@ Do not start live market data, provider-specific integration, optimization, AI/L
   OS/device-encryption reliance remains deferred to a separate ADR.
 - SQLite concurrency beyond M004's single-machine ownership boundary and the
   scoped database collisions handled through M009.
+- Whether CSV evidence stays UTF-8 only or also accepts Windows-1254 and
+  ISO-8859-9 exports.
+- Whether M008 and M009 should refuse disposals and transfers dated before the
+  acquisition or custody they consume. M010 reports those as signed as-of
+  quantities.
+- Whether M009 should refuse a gold sale of all a lot's weight with only some of
+  its pieces, which leaves pieces held at zero grams. M010 reports that as is.
 
 Record a new ADR only when one of these or another cross-cutting architectural choice is accepted or superseded.

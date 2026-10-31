@@ -1,14 +1,16 @@
 # M010: Searchable Inventory, Evidence, and Reconciliation
 
-Status: In Progress
+Status: Verified
 
 Owner: Human and agent
 
-Last reviewed: 2026-10-29
+Last reviewed: 2026-10-31
 
 Accepted: 2026-10-02
 
 Implementation started: 2026-10-02
+
+Verified: 2026-10-31
 
 ## Acceptance record and implementation gate
 
@@ -33,9 +35,92 @@ Implementation is tracked by parent issue #19 and child issues #20-#26. It
 began on 2026-10-02, when #20 merged via PR #27; this In Progress status was
 recorded on 2026-10-26. #21 merged via PR #28 on 2026-10-27, #22 merged via
 PR #32 on 2026-10-28, #23 merged via PR #34 on 2026-10-28, #24 merged via
-PR #36 on 2026-10-29, and #25 merged via PR #39 on 2026-10-29; #26 remains
-open. The start adds no M010 Verified behavior; implementation evidence is
-recorded only after it is proved.
+PR #36 on 2026-10-29, #25 merged via PR #39 on 2026-10-29, and #26 merged via
+PR #42 on 2026-10-30. Child issue #45, added after #26, merged via PR #46 on
+2026-10-31. The start added no M010 Verified behavior; the implementation
+evidence is recorded below.
+
+## Implementation verification
+
+Verified on 2026-10-31 at `875b5cc`, the `origin/main` commit that merged the
+last child PR. The full `/wl-verify` gate ran locally on Windows/.NET 10 with no
+flake rerun; the `Verify` workflow also passed on that commit.
+
+- Domain: 297 passed.
+- Application: 391 passed.
+- Infrastructure / real SQLite: 318 passed.
+- Operations: 23 passed.
+- UI: 129 passed.
+- API: 218 passed.
+- Playwright Chromium: 3 passed.
+- Total: 1379 passed, 0 failed, 0 skipped.
+- `dotnet format --verify-no-changes`: passed.
+- EF Core pending-model check: passed (`No changes have been made to the model
+  since the last migration.`).
+
+Each acceptance criterion maps to this evidence. Test names belong to the suites
+counted above.
+
+| # | Evidence |
+|---|---|
+| 1 | `Search_AppliesEachFilterAndRepresentativeCombinations`, `Search_FiltersAreAndedAndEntryMatchesDoNotDuplicateTransactions`, `Search_ReversalRelationshipFiltersUseEffectivePostedHistory`, `Ledger_EachFilterAndCombinationSelectsEachTransactionOnce` |
+| 2 | `Search_PagesAcrossSameDateTiesAndBindsTheCursorToFiltersAndHousehold`, `Search_FilterBoundCursorIsRestartSafeAndRejectsChangedFilters`, `Ledger_PaginationKeepsTheSearchAndRefusesAnAlteredCursor` |
+| 3 | `Search_AppliesEachFilterAndRepresentativeCombinations`, `Search_FiltersAreAndedAndEntryMatchesDoNotDuplicateTransactions`, `Ledger_EachFilterAndCombinationSelectsEachTransactionOnce` |
+| 4 | `Search_PreservesCurrentDisplayContextAndStableTransactionLinks`, `Search_IsPostedOrderedRestartSafeAndUsesCurrentContext` |
+| 5 | `PositionInventory_MixedLifecycle_MatchesPostedHistoryCurrentAndAsOf` (cash, Currency, Fund, Equity and PhysicalGold), `Positions_DeriveCurrentAndAsOfFromPostedHistoryWithSourceCounts` |
+| 6 | `PositionInventory_MixedLifecycle_MatchesPostedHistoryCurrentAndAsOf`, `PositionInventory_CurrentAndAsOfUseOnlyEffectivePostedEntries`, `Assets_AsOfExcludesLaterHistoryAndBoundsTheTraceLinks` |
+| 7 | `PositionInventory_ValidEmptyExactScopeDiffersFromUnknownScope`, `Inventory_ExactEmptyScopeIsZeroButCrossHouseholdFailsClosed`, `Positions_UnknownCrossHouseholdOrMismatchedScopeIsNotZero`, `Assets_UnknownScopeIsNotZeroAndMalformedFiltersAreFieldMessages` |
+| 8 | `LotInventory_MixedLifecycle_DerivesLineageCostAndCustody`, `LotInventory_PreservesKnownAndUnknownCostShapes`, `LotInventory_DerivesFundLineageCustodyAndEffectiveReversal`. Migrations 009 and 010 add eight evidence and reconciliation tables and no balance table or column. |
+| 9 | `LotInventory_PhysicalGoldKeepsGrossPiecesAndFinenessIndependent`, `LotInventory_MixedLifecycle_DerivesLineageCostAndCustody`, `LotInventory_GoldPiecesLeftAtZeroGramsStayHeldAsInM009`, `Lots_ShowGoldCustodyPiecesFineWeightCostAndTraceToTransactions` |
+| 10 | `MetadataOnlyEvidence_RoundTripsAfterRestartWithStableCodes`, `Evidence_LinksOnlySameHouseholdPostedTransactionsAndSupersedes`, `DirectSql_LinksArePostedSameHouseholdAndNeverOnSupersededRecords` |
+| 11 | `Attachment_RoundTripsByteForByteWithStableSha256`, `Upload_RoundTripsEachRetainedFormatByteForByte`, `Upload_RefusesDisallowedMalformedOrOversizedUploadsBeforeMutation`, `NewEvidence_RefusesInvalidFieldsAndFilesBeforeAnyMutation` |
+| 12 | `Supersession_PreservesTheOriginalAndFormsOneChain`, `Evidence_SupersessionKeepsTheOriginalReadableAndClosesItToNewLinks`, `DirectSql_EvidenceRowsAreInsertOnly` |
+| 13 | `Run_StoresStableCodesAndExactRawValues`, `Run_RecordsMatchedAndOutOfToleranceItemsAndReplaysWithoutLedgerWrites` |
+| 14 | `Lifecycle_MatchMismatchResolveCorrectRerunAndReverse`, `Run_ShowsMatchedAndOutOfToleranceAndKeepsADocumentedExceptionVisible` |
+| 15 | `Resolve_DocumentsExceptionsAndLinksOnlyPostedSameHouseholdCorrections`, `Run_ShowsMatchedAndOutOfToleranceAndKeepsADocumentedExceptionVisible`, and the browser journey |
+| 16 | `CrossHouseholdAndInvalidCorrectionsAreRefused`, `Resolve_DocumentsExceptionsAndLinksOnlyPostedSameHouseholdCorrections`, `Run_TurnsStaleAfterAReversalAndARerunWithACorrectionMatches` |
+| 17 | `Get_LaterReversalMakesTheEarlierRunVisiblyStale`, `Run_TurnsStaleAfterAReversalAndARerunWithACorrectionMatches` |
+| 18 | `Run_RecordsMatchedAndOutOfToleranceItemsAndReplaysWithoutLedgerWrites`, `Lifecycle_MatchMismatchResolveCorrectRerunAndReverse` |
+| 19 | `EvidenceDirectSqlGuardTests` and `ReconciliationDirectSqlGuardTests` |
+| 20 | `M010Routes_LogOnlyRouteTemplatesOutcomesCountsSizeClassesAndDurations`, the sanitized-problem tests of each M010 API class, the log assertions of the Ledger, Assets and Reconcile host tests, and the host-output checks of the browser journey and recovery drill |
+| 21 | See the note below. |
+| 22 | See the note below. |
+| 23 | The full suite above |
+| 24 | The EF Core pending-model check above |
+| 25 | `Migration_008To010To008To010_PreservesExactM009SchemaHistoryDerivationsAndGuards` |
+| 26 | `LocalHosting_M010EvidenceAndReconciliationBackupReadsBackFromFreshProcess`. The drill creates no superseded evidence and no `CORRECTED_BY_TRANSACTION` resolution; other tests cover those shapes, and the package carries the whole database file. |
+| 27 | `UX_MVP.md`, `DATA_CAPTURE.md`, `DATABASE_DESIGN.md`, `SECURITY_OPERATIONS.md` and `OPERATIONS.md` as updated by PRs #42 and #46; `PROJECT_STATE.md` and `ROADMAP.md` in this checkpoint |
+
+**Criterion 21, owner judgement.** The owner accepted this criterion on
+2026-10-31 with these limits recorded. Real Chromium runs all three paths with
+JavaScript disabled. By keyboard it submits the Ledger search and the Assets
+filter, follows the lot and acquisition-transaction links, and submits one
+observation review, that observation and the documented exception. The other
+steps use pointer clicks, and form values are set by the test driver rather than
+typed: the Ledger result and position-to-transactions links, opening new
+evidence, choosing the file, saving evidence, the link checkbox and its submit,
+adding an observation, the comparison and the download. These are native links,
+buttons and form controls, and the Ledger, Assets and Reconcile page templates
+contain no `tabindex`, inline handler or script, apart from the shared shell
+layout and validation summary. Their keyboard operation is therefore inferred,
+not tested end to end.
+
+**Criterion 22, one-off measurement.** The committed journey visits each M010
+page at 390 px, but its reflow check compares only the box of `main`, which
+cannot detect content overflowing inside it, and it does not recheck every page
+once populated. So on 2026-10-31 a temporary probe, not committed, ran in that
+journey at `875b5cc` after full page load, with every `details` element opened
+and the populated Reconcile, evidence and run pages included. At 390 px, every
+M010 page measured a document scroll width of 390 and no element in `main` past
+the viewport. At the 195 px 200%-equivalent width every page probed, M010 or
+older, measured a scroll width of 234: a shared minimum that scrolls rather than
+clips, since no overflowing element had a clipping ancestor. No committed test
+guards this result yet.
+
+PR #42 tightened a `SECURITY_OPERATIONS.md` real-data readiness item and said so
+in its body; it was merged with that change. No new ADR was required: the
+retained bytes stayed inside the SQLite and M004 backup boundary, and no
+cross-cutting decision changed.
 
 ## Objective
 

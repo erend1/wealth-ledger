@@ -5,7 +5,19 @@ verbatim from the "Verified implementation" and "Verification" sections of
 `docs/PROJECT_STATE.md` at `5a228fc`. Each paragraph sits under the milestone
 it describes; a paragraph that spans several milestones sits under the latest
 one. The original subsection headings are kept as `###` headings, in their
-original order.
+original order. Two more paragraphs moved the same way at the M010 checkpoint.
+
+## M010: Searchable Inventory, Evidence, and Reconciliation, verified 2026-10-31 at 875b5cc
+
+M010 makes the verified ledger independently checkable: filter-bound transaction
+search, derived current and as-of position and lot inventory, immutable evidence
+with an optional attachment of up to 10 MiB inside SQLite, exact observations,
+and deterministic dated reconciliation with explicit tolerance, staleness, and
+resolution. Migrations 009 and 010 add the evidence and reconciliation tables.
+The 1379-test suite, a real-Chromium journey, and a fresh-process recovery drill
+passed; the milestone's "Implementation verification" section maps the evidence
+to each acceptance criterion and states the limits of its keyboard and
+narrow-viewport evidence.
 
 ## M009: Complete Physical-Gold Lifecycle, verified 2026-09-16 at dd3ad33
 
@@ -95,6 +107,17 @@ market value, return, or other unavailable aggregate. Ledger passes the M005
 opaque cursor through unchanged and turns an invalid cursor into a sanitized
 page with a first-page link. Settings separates current master labels from the
 local storage, schema, integrity, attestation, and matched-backup review.
+
+`InitialBackupRequired` maps the initial-backup review/action and completion
+pages. The running setup process remains in that static mode after backup
+creation and clearly requires one clean restart. `Ready` maps Today, Ledger
+with direct transaction explanation, read-only Settings, and the dedicated
+M007-M009 opening, Fund, and physical-gold review/receipt/reversal pages and
+JSON adapters. The real-browser suite covers the complete restart-delimited
+first run, Ready navigation, opening cutover, Fund trades, and the physical-
+gold purchase/sale/transfer/correction lifecycle; JavaScript-disabled
+operation, keyboard-only paths, narrow and desktop viewports, external-request
+rejection, and process/file cleanup.
 
 ### Complete physical-gold lifecycle
 
@@ -429,6 +452,15 @@ flows remain usable when JavaScript is disabled. Visible focus, minimum control
 targets, reduced-motion preference, forced colors, and narrow/200%-equivalent
 reflow are covered mechanically and in real Chromium. These checks establish
 the accepted M006 behavior but do not establish broad WCAG conformance.
+
+The verified M006 delivery includes workspace-bound protection readiness, the
+`WealthLedger.UI` Razor Class Library with exact Turkish-first presentation, the
+fail-closed startup-mode boundary, guided browser initialization for storage,
+workspace setup and the required initial backup, and the Ready shell with its
+complete read-only transaction explanation. Semantic landmarks, labels,
+validation focus, keyboard focus, skip navigation, reduced-motion handling,
+forced-color support, and responsive reflow have focused automated coverage;
+this is not a claim of general WCAG conformance.
 
 ### Verification
 
