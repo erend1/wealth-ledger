@@ -1,6 +1,8 @@
 # WealthLedger Local Data Operations
 
-Status: Canonical local-data operator guide through M007
+Status: Canonical operator guide for the local database lifecycle, backup,
+restore, migration, recovery, opening cutover, and post-cutover reconciliation
+and retained evidence. See `docs/PROJECT_STATE.md` for verification status.
 
 Last verified: 2026-09-11
 
@@ -341,9 +343,10 @@ Posting an opening does not reconcile it. Retain the source statement or count
 as an evidence record in Reconcile, record its observed quantities, and run a
 reconciliation dated to the source; resolve each out-of-tolerance item through a
 separately posted correction or a documented exception, never by editing
-history. The remaining ROADMAP real-data gate still applies, so completing
-these workflows is not a recommendation to make WealthLedger the sole real
-household record.
+history. Completing these workflows is not a recommendation to make
+WealthLedger the sole record of real household assets: `docs/ROADMAP.md`
+"Real-data readiness gate" records what has been verified, and the operator
+duties in `docs/SECURITY_OPERATIONS.md` still apply.
 
 Retained evidence files live inside the database, so each one enlarges every
 later backup generation by its size (at most 10 MiB) and is exactly as private
@@ -385,9 +388,9 @@ the 008 -> 010 -> 008 -> 010 migration round trip over M009 history and the
 fresh-process readback of evidence, retained files, observations and
 reconciliation runs from a staged backup.
 
-The verified M007 checkpoint contains 676 passing tests and six migrations.
-Its three Playwright journeys use unique explicit database/backup roots, block
-external requests, cover the restart-delimited first run plus opening
-review/post/receipt/reversal/replacement, and produce no screenshot or trace by
-default. The retained human learning lab is not test-owned and is never deleted
+`docs/PROJECT_STATE.md` records the current verified checkpoint, its test
+counts, and its migration chain; `CHANGELOG.md` records the evidence for earlier
+checkpoints. The Playwright journeys use unique explicit database/backup roots,
+block external requests, and produce no screenshot or trace by default. The
+retained human learning lab is not test-owned and is never deleted
 automatically.
