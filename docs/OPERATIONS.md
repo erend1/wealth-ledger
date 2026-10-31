@@ -4,7 +4,7 @@ Status: Canonical operator guide for the local database lifecycle, backup,
 restore, migration, recovery, opening cutover, and post-cutover reconciliation
 and retained evidence. See `docs/PROJECT_STATE.md` for verification status.
 
-Last verified: 2026-09-11
+Last verified: 2026-10-31
 
 ## Safety boundary
 
@@ -206,10 +206,13 @@ check, and only then invokes EF Core. It reports starting and ending migration
 identifiers and the recovery-package path. A backup or verification failure
 prevents the first schema-changing command.
 
-Every known applied migration prefix is verified against only the tables that
-prefix introduced. In particular, a valid M001 database does not require the
-M002 `CommandReceipt` table before backup; it is reported as
-`MigrationRequired` and can follow the protected M001-to-current chain.
+A database's applied migrations must be an exact prefix of the known chain. The
+bounded table check then reads the representative tables of
+`001_CoreLedger`, `002_CommandReceipt`, and `005_WorkspaceIdentity` only when
+the prefix contains that migration; it does not probe every table. In
+particular, a valid M001 database does not require the M002 `CommandReceipt`
+table before backup; it is reported as `MigrationRequired` and can follow the
+protected M001-to-current chain.
 
 If migration reports failure:
 
@@ -358,10 +361,15 @@ that the normal package carries all of them.
 ## Synthetic verification workflow
 
 The process tests execute the same commands against unique temporary paths and
-ephemeral state. From a clean checkout:
+ephemeral state. From a clean checkout, the first commands also restore the
+local `dotnet-ef` tool and install the pinned Chromium that the full test run
+needs:
 
 ```powershell
+dotnet tool restore
 dotnet restore WealthLedger.slnx
+dotnet build WealthLedger.slnx --no-restore --verbosity minimal
+pwsh tests/WealthLedger.UI.BrowserTests/bin/Debug/net10.0/playwright.ps1 install chromium
 
 dotnet test tests/WealthLedger.Operations.Tests/WealthLedger.Operations.Tests.csproj --no-restore --filter FullyQualifiedName~OperationsCli_InitializeStatusBackupVerifyStageAndRestart --verbosity minimal
 
